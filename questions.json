@@ -1,0 +1,955 @@
+{
+  "keeper_quiz_documentation": {
+    "collection_date": "2026-01-17",
+    "status": "Partial Documentation",
+    "quizzes_documented": 6,
+    "total_steps_documented": 48,
+    "total_questions_documented": 150,
+    "quizzes": [
+      {
+        "quiz_id": 1,
+        "quiz_name": "Basic Traits",
+        "description": "Personal characteristics and basic information",
+        "format": "step_by_step_sequential",
+        "total_steps": 14,
+        "completion_percentage": "100%",
+        "steps": [
+          {
+            "step_number": 1,
+            "step_name": "Relationship readiness",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How committed are you to finding your life partner right now?",
+                "question_type": "multiple_choice_radio",
+                "options": [
+                  {"value": 5, "label": "My top priority"},
+                  {"value": 4, "label": "Ready to settle down"},
+                  {"value": 3, "label": "Actively looking"},
+                  {"value": 2, "label": "Open to the right person"},
+                  {"value": 1, "label": "Not a priority"}
+                ]
+              }
+            ]
+          },
+          {
+            "step_number": 2,
+            "step_name": "Height",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How tall are you?",
+                "question_type": "slider_with_unit_toggle",
+                "details": "Slider control with Imperial (feet/inches) and Metric (cm) toggle"
+              }
+            ]
+          },
+          {
+            "step_number": 3,
+            "step_name": "Ethnicity",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What is your ethnic background?",
+                "question_type": "multi_select_searchable",
+                "description": "Please share your ancestral background (e.g. Italian, Korean) rather than nationality or culture.",
+                "note": "Select as many as you'd like"
+              }
+            ]
+          },
+          {
+            "step_number": 4,
+            "step_name": "Education",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Education details",
+                "question_type": "form_with_repeatable_sections",
+                "fields": [
+                  {"field_name": "School", "type": "searchable_input"},
+                  {"field_name": "Degree", "type": "searchable_input"},
+                  {"field_name": "Field of Study", "type": "searchable_input"}
+                ],
+                "note": "Can add multiple education entries"
+              }
+            ]
+          },
+          {
+            "step_number": 5,
+            "step_name": "Test scores",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Test score details",
+                "question_type": "form_with_repeatable_sections",
+                "fields": [
+                  {"field_name": "Test name", "type": "searchable_input"},
+                  {"field_name": "Total Score", "type": "numeric_input"},
+                  {"field_name": "Math Score", "type": "text_input"},
+                  {"field_name": "Evidence-Based Reading and Writing Score", "type": "text_input"},
+                  {"field_name": "Test year", "type": "year_selector"}
+                ]
+              }
+            ]
+          },
+          {
+            "step_number": 6,
+            "step_name": "Career",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What do you do?",
+                "question_type": "open_ended_text"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Share a link to your work",
+                "question_type": "open_ended_text",
+                "details": "Optional field for LinkedIn or similar"
+              },
+              {
+                "question_number": 3,
+                "question_text": "What are your ambitions?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 7,
+            "step_name": "Financial stability",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Yearly pre-tax income",
+                "question_type": "currency_input",
+                "currency": "USD"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Net worth",
+                "question_type": "currency_input",
+                "currency": "USD"
+              },
+              {
+                "question_number": 3,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area",
+                "required": false
+              }
+            ]
+          },
+          {
+            "step_number": 8,
+            "step_name": "Children",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How many children do you currently have?",
+                "question_type": "slider",
+                "range": "0 to 6+"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Including current children, how many total kids would you like to have?",
+                "question_type": "range_slider",
+                "range": "0 to 6+"
+              },
+              {
+                "question_number": 3,
+                "question_text": "I'm open to matches who have children",
+                "question_type": "toggle_switch"
+              }
+            ]
+          },
+          {
+            "step_number": 9,
+            "step_name": "Politics",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How much do you care about politics?",
+                "question_type": "slider",
+                "scale": "Not at all to It's my life"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Which label best describes your politics?",
+                "question_type": "searchable_select",
+                "example_options": ["Very left", "Left", "Center", "Right", "Very right", "Libertarian"]
+              },
+              {
+                "question_number": 3,
+                "question_text": "Tell us more about your political views",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 10,
+            "step_name": "Religion",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How religious are you?",
+                "question_type": "slider",
+                "scale": "Not at all to Devout"
+              },
+              {
+                "question_number": 2,
+                "question_text": "What religion do you identify with?",
+                "question_type": "multi_select_searchable"
+              },
+              {
+                "question_number": 3,
+                "question_text": "Is there anything else you'd like to add?",
+                "question_type": "open_ended_text_area",
+                "required": false
+              }
+            ]
+          },
+          {
+            "step_number": 11,
+            "step_name": "Interests",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What are you interested in? What do you like to do?",
+                "question_type": "searchable_input_with_predefined_list",
+                "predefined_interests": ["Anime", "Art", "Board Games", "Coding", "Dancing", "Exercise", "Festivals", "Meditation", "Music", "Reading", "Sports", "Travel", "Cooking", "Movies", "Gardening", "Photography", "Writing", "Gaming", "Crafts", "Volunteering"],
+                "rating_system": "Personal significance (Lowest, Low, Medium, High, Highest)"
+              }
+            ]
+          },
+          {
+            "step_number": 12,
+            "step_name": "Personality test results",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Big 5/OCEAN Personality Test Results",
+                "question_type": "personality_score_display",
+                "traits": [
+                  {"trait": "Openness", "scale": "0-100"},
+                  {"trait": "Conscientiousness", "scale": "0-100"},
+                  {"trait": "Extraversion", "scale": "0-100"},
+                  {"trait": "Agreeableness", "scale": "0-100"},
+                  {"trait": "Neuroticism", "scale": "0-100"}
+                ],
+                "note": "Can also add Myers-Briggs or Enneagram"
+              }
+            ]
+          },
+          {
+            "step_number": 13,
+            "step_name": "Location",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Where do you live?",
+                "question_type": "location_searchable",
+                "description": "Add your address, neighborhood, or city"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Anything else you'd like to add?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Do you split time anywhere? Do you have an upcoming move planned?",
+                "required": false
+              }
+            ]
+          },
+          {
+            "step_number": 14,
+            "step_name": "About you",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What sets you apart? What must we know to find your perfect match?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "quiz_id": 2,
+        "quiz_name": "Basic Preferences",
+        "description": "Ranking and prioritizing important qualities in a partner",
+        "format": "drag_and_drop_ranking_single_page",
+        "completion_percentage": "100%",
+        "structure": {
+          "main_instruction": "Drag and drop to rank your preferences. Place the most important items at the top.",
+          "sections": [
+            {
+              "section_name": "Non-negotiable",
+              "description": "These are your must-haves"
+            },
+            {
+              "section_name": "Very important"
+            },
+            {
+              "section_name": "Somewhat important"
+            },
+            {
+              "section_name": "Nice to have"
+            },
+            {
+              "section_name": "Disabled",
+              "description": "Age, height, ethnicity, and location can't be deleted"
+            }
+          ],
+          "note": "Single interactive page with drag/drop ranking of preference cards"
+        }
+      },
+      {
+        "quiz_id": 3,
+        "quiz_name": "Photos & Videos",
+        "description": "Photo upload and rating section",
+        "format": "single_page_with_activities",
+        "completion_percentage": "100%",
+        "activities": [
+          {
+            "activity_name": "Rate photos to earn credits",
+            "description": "Vote on photos to earn credits"
+          },
+          {
+            "activity_name": "Purchase credits",
+            "description": "Purchase credits for testing"
+          },
+          {
+            "activity_name": "Upload photos and videos",
+            "description": "Upload media for matching"
+          }
+        ]
+      },
+      {
+        "quiz_id": 4,
+        "quiz_name": "Core Values & Self-Image",
+        "description": "Exploring personal values and self-perception",
+        "format": "step_by_step_sequential",
+        "total_steps": 16,
+        "completion_percentage": "13%",
+        "steps": [
+          {
+            "step_number": 1,
+            "step_name": "Core values",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What are your core values?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Share your guiding principles."
+              }
+            ]
+          },
+          {
+            "step_number": 2,
+            "step_name": "Value evolution",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How significantly have your personal values changed since you were sixteen years old?",
+                "question_type": "multiple_choice_radio",
+                "options": [
+                  {"value": 1, "label": "They're completely different"},
+                  {"value": 2, "label": "They've changed very substantially"},
+                  {"value": 3, "label": "They've changed a lot"},
+                  {"value": 4, "label": "They've changed somewhat"},
+                  {"value": 5, "label": "They've changed slightly"},
+                  {"value": 6, "label": "They haven't changed at all"},
+                  {"value": 7, "label": "Unsure/something else"}
+                ]
+              },
+              {
+                "question_number": 2,
+                "question_text": "What's changed and what hasn't?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell us how you've evolved."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "quiz_id": 5,
+        "quiz_name": "Lifestyle & Health",
+        "description": "Daily habits, health practices, and lifestyle choices",
+        "format": "step_by_step_sequential",
+        "total_steps": 16,
+        "completion_percentage": "75%",
+        "steps": [
+          {
+            "step_number": 1,
+            "step_name": "Pets",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How many cats do you own?",
+                "question_type": "slider",
+                "range": "0 to 10+"
+              },
+              {
+                "question_number": 2,
+                "question_text": "How many dogs do you own?",
+                "question_type": "slider",
+                "range": "0 to 10+"
+              },
+              {
+                "question_number": 3,
+                "question_text": "How many other pets do you own? (Livestock doesn't count)",
+                "question_type": "slider",
+                "range": "0 to 10+"
+              },
+              {
+                "question_number": 4,
+                "question_text": "What are your general feelings about pets?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell us anything we should know."
+              }
+            ]
+          },
+          {
+            "step_number": 2,
+            "step_name": "Exercise",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How often do you exercise?",
+                "question_type": "multiple_choice_radio",
+                "options": [
+                  {"value": 1, "label": "Never"},
+                  {"value": 2, "label": "A few times per year"},
+                  {"value": 3, "label": "1-3 times per month"},
+                  {"value": 4, "label": "1-2 times per week"},
+                  {"value": 5, "label": "3-4 times per week"},
+                  {"value": 6, "label": "5-6 times per week"},
+                  {"value": 7, "label": "Daily or more"}
+                ]
+              },
+              {
+                "question_number": 2,
+                "question_text": "What's your exercise routine like?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 3,
+            "step_name": "Meals",
+            "required": true,
+            "description": "About how many times per week do you...",
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Order takeout/delivery",
+                "question_type": "slider",
+                "range": "0 to 21+"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Go out to eat",
+                "question_type": "slider",
+                "range": "0 to 21+"
+              },
+              {
+                "question_number": 3,
+                "question_text": "Heat up something quick (e.g. frozen food, leftovers, etc.)",
+                "question_type": "slider",
+                "range": "0 to 21+"
+              },
+              {
+                "question_number": 4,
+                "question_text": "Home cook a meal",
+                "question_type": "slider",
+                "range": "0 to 21+"
+              },
+              {
+                "question_number": 5,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 4,
+            "step_name": "Diet",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How strict is your diet?",
+                "question_type": "slider",
+                "scale": "Not at all strict to Very strict"
+              },
+              {
+                "question_number": 2,
+                "question_text": "What's your diet like?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 5,
+            "step_name": "Alcohol",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How often do you drink alcohol?",
+                "question_type": "multiple_choice_radio",
+                "options": [
+                  {"value": 1, "label": "Never"},
+                  {"value": 2, "label": "Less than once a month"},
+                  {"value": 3, "label": "1-3 times per month"},
+                  {"value": 4, "label": "1-2 times per week"},
+                  {"value": 5, "label": "3-4 times per week"},
+                  {"value": 6, "label": "5-6 times per week"},
+                  {"value": 7, "label": "Daily"}
+                ]
+              },
+              {
+                "question_number": 2,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 6,
+            "step_name": "Nicotine use",
+            "required": true,
+            "description": "How often do you use...",
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Cigarettes",
+                "question_type": "slider",
+                "scale": "Never to Daily"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Cigars",
+                "question_type": "slider",
+                "scale": "Never to Daily"
+              },
+              {
+                "question_number": 3,
+                "question_text": "Vapes",
+                "question_type": "slider",
+                "scale": "Never to Daily"
+              },
+              {
+                "question_number": 4,
+                "question_text": "Pouches or other products",
+                "question_type": "slider",
+                "scale": "Never to Daily"
+              },
+              {
+                "question_number": 5,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 7,
+            "step_name": "Drugs",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "I don't use any other drugs.",
+                "question_type": "checkbox"
+              },
+              {
+                "question_number": 2,
+                "question_text": "What other drugs do you use?",
+                "question_type": "searchable_input_with_frequency_selectors",
+                "predefined_drugs": ["LSD/Acid", "Ketamine", "Ecstasy/MDMA", "DMT", "Psilocybin"],
+                "frequency_scale": ["Never", "Rarely", "Monthly", "Weekly", "Daily"]
+              },
+              {
+                "question_number": 3,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 8,
+            "step_name": "Substance use preferences",
+            "required": false,
+            "description": "Alcohol, nicotine, other substances?",
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Do you have any preferences about your future partner's substance use habits?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 9,
+            "step_name": "Sleep habits",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What are your sleeping habits like?",
+                "question_type": "multiple_choice_radio",
+                "options": [
+                  {"value": 1, "label": "I'm a consistent early-riser"},
+                  {"value": 2, "label": "I tend to prefer mornings"},
+                  {"value": 3, "label": "Inconsistent/A mix of both"},
+                  {"value": 4, "label": "I tend to prefer nights"},
+                  {"value": 5, "label": "I'm a consistent night owl"},
+                  {"value": 6, "label": "Something else"}
+                ]
+              },
+              {
+                "question_number": 2,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell us anything important."
+              }
+            ]
+          },
+          {
+            "step_number": 10,
+            "step_name": "Body modifications",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How many tattoos do you have?",
+                "question_type": "slider",
+                "range": "0 to 10+"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Tell us about them.",
+                "question_type": "open_ended_text_area",
+                "placeholder": "e.g. \\"My mom's name on my shoulder\\""
+              },
+              {
+                "question_number": 3,
+                "question_text": "How many piercings do you have?",
+                "question_type": "slider",
+                "range": "0 to 10+"
+              },
+              {
+                "question_number": 4,
+                "question_text": "Where are they?",
+                "question_type": "open_ended_text",
+                "placeholder": "e.g. \\"My right earlobe and my lip\\""
+              },
+              {
+                "question_number": 5,
+                "question_text": "How many cosmetic surgery procedures have you had?",
+                "question_type": "slider",
+                "range": "0 to 10+"
+              }
+            ]
+          },
+          {
+            "step_number": 11,
+            "step_name": "Physical health",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How would you rate your overall physical health?",
+                "question_type": "slider",
+                "scale": "Very poor to Amazing",
+                "range": "0-10"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Do you have any health conditions that impact your life?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell us anything important."
+              }
+            ]
+          },
+          {
+            "step_number": 12,
+            "step_name": "Mental health",
+            "required": true,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How would you rate your overall mental health?",
+                "question_type": "slider",
+                "scale": "Very poor to Amazing",
+                "range": "0-10"
+              },
+              {
+                "question_number": 2,
+                "question_text": "Have you ever been diagnosed with a mental health condition or personality disorder?",
+                "question_type": "multiple_choice_radio",
+                "options": [
+                  {"value": 1, "label": "Yes"},
+                  {"value": 2, "label": "No"},
+                  {"value": 3, "label": "Prefer not to say"}
+                ]
+              },
+              {
+                "question_number": 3,
+                "question_text": "Is there anything else you'd like to say about this?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "You may share in confidence."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "quiz_id": 6,
+        "quiz_name": "Your Life Story",
+        "description": "Personal background and life narrative",
+        "format": "step_by_step_sequential",
+        "total_steps": 9,
+        "completion_percentage": "100%",
+        "steps": [
+          {
+            "step_number": 1,
+            "step_name": "Past & Future locations",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Past & Future locations",
+                "question_type": "placeholder",
+                "note": "Step identified but full questions not yet documented"
+              }
+            ]
+          },
+          {
+            "step_number": 2,
+            "step_name": "Settling down",
+            "required": true,
+            "description": "How do you feel about each of the following settings as a place to settle down and start a home?",
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "A big city",
+                "question_type": "slider",
+                "scale": "Very unappealing to Very appealing"
+              },
+              {
+                "question_number": 2,
+                "question_text": "A small city",
+                "question_type": "slider",
+                "scale": "Very unappealing to Very appealing"
+              },
+              {
+                "question_number": 3,
+                "question_text": "A suburb",
+                "question_type": "slider",
+                "scale": "Very unappealing to Very appealing"
+              },
+              {
+                "question_number": 4,
+                "question_text": "A small town",
+                "question_type": "slider",
+                "scale": "Very unappealing to Very appealing"
+              },
+              {
+                "question_number": 5,
+                "question_text": "Somewhere rural",
+                "question_type": "slider",
+                "scale": "Very unappealing to Very appealing"
+              },
+              {
+                "question_number": 6,
+                "question_text": "Where do you see yourself settling down?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Somewhere my wife wants to live"
+              }
+            ]
+          },
+          {
+            "step_number": 3,
+            "step_name": "Proudest achievement",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What is the one accomplishment you are most proud of?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 4,
+            "step_name": "Future dreams",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Describe your hopes and dreams for the future.",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell us what's on the horizon and beyond."
+              }
+            ]
+          },
+          {
+            "step_number": 5,
+            "step_name": "Future fears",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Describe your fears and anxieties about the future.",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Share what makes you worry."
+              }
+            ]
+          },
+          {
+            "step_number": 6,
+            "step_name": "Favorite story",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "What is your favorite story (from your life) to tell new people?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell your story just as you would in person."
+              }
+            ]
+          },
+          {
+            "step_number": 7,
+            "step_name": "Life priorities",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Rank the following priorities by how important they are at this moment in your life.",
+                "question_type": "drag_and_drop_ranking",
+                "items": [
+                  {"ranking": 1, "text": "Career advancement"},
+                  {"ranking": 2, "text": "Finding a partner"},
+                  {"ranking": 3, "text": "Starting a family"},
+                  {"ranking": 4, "text": "Making money"},
+                  {"ranking": 5, "text": "Having fun"},
+                  {"ranking": 6, "text": "Being happy"},
+                  {"ranking": 7, "text": "Pursuing hobbies"},
+                  {"ranking": 8, "text": "Personal growth"},
+                  {"ranking": 9, "text": "Spiritual growth"},
+                  {"ranking": 10, "text": "Health and wellness"}
+                ]
+              },
+              {
+                "question_number": 2,
+                "question_text": "Anything you'd like to add or clarify?",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Share your thoughts."
+              }
+            ]
+          },
+          {
+            "step_number": 8,
+            "step_name": "Self-improvement",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "How are you actively working to improve yourself?",
+                "question_type": "open_ended_text_area"
+              }
+            ]
+          },
+          {
+            "step_number": 9,
+            "step_name": "Hardship",
+            "required": false,
+            "questions": [
+              {
+                "question_number": 1,
+                "question_text": "Describe a hardship you've experienced and overcome.",
+                "question_type": "open_ended_text_area",
+                "placeholder": "Tell us in your own words."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "quizzes_not_yet_documented": [
+      {
+        "quiz_name": "Social Life",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Communication Style",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Relationship expectations",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Family & Kids",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Intimacy",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Love Philosophy",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Leisure, Habits, & Quirks",
+        "status": "Not yet documented"
+      },
+      {
+        "quiz_name": "Civics & Ethics",
+        "status": "Not yet documented"
+      }
+    ],
+    "quizzes_partially_documented": [
+      {
+        "quiz_name": "Core Values & Self-Image",
+        "steps_documented": 2,
+        "total_steps": 16,
+        "completion": "13%"
+      },
+      {
+        "quiz_name": "Lifestyle & Health",
+        "steps_documented": 12,
+        "total_steps": 16,
+        "completion": "75%"
+      }
+    ],
+    "summary": {
+      "total_quizzes": 14,
+      "fully_documented_quizzes": 4,
+      "partially_documented_quizzes": 2,
+      "not_documented_quizzes": 8,
+      "total_questions_documented": 157,
+      "documentation_coverage": "43%"
+    }
+  }
+}

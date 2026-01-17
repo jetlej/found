@@ -1,0 +1,550 @@
+import { AvatarPicker } from "@/components/AvatarPicker";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import {
+    cancelDailyReminder,
+    hasNotificationPermission,
+    promptForNotifications,
+    scheduleDailyReminder,
+} from "@/hooks/usePushNotifications";
+import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { useAuth, useUser } from "@clerk/clerk-expo";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useMutation, useQuery } from "convex/react";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Linking,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+export default function ProfileScreen() {
+  const { signOut, userId } = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? { clerkId: userId } : "skip"
+  );
+  const updateProfile = useMutation(api.users.updateProfile);
+  const updateNotifications = useMutation(api.users.updateNotificationSettings);
+
+  const notificationsEnabled = currentUser?.notificationsEnabled ?? false;
+  const reminderHour = currentUser?.reminderHour ?? 12;
+  const reminderMinute = currentUser?.reminderMinute ?? 0;
+
+  useEffect(() => {
+    async function checkSystemPermission() {
+      if (!userId || !currentUser?.notificationsEnabled) return;
+
+      const hasPermission = await hasNotificationPermission();
+      if (!hasPermission) {
+        await updateNotifications({
+          clerkId: userId,
+          notificationsEnabled: false,
+        });
+        await cancelDailyReminder();
+      }
+    }
+    checkSystemPermission();
+  }, [userId, currentUser?.notificationsEnabled]);
+
+  const handleAvatarUploaded = async (storageId: Id<"_storage">) => {
+    if (!userId) return;
+    await updateProfile({ clerkId: userId, avatarStorageId: storageId });
+  };
+
+  const handleEditName = () => {
+    setEditedName(currentUser?.name ?? "");
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!userId || !editedName.trim()) return;
+    setIsSaving(true);
+    try {
+      await updateProfile({ clerkId: userId, name: editedName.trim() });
+      setIsEditingName(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setEditedName("");
+  };
+
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (!userId) return;
+    setIsSavingNotifications(true);
+
+    try {
+      if (enabled) {
+        const hasPermission = await hasNotificationPermission();
+
+        if (hasPermission) {
+          await scheduleDailyReminder(reminderHour, reminderMinute);
+          await updateNotifications({
+            clerkId: userId,
+            notificationsEnabled: true,
+          });
+        } else {
+          const { granted, token } = await promptForNotifications();
+          if (granted) {
+            await updateNotifications({
+              clerkId: userId,
+              notificationsEnabled: true,
+              pushToken: token ?? undefined,
+              reminderHour: 12,
+              reminderMinute: 0,
+            });
+          } else {
+            Alert.alert(
+              "Notifications Disabled",
+              "To enable daily reminders, please allow notifications in your device settings.",
+              [
+                { text: "Not Now", style: "cancel" },
+                {
+                  text: "Open Settings",
+                  onPress: () => Linking.openSettings(),
+                },
+              ]
+            );
+          }
+        }
+      } else {
+        await cancelDailyReminder();
+        await updateNotifications({
+          clerkId: userId,
+          notificationsEnabled: false,
+        });
+      }
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
+  const handleTimeChange = async (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowTimePicker(false);
+    }
+
+    if (event.type === "dismissed") {
+      setShowTimePicker(false);
+      return;
+    }
+
+    if (selectedDate && userId) {
+      const hour = selectedDate.getHours();
+      const minute = selectedDate.getMinutes();
+
+      setShowTimePicker(false);
+      setIsSavingNotifications(true);
+
+      try {
+        if (notificationsEnabled) {
+          await scheduleDailyReminder(hour, minute);
+        }
+
+        await updateNotifications({
+          clerkId: userId,
+          reminderHour: hour,
+          reminderMinute: minute,
+        });
+      } finally {
+        setIsSavingNotifications(false);
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/");
+  };
+
+  const formatTime = (hour: number, minute: number) => {
+    const period = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    const displayMinute = minute.toString().padStart(2, "0");
+    return `${displayHour}:${displayMinute} ${period}`;
+  };
+
+  const reminderDate = new Date();
+  reminderDate.setHours(reminderHour, reminderMinute, 0, 0);
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.navBar}>
+        <Pressable onPress={() => router.back()} style={styles.closeButton}>
+          <Text style={styles.closeIcon}>✕</Text>
+        </Pressable>
+        <Text style={styles.navTitle}>Profile</Text>
+        <View style={styles.closeButton} />
+      </View>
+
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <AvatarPicker
+            avatarUrl={currentUser?.avatarUrl}
+            name={currentUser?.name}
+            size={80}
+            onAvatarUploaded={handleAvatarUploaded}
+          />
+          {isEditingName ? (
+            <View style={styles.nameEditContainer}>
+              <TextInput
+                style={styles.nameInput}
+                value={editedName}
+                onChangeText={setEditedName}
+                autoFocus
+                maxLength={30}
+                placeholder="Enter name"
+                placeholderTextColor={colors.textPlaceholder}
+              />
+              <View style={styles.nameEditActions}>
+                {isSaving ? (
+                  <ActivityIndicator color={colors.success} size="small" />
+                ) : (
+                  <>
+                    <Pressable
+                      onPress={handleCancelEdit}
+                      style={styles.editActionButton}
+                    >
+                      <Text style={styles.cancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={handleSaveName}
+                      style={styles.editActionButton}
+                      disabled={!editedName.trim()}
+                    >
+                      <Text
+                        style={[
+                          styles.saveText,
+                          !editedName.trim() && styles.saveTextDisabled,
+                        ]}
+                      >
+                        Save
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={handleEditName} style={styles.nameRow}>
+              <Text style={styles.name}>{currentUser?.name ?? "User"}</Text>
+              <Ionicons
+                name="pencil"
+                size={16}
+                color={colors.textMuted}
+                style={styles.pencilIcon}
+              />
+            </Pressable>
+          )}
+          <Text style={styles.phone}>
+            {user?.phoneNumbers?.[0]?.phoneNumber}
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+
+          <View style={styles.notificationRow}>
+            <View style={styles.notificationInfo}>
+              <Text style={styles.menuText}>Daily Reminders</Text>
+              <Text style={styles.notificationHint}>
+                Get reminded daily at a set time
+              </Text>
+            </View>
+            {isSavingNotifications ? (
+              <ActivityIndicator color={colors.success} size="small" />
+            ) : (
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={handleToggleNotifications}
+                trackColor={{ false: colors.border, true: colors.success }}
+                thumbColor={colors.surface}
+              />
+            )}
+          </View>
+
+          {notificationsEnabled && (
+            <Pressable
+              style={styles.notificationRow}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <View style={styles.notificationInfo}>
+                <Text style={styles.menuText}>Reminder Time</Text>
+                <Text style={styles.notificationHint}>
+                  When to send daily reminder
+                </Text>
+              </View>
+              <View style={styles.timeDisplay}>
+                <Text style={styles.timeText}>
+                  {formatTime(reminderHour, reminderMinute)}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </View>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>About</Text>
+          <Pressable style={styles.menuItem}>
+            <Text style={styles.menuText}>Privacy Policy</Text>
+            <Text style={styles.menuArrow}>→</Text>
+          </Pressable>
+          <Pressable style={styles.menuItem}>
+            <Text style={styles.menuText}>Terms of Service</Text>
+            <Text style={styles.menuArrow}>→</Text>
+          </Pressable>
+        </View>
+
+        <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </Pressable>
+
+        <Text style={styles.version}>v1.0.0</Text>
+      </ScrollView>
+
+      {showTimePicker && (
+        <View style={styles.timePickerOverlay}>
+          <View style={styles.timePickerContainer}>
+            <View style={styles.timePickerHeader}>
+              <Text style={styles.timePickerTitle}>Reminder Time</Text>
+              <Pressable onPress={() => setShowTimePicker(false)}>
+                <Text style={styles.timePickerDone}>Done</Text>
+              </Pressable>
+            </View>
+            <DateTimePicker
+              value={reminderDate}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleTimeChange}
+              textColor={colors.text}
+              themeVariant="light"
+            />
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  navBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeIcon: {
+    fontSize: 20,
+    color: colors.textMuted,
+  },
+  navTitle: {
+    fontFamily: fonts.serif,
+    fontSize: fontSizes.lg,
+    color: colors.text,
+  },
+  header: {
+    alignItems: "center",
+    paddingVertical: spacing["2xl"],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  name: {
+    fontSize: fontSizes.xl,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  pencilIcon: {
+    marginTop: 2,
+  },
+  nameEditContainer: {
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  nameInput: {
+    fontSize: fontSizes.xl,
+    fontWeight: "600",
+    color: colors.text,
+    textAlign: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.success,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    minWidth: 150,
+  },
+  nameEditActions: {
+    flexDirection: "row",
+    gap: spacing.lg,
+  },
+  editActionButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  cancelText: {
+    fontSize: fontSizes.sm,
+    color: colors.textMuted,
+  },
+  saveText: {
+    fontSize: fontSizes.sm,
+    color: colors.success,
+    fontWeight: "600",
+  },
+  saveTextDisabled: {
+    opacity: 0.5,
+  },
+  phone: {
+    fontSize: fontSizes.sm,
+    color: colors.textMuted,
+  },
+  section: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: fontSizes.xs,
+    fontWeight: "600",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    marginBottom: spacing.md,
+    letterSpacing: 1,
+  },
+  menuItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  menuText: {
+    fontSize: fontSizes.base,
+    color: colors.text,
+  },
+  menuArrow: {
+    fontSize: fontSizes.base,
+    color: colors.textMuted,
+  },
+  notificationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  notificationInfo: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  notificationHint: {
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  timeDisplay: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  timeText: {
+    fontSize: fontSizes.base,
+    color: colors.success,
+  },
+  signOutButton: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing["3xl"],
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  signOutText: {
+    fontSize: fontSizes.base,
+    fontWeight: "500",
+    color: colors.error,
+  },
+  version: {
+    textAlign: "center",
+    marginTop: spacing.xl,
+    marginBottom: spacing["3xl"],
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+  },
+  timePickerOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.overlay,
+  },
+  timePickerContainer: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 20,
+  },
+  timePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  timePickerTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  timePickerDone: {
+    fontSize: fontSizes.lg,
+    fontWeight: "600",
+    color: colors.success,
+  },
+});

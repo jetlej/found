@@ -1,0 +1,429 @@
+# Mila - AI Matchmaking Dating App
+
+## Project Overview
+
+Mila is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 100 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
+
+**Current Status**: Beta - Onboarding flow complete, matching features coming soon.
+
+## Tech Stack
+
+- **Framework**: React Native with Expo SDK 54
+- **Navigation**: Expo Router (file-based routing)
+- **Backend**: Convex (real-time database, no migrations needed)
+- **Authentication**: Clerk (phone/SMS auth)
+- **Offline Storage**: MMKV v3 with Zustand persist middleware
+- **Language**: TypeScript
+- **Package Manager**: Bun
+
+## Project Structure
+
+```
+app/                    # Expo Router screens (file-based routing)
+├── index.tsx          # Landing page (pre-auth)
+├── (auth)/            # Auth screens (sign-in, verify)
+├── (onboarding)/      # Onboarding flow
+│   ├── basics.tsx     # Gender, location, sexuality, age, height
+│   ├── photos.tsx     # Photo upload (6 slots, 2 required)
+│   ├── questions.tsx  # 100 questions flow
+│   └── complete.tsx   # Waitlist confirmation
+├── (tabs)/            # Main tab navigation (post-onboarding)
+└── profile.tsx        # Profile page (modal)
+
+convex/                # Convex backend
+├── schema.ts          # Database schema
+├── users.ts           # User mutations/queries
+├── photos.ts          # Photo upload/management
+├── questions.ts       # Question queries + seeding
+├── answers.ts         # User answer storage
+└── storage.ts         # File storage
+
+components/            # Reusable components
+├── ProgressBar.tsx    # Progress indicator for questions
+├── QuestionCard.tsx   # Renders different question types
+├── AvatarPicker.tsx   # Avatar display + upload
+└── OfflineBanner.tsx  # Shows when device is offline
+
+lib/                   # Utilities
+├── theme.ts           # Light theme colors + typography
+├── onboarding-flow.ts # Configurable onboarding step order
+├── clerk.tsx          # Clerk auth provider
+├── convex.tsx         # Convex client provider
+└── offline-auth.ts    # Cached auth state
+
+hooks/                 # Custom React hooks
+├── useOfflineSync.ts  # Network detection
+└── usePushNotifications.ts # Push notification setup
+
+stores/                # Zustand stores
+└── offline.ts         # Offline state + user caching
+```
+
+## Key Conventions
+
+### Styling
+
+- **Light theme only** - Clean, elegant aesthetic
+- Inline StyleSheet.create() at bottom of each file
+- Import colors from `@/lib/theme`
+- Typography: System sans-serif for body, Cormorant (serif) for headings
+- Color palette (from `lib/theme.ts`):
+  - Background: `#FAFAFA`
+  - Surface: `#FFFFFF`
+  - Text: `#1A1A1A`
+  - Text secondary: `#666666`
+  - Text muted: `#999999`
+  - Primary (buttons): `#000000`
+  - Border: `#E5E5E5`
+  - Success: `#22c55e`
+  - Error: `#ef4444`
+
+### Fonts
+
+- Body text: System font (clean sans-serif)
+- Headings: `Cormorant-Medium`, `Cormorant-Bold`, `Cormorant-MediumItalic`
+- Loaded via `@expo-google-fonts/cormorant`
+
+### Navigation
+
+- Use `router.replace()` for auth redirects
+- Use `router.push()` for normal navigation
+- Use `router.back()` for back navigation
+- Auth flow handled in `app/_layout.tsx` via AuthGate component
+- Onboarding flow order configurable in `lib/onboarding-flow.ts`
+
+### Data Fetching (Convex)
+
+- Use `useQuery()` for reading data - automatically real-time
+- Use `useMutation()` for writes
+- Pass `"skip"` as second argument to conditionally skip queries:
+  ```typescript
+  const data = useQuery(
+    api.users.current,
+    userId ? { clerkId: userId } : "skip"
+  );
+  ```
+
+### Question Types
+
+The app supports 4 question types (defined in `components/QuestionCard.tsx`):
+- `multiple_choice`: Radio button selection from options array
+- `text`: Single-line text input
+- `essay`: Multi-line textarea for longer responses
+- `scale`: Slider from min to max (default 1-10) with optional labels
+
+### Photo Upload
+
+- 6-slot grid layout, first 2 required
+- Uses `react-native-image-crop-picker` for cropping
+- Upload flow: pick → crop → upload to Convex storage → save to photos table
+- Photos stored with `order` field (0-5) for display order
+
+## Database Schema (Convex)
+
+### users
+- `clerkId`: string (indexed)
+- `phone`: string
+- `name`: string (optional)
+- `avatarUrl`: string (optional)
+- `gender`: string (optional)
+- `location`: string (optional)
+- `sexuality`: string (optional)
+- `birthdate`: string (optional, ISO date)
+- `heightInches`: number (optional)
+- `onboardingComplete`: boolean (optional)
+- `waitlistPosition`: number (optional)
+- `pushToken`: string (optional)
+- `notificationsEnabled`: boolean (optional)
+
+### photos
+- `userId`: Id<"users">
+- `storageId`: Id<"_storage">
+- `url`: string
+- `order`: number (0-5)
+- Index: `by_user`
+
+### questions
+- `order`: number (1-100)
+- `text`: string
+- `type`: "multiple_choice" | "text" | "essay" | "scale"
+- `options`: string[] (optional, for multiple_choice)
+- `category`: string (optional)
+- `scaleMin`, `scaleMax`: number (optional, for scale)
+- `scaleMinLabel`, `scaleMaxLabel`: string (optional)
+- Index: `by_order`
+
+### answers
+- `userId`: Id<"users">
+- `questionId`: Id<"questions">
+- `value`: string
+- Indexes: `by_user`, `by_user_question`
+
+## Seeding Questions
+
+Questions must be seeded before the app works. Use the `questions.seed` mutation:
+
+```typescript
+// Example: Seed via Convex dashboard or script
+await ctx.runMutation(api.questions.seed, {
+  questions: [
+    {
+      order: 1,
+      text: "What does a perfect Sunday look like for you?",
+      type: "essay",
+      category: "Lifestyle",
+    },
+    {
+      order: 2,
+      text: "How important is physical fitness to you?",
+      type: "scale",
+      scaleMin: 1,
+      scaleMax: 10,
+      scaleMinLabel: "Not important",
+      scaleMaxLabel: "Very important",
+      category: "Lifestyle",
+    },
+    // ... 98 more questions
+  ],
+});
+```
+
+## Environment Variables
+
+```
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+EXPO_PUBLIC_CONVEX_URL=https://xxx.convex.cloud
+```
+
+## Running the App
+
+```bash
+# Install dependencies
+bun install
+
+# Start Convex dev server (keep running in separate terminal)
+bunx convex dev
+
+# Start Expo
+bun start
+
+# Press 'i' for iOS simulator
+```
+
+## Important Notes
+
+- **Development build required** for native modules
+- iOS-first but works on Android
+- Convex handles all real-time sync automatically
+- Questions must be seeded before onboarding works
+
+---
+
+## Coming Soon Features
+
+These features are planned but not yet implemented. This documentation captures the full product vision.
+
+---
+
+### ChatGPT Question Import Flow
+
+**Purpose**: Let users skip manually answering questions that ChatGPT already knows about them from their conversation history.
+
+**User Flow**:
+1. After basic info + photos, user sees two options:
+   - "Answer questions manually"
+   - "Let ChatGPT help answer for you"
+2. If they choose ChatGPT option, show explanation screen:
+   - "Copy this prompt into ChatGPT"
+   - "ChatGPT will only answer questions it's confident about"
+   - "Review the answers before pasting - edit anything you want to change"
+3. User taps "Copy Prompt" button - copies a prompt containing:
+   - Instructions for ChatGPT to answer only questions it knows with HIGH CERTAINTY
+   - All 100 questions in a structured format
+   - Instructions to return answers as JSON for easy parsing
+4. User goes to ChatGPT, pastes prompt, gets JSON response
+5. User returns to app, taps "Paste Answers"
+6. App parses JSON and shows: "ChatGPT answered X of 100 questions!"
+7. App then runs user through ONLY the unanswered questions (one per page)
+8. After completing remaining questions, OPTIONAL step:
+   - "Want to review the AI-answered questions?"
+   - If yes: show each AI-answered question one by one, user can edit or confirm
+   - If no: skip straight to completion
+
+**Technical Notes**:
+- JSON format should include question ID and answer value
+- Handle malformed JSON gracefully with error message
+- Store which answers came from AI vs manual (for analytics)
+
+---
+
+### Match Preview Motivation System
+
+**Purpose**: Keep users engaged through 100 questions by showing them potential matches as they progress. The previews get better as more questions are answered.
+
+**User Flow**:
+1. Every 10 questions (at Q10, Q20, Q30... Q90), pause the question flow
+2. Show a "match preview" interstitial screen:
+   - Display a real user profile (photo + basic info)
+   - Ask: "Is this the type of person you're into?"
+   - Yes / No buttons
+3. User's feedback is captured (helps train the matching algorithm)
+4. Show encouraging message: "Great! As you answer more questions, we'll find even better matches for you"
+5. Continue to next question
+
+**Key Details**:
+- Previews should genuinely improve over time (not random)
+- Early previews (Q10-Q30) are broader matches
+- Later previews (Q70-Q90) should be more targeted based on answers so far
+- This creates a tangible reward loop - user sees the value of answering more questions
+- The yes/no feedback becomes training data for the matching algorithm
+
+**Technical Notes**:
+- Need real-time or near-real-time matching calculation
+- Could use a simpler/faster algorithm for previews vs final matching
+- Track preview feedback in database for algorithm training
+
+---
+
+### AI Matchmaker Chat Interface
+
+**Purpose**: After completing 100 questions, users interact with an AI matchmaker through a chat UI (similar to ChatGPT/Claude interfaces). The AI presents matches conversationally.
+
+**Core Experience**:
+- Chat interface that looks like modern AI chat apps
+- AI matchmaker has a personality - warm, thoughtful, invested in finding you the right person
+- NOT a swipe interface - this is intentionally slower and more thoughtful
+
+**Daily Match Flow**:
+1. User gets 3 matches per day (delivered via the chat)
+2. AI presents ONE match at a time with:
+   - Their photos (carousel or grid)
+   - AI-written description/summary of the person
+   - **Compatibility breakdown**:
+     - Reasons why you're compatible (parsed from both users' answers)
+     - Potential concerns or differences (honest about mismatches)
+   - This is NOT just "you both like hiking" - it's deeper compatibility insights
+3. User has two options:
+   - "I want to meet them" (Yes)
+   - "Ask more questions" (dig deeper before deciding)
+
+**Ask More Questions Feature**:
+- User can ask the AI anything about the match
+- AI answers based on the match's 100 question answers
+- Examples: "What are their views on having kids?", "How important is religion to them?", "What's their relationship with their family like?"
+- AI can also answer subjective questions: "Do you think we'd get along?", "What might we argue about?"
+- This is very open-ended - AI uses its judgment
+- Eventually user must decide Yes or No
+
+**Technical Notes**:
+- Chat history persists
+- Need to handle "no more matches today" state gracefully
+- AI needs access to both users' full answer sets
+- Consider rate limiting questions to prevent endless deliberation
+
+---
+
+### Double Opt-In & Automated Date Booking
+
+**Purpose**: Remove the friction of "matching then chatting then planning a date." If both people want to meet, the AI handles everything.
+
+**Matching Flow**:
+1. User A says "I want to meet them" on User B's profile
+2. User B does NOT immediately know
+3. Next day (or next session), AI tells User B: "[User A's name] wants to meet you!"
+4. Shows User B the same profile view (photos, compatibility, etc.)
+5. User B decides Yes or No
+6. If No: User A is never notified (no rejection notification)
+7. If Yes: It's a mutual match!
+
+**Date Booking Flow** (after mutual match):
+1. AI congratulates both users on the match
+2. AI asks each user for their availability:
+   - Calendar picker UI
+   - "When are you free this week for a date?"
+   - Each user submits 3-5 time slots
+3. AI finds overlapping availability
+4. AI knows both users' locations (from basic info)
+5. AI selects a restaurant from a **pre-curated list**:
+   - Restaurants vetted for good date vibes
+   - Located conveniently between both users
+   - Appropriate price point
+6. AI books reservation via **Resi API**
+7. AI confirms with both users:
+   - "You're meeting [Name] at [Restaurant] on [Date] at [Time]!"
+   - Add to calendar button
+
+**Pre-Date Chat**:
+- Chat between the two users opens **2 hours before the date**
+- NOT before - this is intentional
+- Prevents endless texting that kills momentum
+- Chat is just for logistics: "I'm running 5 min late", "I'm wearing a blue jacket"
+- After the date, chat remains open
+
+**Restaurant List**:
+- Curated by city/neighborhood
+- Criteria: good for conversation (not too loud), romantic but not over-the-top, mid-to-upscale price point
+- Need admin interface to manage restaurant list
+- Resi API integration for reservations
+
+**Technical Notes**:
+- Resi API integration needed
+- Calendar/scheduling logic to find overlaps
+- Location-based restaurant selection
+- Push notifications for match alerts and date reminders
+- Handle edge cases: restaurant fully booked, user cancels, etc.
+
+---
+
+### Answer Parsing & Structured Data Extraction
+
+**Purpose**: Convert free-form essay answers into structured data for efficient matching. Avoids expensive AI calls comparing full essays for every potential match.
+
+**Problem Being Solved**:
+- Many questions have open-ended essay answers
+- Comparing User A's essays to User B's essays for compatibility = expensive
+- With thousands of users, this doesn't scale
+- Need structured data for fast compatibility scoring
+
+**How It Works**:
+1. After user completes all 100 questions, run AI parsing job
+2. AI reads through all their answers (especially essays)
+3. AI extracts structured data into predefined categories
+
+**Example - Spirituality Question**:
+- User writes: "I was raised Catholic but I'm not practicing anymore. I'd say I'm spiritual but not religious. I meditate and believe in something bigger than us, but I don't go to church. I'd want to raise my kids with some moral framework but not strict religion."
+- AI extracts:
+  - `religious_background`: "Catholic"
+  - `current_practice`: "spiritual_not_religious"
+  - `importance_level`: 3/10 (low-medium)
+  - `practices`: ["meditation"]
+  - `kids_religion_preference`: "flexible_moral_framework"
+  - `dealbreaker`: false
+
+**Categories to Extract** (examples):
+- Religion/spirituality (belief, practice level, importance, dealbreaker?)
+- Political views (leaning, importance, dealbreaker?)
+- Kids (wants them?, timeline, dealbreaker?)
+- Marriage (views on, timeline)
+- Lifestyle (introvert/extrovert, homebody/adventurer, etc.)
+- Career ambition level
+- Family closeness
+- Communication style
+- Conflict resolution style
+- Love languages
+- Dealbreakers (explicit list)
+- Interests/hobbies (tagged list)
+- Values (ranked list)
+
+**Matching Algorithm Uses**:
+- First pass: filter by dealbreakers (fast, structured)
+- Second pass: compatibility score from structured data (fast)
+- Third pass: AI reads relevant essays for nuance (only for top candidates)
+- This makes matching scalable
+
+**Technical Notes**:
+- Run parsing as background job after onboarding complete
+- Store structured data in separate table/fields
+- Re-run parsing if user updates answers
+- Need schema for all structured fields
+- Consider confidence scores for extracted data

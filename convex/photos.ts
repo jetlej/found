@@ -76,3 +76,10 @@ export const reorder = mutation({
     }
   },
 });
+
+// Get all photos (for batch loading on matches screen)
+export const listAll = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("photos").collect();
+  },
+});

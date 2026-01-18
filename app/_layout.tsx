@@ -65,8 +65,8 @@ function getOnboardingRoute(user: any): string {
     return `/(onboarding)/${user.onboardingStep}`;
   }
 
-  // Fallback: check if basics are complete
-  const basicsComplete = user.gender && user.sexuality && user.location && user.birthdate && user.heightInches;
+  // Fallback: check if basics are complete (name is now required)
+  const basicsComplete = user.name && user.gender && user.sexuality && user.location && user.birthdate && user.heightInches;
   if (!basicsComplete) {
     return "/(onboarding)/basics";
   }

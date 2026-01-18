@@ -89,6 +89,7 @@ export const updateProfile = mutation({
 export const updateBasics = mutation({
   args: {
     clerkId: v.string(),
+    name: v.optional(v.string()),
     gender: v.optional(v.string()),
     location: v.optional(v.string()),
     sexuality: v.optional(v.string()),
@@ -104,6 +105,7 @@ export const updateBasics = mutation({
     if (!user) return;
 
     const updates: {
+      name?: string;
       gender?: string;
       location?: string;
       sexuality?: string;
@@ -111,6 +113,7 @@ export const updateBasics = mutation({
       heightInches?: number;
     } = {};
 
+    if (args.name !== undefined) updates.name = args.name;
     if (args.gender !== undefined) updates.gender = args.gender;
     if (args.location !== undefined) updates.location = args.location;
     if (args.sexuality !== undefined) updates.sexuality = args.sexuality;
@@ -214,3 +217,10 @@ export const updateNotificationSettings = mutation({
   },
 });
 
+// Query to list all users (for compatibility screen)
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
+  },
+});

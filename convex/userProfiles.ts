@@ -99,3 +99,11 @@ export const hasProfile = query({
     return !!profile;
   },
 });
+
+// Query to list all profiles (for compatibility screen)
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("userProfiles").collect();
+  },
+});

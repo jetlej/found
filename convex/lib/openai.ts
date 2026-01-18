@@ -114,6 +114,7 @@ export async function extractStructuredData<T>(
   options: {
     model?: string;
     temperature?: number;
+    maxTokens?: number;
   } = {}
 ): Promise<T> {
   const messages: ChatMessage[] = [
@@ -123,6 +124,7 @@ export async function extractStructuredData<T>(
 
   return callOpenAI<T>(messages, {
     ...options,
+    maxTokens: options.maxTokens,
     responseFormat: "json",
   });
 }

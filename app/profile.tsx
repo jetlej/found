@@ -1,6 +1,5 @@
-import { AvatarPicker } from "@/components/AvatarPicker";
+import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import {
     cancelDailyReminder,
     hasNotificationPermission,
@@ -17,7 +16,9 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Image,
     Linking,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -39,13 +40,25 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
 
   const currentUser = useQuery(
     api.users.current,
     userId ? { clerkId: userId } : "skip"
   );
+  
   const updateProfile = useMutation(api.users.updateProfile);
   const updateNotifications = useMutation(api.users.updateNotificationSettings);
+
+  // Get user's photos
+  const userPhotos = useQuery(
+    api.photos.getByUser,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
+
+  // Get first photo URL (sorted by order)
+  const firstPhotoUrl = userPhotos
+    ?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   const notificationsEnabled = currentUser?.notificationsEnabled ?? false;
   const reminderHour = currentUser?.reminderHour ?? 12;
@@ -66,11 +79,6 @@ export default function ProfileScreen() {
     }
     checkSystemPermission();
   }, [userId, currentUser?.notificationsEnabled]);
-
-  const handleAvatarUploaded = async (storageId: Id<"_storage">) => {
-    if (!userId) return;
-    await updateProfile({ clerkId: userId, avatarStorageId: storageId });
-  };
 
   const handleEditName = () => {
     setEditedName(currentUser?.name ?? "");
@@ -203,12 +211,23 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <AvatarPicker
-            avatarUrl={currentUser?.avatarUrl}
-            name={currentUser?.name}
-            size={80}
-            onAvatarUploaded={handleAvatarUploaded}
-          />
+          <Pressable
+            style={styles.avatarContainer}
+            onPress={() => setShowPhotoEditor(true)}
+          >
+            {firstPhotoUrl ? (
+              <Image source={{ uri: firstPhotoUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>
+                  {currentUser?.name?.charAt(0)?.toUpperCase() || "?"}
+                </Text>
+              </View>
+            )}
+            <View style={styles.editBadge}>
+              <Ionicons name="pencil" size={12} color={colors.primaryText} />
+            </View>
+          </Pressable>
           {isEditingName ? (
             <View style={styles.nameEditContainer}>
               <TextInput
@@ -347,6 +366,40 @@ export default function ProfileScreen() {
           </View>
         </View>
       )}
+
+      {/* Photo Editor Modal */}
+      <Modal
+        visible={showPhotoEditor}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPhotoEditor(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderSpacer} />
+            <Text style={styles.modalTitle}>Edit Photos</Text>
+            <Pressable
+              onPress={() => setShowPhotoEditor(false)}
+              style={styles.modalDoneButton}
+            >
+              <Text style={styles.modalDoneText}>Done</Text>
+            </Pressable>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            <Text style={styles.modalSubtitle}>
+              Hold and drag photos to reorder. Your first photo is your main
+              profile picture.
+            </Text>
+            {currentUser?._id && (
+              <PhotoGrid
+                userId={currentUser._id}
+                existingPhotos={userPhotos}
+                showRequired={false}
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -387,6 +440,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: spacing.md,
+  },
+  avatarContainer: {
+    position: "relative",
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.border,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.surfaceSecondary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  avatarInitial: {
+    fontSize: fontSizes["2xl"],
+    fontWeight: "600",
+    color: colors.text,
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: colors.background,
   },
   nameRow: {
     flexDirection: "row",
@@ -546,5 +636,47 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.lg,
     fontWeight: "600",
     color: colors.success,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalHeaderSpacer: {
+    width: 60,
+  },
+  modalTitle: {
+    fontFamily: fonts.serif,
+    fontSize: fontSizes.lg,
+    color: colors.text,
+  },
+  modalDoneButton: {
+    width: 60,
+    alignItems: "flex-end",
+  },
+  modalDoneText: {
+    fontSize: fontSizes.base,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  modalContent: {
+    flex: 1,
+    paddingTop: spacing.lg,
+  },
+  modalSubtitle: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: "center",
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    lineHeight: 20,
   },
 });

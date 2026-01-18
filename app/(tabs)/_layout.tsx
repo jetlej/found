@@ -18,7 +18,10 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { display: "none" },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
         headerStyle: {
           backgroundColor: colors.background,
         },
@@ -31,6 +34,14 @@ export default function TabLayout() {
           title: "Home",
           headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: "Matches",
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabIcon name="heart" color={color} />,
         }}
       />
     </Tabs>

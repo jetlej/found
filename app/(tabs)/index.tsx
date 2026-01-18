@@ -34,6 +34,16 @@ export default function HomeScreen() {
     userId ? { clerkId: userId } : "skip"
   );
 
+  // Get user's photos to show first one as profile pic
+  const userPhotos = useQuery(
+    api.photos.getByUser,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
+
+  // Get first photo URL (sorted by order)
+  const firstPhotoUrl = userPhotos
+    ?.sort((a, b) => a.order - b.order)[0]?.url || null;
+
   useEffect(() => {
     if (currentUser && currentUser._id) {
       setCachedUser({
@@ -63,9 +73,9 @@ export default function HomeScreen() {
             onPress={() => router.push("/profile")}
             style={styles.headerAvatar}
           >
-            {effectiveUser?.avatarUrl ? (
+            {firstPhotoUrl ? (
               <Image
-                source={{ uri: effectiveUser.avatarUrl }}
+                source={{ uri: firstPhotoUrl }}
                 style={styles.headerAvatarImage}
               />
             ) : (

@@ -23,8 +23,21 @@ export const QUESTIONS = [
   {
     order: 2,
     text: "What is your ethnic background?",
-    type: "text" as const,
+    type: "multiple_choice" as const,
     category: "Basic Traits",
+    options: [
+      "Asian",
+      "Black / African Descent",
+      "Hispanic / Latino",
+      "Middle Eastern",
+      "Native American / Indigenous",
+      "Pacific Islander",
+      "South Asian",
+      "White / Caucasian",
+      "Mixed / Multiracial",
+      "Other",
+      "Prefer not to say",
+    ],
   },
   {
     order: 3,

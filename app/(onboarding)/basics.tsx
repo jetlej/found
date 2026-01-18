@@ -16,6 +16,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -42,8 +43,8 @@ const generateHeightOptions = () => {
 
 const HEIGHT_OPTIONS = generateHeightOptions();
 
-type Step = "gender" | "interested" | "location" | "birthday" | "height";
-const STEPS: Step[] = ["gender", "interested", "location", "birthday", "height"];
+type Step = "name" | "gender" | "interested" | "location" | "birthday" | "height";
+const STEPS: Step[] = ["name", "gender", "interested", "location", "birthday", "height"];
 
 export default function BasicsScreen() {
   const { userId } = useAuth();
@@ -61,6 +62,7 @@ export default function BasicsScreen() {
   }, []);
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [firstName, setFirstName] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [interestedIn, setInterestedIn] = useState<string | null>(null);
   const [location, setLocation] = useState<string | null>(null);
@@ -84,6 +86,8 @@ export default function BasicsScreen() {
 
   const canProceed = () => {
     switch (step) {
+      case "name":
+        return firstName.trim().length > 0;
       case "gender":
         return !!gender;
       case "interested":
@@ -118,12 +122,13 @@ export default function BasicsScreen() {
       setCurrentStep(currentStep + 1);
     } else {
       // Final step - save and continue
-      if (!userId || !gender || !interestedIn || !location || !heightInches) return;
+      if (!userId || !firstName.trim() || !gender || !interestedIn || !location || !heightInches) return;
 
       setLoading(true);
       try {
         await updateBasics({
           clerkId: userId,
+          name: firstName.trim(),
           gender,
           sexuality: interestedIn,
           location,
@@ -178,6 +183,26 @@ export default function BasicsScreen() {
 
   const renderStepContent = () => {
     switch (step) {
+      case "name":
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.question}>What's your first name?</Text>
+            <Text style={styles.questionSubtext}>
+              This is how you'll appear to matches
+            </Text>
+            <TextInput
+              style={styles.nameInput}
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Your first name"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              autoCorrect={false}
+              autoFocus
+            />
+          </View>
+        );
+
       case "gender":
         return (
           <View style={styles.stepContent}>
@@ -417,6 +442,14 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.base,
     color: colors.textSecondary,
     marginBottom: spacing.xl,
+  },
+  nameInput: {
+    fontSize: fontSizes.xl,
+    color: colors.text,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+    paddingVertical: spacing.md,
+    marginTop: spacing.lg,
   },
   optionsColumn: {
     gap: spacing.md,

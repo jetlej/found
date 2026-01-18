@@ -1,5 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -8,14 +9,15 @@ import * as ExpoImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Animated,
+    Dimensions,
+    Image,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -51,6 +53,15 @@ export default function PhotosScreen() {
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const addPhoto = useMutation(api.photos.add);
   const removePhoto = useMutation(api.photos.remove);
+  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
+
+  // Screen ready state for smooth fade-in from splash
+  const { setReady: setScreenReady, fadeAnim } = useScreenReady();
+
+  // Mark screen as ready immediately (photos load async but we show UI right away)
+  useEffect(() => {
+    setScreenReady(true);
+  }, []);
 
   const [slots, setSlots] = useState<PhotoSlot[]>([
     { order: 0 },
@@ -60,18 +71,6 @@ export default function PhotosScreen() {
     { order: 4 },
     { order: 5 },
   ]);
-  const [hasCheckedResume, setHasCheckedResume] = useState(false);
-
-  // Check if user already has enough photos and should skip to questions
-  useEffect(() => {
-    if (existingPhotos && !hasCheckedResume) {
-      setHasCheckedResume(true);
-      if (existingPhotos.length >= 2) {
-        // User already has photos, go to questions
-        router.replace("/(onboarding)/questions");
-      }
-    }
-  }, [existingPhotos, hasCheckedResume]);
 
   // Merge existing photos into slots
   const mergedSlots = slots.map((slot) => {
@@ -178,84 +177,89 @@ export default function PhotosScreen() {
     );
   };
 
-  const handleContinue = () => {
-    router.push("/(onboarding)/questions");
+  const handleContinue = async () => {
+    if (userId) {
+      await setOnboardingStep({ clerkId: userId, step: "ai-import" });
+    }
+    router.push("/(onboarding)/ai-import");
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Add your photos</Text>
-          <Text style={styles.subtitle}>
-            Add at least 2 photos to continue. Show your personality!
+      <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Add your photos</Text>
+            <Text style={styles.subtitle}>
+              Add at least 2 photos to continue. Show your personality!
+            </Text>
+          </View>
+
+          <View style={styles.grid}>
+            {mergedSlots.map((slot) => {
+              const hasImage = slot.url || slot.localUri;
+              const isRequired = slot.order < 2;
+
+              return (
+                <Pressable
+                  key={slot.order}
+                  style={[
+                    styles.slot,
+                    isRequired && !hasImage && styles.slotRequired,
+                  ]}
+                  onPress={() => (hasImage ? null : pickImage(slot.order))}
+                >
+                  {hasImage ? (
+                    <>
+                      <Image
+                        source={{ uri: slot.localUri || slot.url }}
+                        style={styles.image}
+                      />
+                      {slot.uploading && (
+                        <View style={styles.uploadingOverlay}>
+                          <Text style={styles.uploadingText}>...</Text>
+                        </View>
+                      )}
+                      <Pressable
+                        style={styles.removeButton}
+                        onPress={() => handleRemove(slot)}
+                      >
+                        <Ionicons name="close-circle" size={24} color={colors.text} />
+                      </Pressable>
+                    </>
+                  ) : (
+                    <View style={styles.emptySlot}>
+                      <Ionicons
+                        name="add"
+                        size={32}
+                        color={isRequired ? colors.text : colors.textMuted}
+                      />
+                      {isRequired && (
+                        <Text style={styles.requiredLabel}>Required</Text>
+                      )}
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.photoCount}>
+            {filledCount} of 6 photos added
+            {filledCount < 2 && " (2 required)"}
           </Text>
         </View>
 
-        <View style={styles.grid}>
-          {mergedSlots.map((slot) => {
-            const hasImage = slot.url || slot.localUri;
-            const isRequired = slot.order < 2;
-
-            return (
-              <Pressable
-                key={slot.order}
-                style={[
-                  styles.slot,
-                  isRequired && !hasImage && styles.slotRequired,
-                ]}
-                onPress={() => (hasImage ? null : pickImage(slot.order))}
-              >
-                {hasImage ? (
-                  <>
-                    <Image
-                      source={{ uri: slot.localUri || slot.url }}
-                      style={styles.image}
-                    />
-                    {slot.uploading && (
-                      <View style={styles.uploadingOverlay}>
-                        <Text style={styles.uploadingText}>...</Text>
-                      </View>
-                    )}
-                    <Pressable
-                      style={styles.removeButton}
-                      onPress={() => handleRemove(slot)}
-                    >
-                      <Ionicons name="close-circle" size={24} color={colors.text} />
-                    </Pressable>
-                  </>
-                ) : (
-                  <View style={styles.emptySlot}>
-                    <Ionicons
-                      name="add"
-                      size={32}
-                      color={isRequired ? colors.text : colors.textMuted}
-                    />
-                    {isRequired && (
-                      <Text style={styles.requiredLabel}>Required</Text>
-                    )}
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
+        <View style={styles.footer}>
+          <Pressable
+            style={[styles.button, !isValid && styles.buttonDisabled]}
+            onPress={handleContinue}
+            disabled={!isValid}
+          >
+            <Text style={styles.buttonText}>Continue</Text>
+          </Pressable>
         </View>
-
-        <Text style={styles.photoCount}>
-          {filledCount} of 6 photos added
-          {filledCount < 2 && " (2 required)"}
-        </Text>
-      </View>
-
-      <View style={styles.footer}>
-        <Pressable
-          style={[styles.button, !isValid && styles.buttonDisabled]}
-          onPress={handleContinue}
-          disabled={!isValid}
-        >
-          <Text style={styles.buttonText}>Continue</Text>
-        </Pressable>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -264,6 +268,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  flex: {
+    flex: 1,
   },
   content: {
     flex: 1,

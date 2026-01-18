@@ -42,6 +42,7 @@ export const upsert = mutation({
     userId: v.id("users"),
     questionId: v.id("questions"),
     value: v.string(),
+    source: v.optional(v.union(v.literal("ai"), v.literal("manual"))),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -52,7 +53,12 @@ export const upsert = mutation({
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { value: args.value });
+      // When updating, also update source if provided (manual edit of AI answer)
+      const updates: { value: string; source?: "ai" | "manual" } = { value: args.value };
+      if (args.source) {
+        updates.source = args.source;
+      }
+      await ctx.db.patch(existing._id, updates);
       return existing._id;
     }
 
@@ -60,6 +66,7 @@ export const upsert = mutation({
       userId: args.userId,
       questionId: args.questionId,
       value: args.value,
+      source: args.source ?? "manual",
     });
   },
 });
@@ -68,6 +75,23 @@ export const remove = mutation({
   args: { answerId: v.id("answers") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.answerId);
+  },
+});
+
+export const clearAiAnswers = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const answers = await ctx.db
+      .query("answers")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Delete all AI-sourced answers
+    for (const answer of answers) {
+      if (answer.source === "ai") {
+        await ctx.db.delete(answer._id);
+      }
+    }
   },
 });
 

@@ -1,37 +1,37 @@
 import { ConfigContext, ExpoConfig } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-  name: "Challenger",
-  slug: "challenger",
+  name: "Found",
+  slug: "found",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
-  scheme: "challenger",
-  userInterfaceStyle: "dark",
-  backgroundColor: "#0a0a0a",
+  scheme: "found",
+  userInterfaceStyle: "light",
+  backgroundColor: "#FAFAFA",
   newArchEnabled: true,
   splash: {
-    image: "./assets/images/splash-icon.png",
-    resizeMode: "contain",
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "#FAFAFA",
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.jetlej.challenger",
+    bundleIdentifier: "com.found.app",
     appleTeamId: "34HCA7L7PV",
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "#FAFAFA",
     infoPlist: {
-      UIBackgroundModes: ["audio"],
       ITSAppUsesNonExemptEncryption: false,
+      NSLocationWhenInUseUsageDescription:
+        "Found needs your location to find matches near you.",
     },
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#0a0a0a",
+      backgroundColor: "#FAFAFA",
     },
     edgeToEdgeEnabled: true,
-    package: "com.jetlej.challenger",
+    package: "com.found.app",
+    permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
   },
   web: {
     bundler: "metro",
@@ -42,12 +42,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     [
+      "expo-location",
+      {
+        locationWhenInUsePermission:
+          "Found needs your location to find matches near you.",
+      },
+    ],
+    [
       "expo-splash-screen",
       {
-        image: "./assets/images/icon.png",
-        imageWidth: 200,
-        resizeMode: "contain",
-        backgroundColor: "#0a0a0a",
+        backgroundColor: "#FAFAFA",
       },
     ],
     [
@@ -55,14 +59,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         icon: "./assets/images/icon.png",
         color: "#ffffff",
-      },
-    ],
-    [
-      "@kingstinct/react-native-healthkit",
-      {
-        NSHealthShareUsageDescription:
-          "Allow Challenger to read your health data to automatically track your challenge progress",
-        NSHealthUpdateUsageDescription: "Allow Challenger to save health data",
       },
     ],
   ],

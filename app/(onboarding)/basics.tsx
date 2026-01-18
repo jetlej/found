@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -6,9 +7,10 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery } from "convex/react";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -48,6 +50,15 @@ export default function BasicsScreen() {
   const router = useRouter();
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
   const updateBasics = useMutation(api.users.updateBasics);
+  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
+
+  // Screen ready state for smooth fade-in from splash
+  const { setReady: setScreenReady, fadeAnim } = useScreenReady();
+
+  // Mark screen as ready immediately (no async data to load)
+  useEffect(() => {
+    setScreenReady(true);
+  }, []);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [gender, setGender] = useState<string | null>(null);
@@ -119,6 +130,7 @@ export default function BasicsScreen() {
           birthdate: birthdate.toISOString(),
           heightInches,
         });
+        await setOnboardingStep({ clerkId: userId, step: "photos" });
         router.push("/(onboarding)/photos");
       } catch (err: any) {
         setError(err.message || "Something went wrong");
@@ -309,51 +321,53 @@ export default function BasicsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.progressContainer}>
-          {STEPS.map((_, index) => (
-            <View
-              key={index}
+      <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        <View style={styles.header}>
+          <View style={styles.progressContainer}>
+            {STEPS.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.progressDot,
+                  index <= currentStep && styles.progressDotActive,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.content}>
+          {renderStepContent()}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </View>
+
+        <View style={styles.footer}>
+          <View style={styles.buttonRow}>
+            {currentStep > 0 && (
+              <Pressable style={styles.backButton} onPress={handleBack}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+            )}
+            <Pressable
               style={[
-                styles.progressDot,
-                index <= currentStep && styles.progressDotActive,
+                styles.nextButton,
+                (!canProceed() || loading) && styles.buttonDisabled,
+                currentStep === 0 && styles.nextButtonFull,
               ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.content}>
-        {renderStepContent()}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </View>
-
-      <View style={styles.footer}>
-        <View style={styles.buttonRow}>
-          {currentStep > 0 && (
-            <Pressable style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
+              onPress={handleNext}
+              disabled={!canProceed() || loading}
+            >
+              <Text style={styles.nextButtonText}>
+                {loading
+                  ? "Saving..."
+                  : currentStep === STEPS.length - 1
+                    ? "Continue"
+                    : "Next"}
+              </Text>
             </Pressable>
-          )}
-          <Pressable
-            style={[
-              styles.nextButton,
-              (!canProceed() || loading) && styles.buttonDisabled,
-              currentStep === 0 && styles.nextButtonFull,
-            ]}
-            onPress={handleNext}
-            disabled={!canProceed() || loading}
-          >
-            <Text style={styles.nextButtonText}>
-              {loading
-                ? "Saving..."
-                : currentStep === STEPS.length - 1
-                  ? "Continue"
-                  : "Next"}
-            </Text>
-          </Pressable>
+          </View>
         </View>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -362,6 +376,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  flex: {
+    flex: 1,
   },
   header: {
     paddingHorizontal: spacing.xl,

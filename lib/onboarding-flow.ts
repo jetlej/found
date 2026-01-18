@@ -1,7 +1,7 @@
 // Onboarding Flow Configuration
 // Change the order of steps here to A/B test different flows
 
-export const ONBOARDING_STEPS = ["basics", "photos", "questions"] as const;
+export const ONBOARDING_STEPS = ["basics", "photos", "ai-import", "questions"] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
@@ -9,6 +9,7 @@ export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export const STEP_ROUTES: Record<OnboardingStep, string> = {
   basics: "/(onboarding)/basics",
   photos: "/(onboarding)/photos",
+  "ai-import": "/(onboarding)/ai-import",
   questions: "/(onboarding)/questions",
 };
 

@@ -1,10 +1,10 @@
-# Mila - AI Matchmaking Dating App
+# Found - AI Matchmaking Dating App
 
 ## Project Overview
 
-Mila is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 100 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
+Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 100 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
 
-**Current Status**: Beta - Onboarding flow complete, matching features coming soon.
+**Current Status**: Beta - Onboarding flow complete with AI profile parsing. Matching features coming soon.
 
 ## Tech Stack
 
@@ -12,6 +12,7 @@ Mila is an AI matchmaking dating app for people serious about finding real partn
 - **Navigation**: Expo Router (file-based routing)
 - **Backend**: Convex (real-time database, no migrations needed)
 - **Authentication**: Clerk (phone/SMS auth)
+- **AI**: OpenAI API (gpt-4o-mini for profile parsing)
 - **Offline Storage**: MMKV v3 with Zustand persist middleware
 - **Language**: TypeScript
 - **Package Manager**: Bun
@@ -20,40 +21,62 @@ Mila is an AI matchmaking dating app for people serious about finding real partn
 
 ```
 app/                    # Expo Router screens (file-based routing)
-├── index.tsx          # Landing page (pre-auth)
-├── (auth)/            # Auth screens (sign-in, verify)
+├── index.tsx          # Landing page (pre-auth) - introduces Found concept
+├── _layout.tsx        # Root layout with AuthGate, font loading, splash screen control
+├── (auth)/            # Auth screens
+│   ├── _layout.tsx    # Auth stack layout
+│   ├── sign-in.tsx    # Phone number input
+│   └── verify.tsx     # SMS code verification
 ├── (onboarding)/      # Onboarding flow
-│   ├── basics.tsx     # Gender, location, sexuality, age, height
+│   ├── _layout.tsx    # Onboarding stack layout
+│   ├── basics.tsx     # One-per-page: gender, location, sexuality, birthday, height
 │   ├── photos.tsx     # Photo upload (6 slots, 2 required)
-│   ├── questions.tsx  # 100 questions flow
-│   └── complete.tsx   # Waitlist confirmation
+│   ├── ai-import.tsx  # Choice screen: use AI or answer manually
+│   ├── ai-paste.tsx   # AI prompt copy + JSON paste screen
+│   ├── questions.tsx  # 100 questions flow with progress bar
+│   └── complete.tsx   # Profile analysis display + waitlist screen
 ├── (tabs)/            # Main tab navigation (post-onboarding)
+│   ├── _layout.tsx    # Tab bar layout
+│   └── index.tsx      # Home screen
 └── profile.tsx        # Profile page (modal)
 
 convex/                # Convex backend
-├── schema.ts          # Database schema
-├── users.ts           # User mutations/queries
+├── schema.ts          # Database schema (users, photos, questions, answers, userProfiles)
+├── users.ts           # User mutations/queries + onboarding completion
 ├── photos.ts          # Photo upload/management
-├── questions.ts       # Question queries + seeding
-├── answers.ts         # User answer storage
-└── storage.ts         # File storage
+├── questions.ts       # Question queries
+├── seedQuestions.ts   # 100 questions seed data + seed mutation
+├── answers.ts         # User answer storage + internal query for AI parsing
+├── userProfiles.ts    # Structured profile data queries/mutations
+├── matching.ts        # Compatibility scoring algorithm
+├── storage.ts         # File storage URL generation
+├── lib/
+│   ├── openai.ts      # OpenAI client wrapper with retry logic
+│   └── prompts.ts     # AI extraction prompt templates
+└── actions/
+    └── parseProfile.ts # Background action to parse answers into structured data
 
 components/            # Reusable components
-├── ProgressBar.tsx    # Progress indicator for questions
-├── QuestionCard.tsx   # Renders different question types
-├── AvatarPicker.tsx   # Avatar display + upload
+├── ProgressBar.tsx    # Progress indicator: category name (X/Y), overall progress bar, "X of 100"
+├── QuestionCard.tsx   # Renders different question types (multiple_choice, text, essay, scale)
+├── AvatarPicker.tsx   # Avatar display + upload with cropping
 └── OfflineBanner.tsx  # Shows when device is offline
 
 lib/                   # Utilities
-├── theme.ts           # Light theme colors + typography
-├── onboarding-flow.ts # Configurable onboarding step order
+├── theme.ts           # Light theme colors + typography (fonts, fontSizes, spacing, colors)
+├── onboarding-flow.ts # Configurable onboarding step order for A/B testing
+├── ai-import.ts       # AI prompt generation and JSON response parsing
 ├── clerk.tsx          # Clerk auth provider
 ├── convex.tsx         # Convex client provider
+├── media.ts           # Image picker utilities
+├── avatar.ts          # Avatar upload helpers
+├── token-cache.ts     # Clerk token caching
 └── offline-auth.ts    # Cached auth state
 
 hooks/                 # Custom React hooks
 ├── useOfflineSync.ts  # Network detection
-└── usePushNotifications.ts # Push notification setup
+├── usePushNotifications.ts # Push notification setup
+└── useScreenReady.ts  # Splash screen control + fade-in animation for first screen
 
 stores/                # Zustand stores
 └── offline.ts         # Offline state + user caching
@@ -65,7 +88,7 @@ stores/                # Zustand stores
 
 - **Light theme only** - Clean, elegant aesthetic
 - Inline StyleSheet.create() at bottom of each file
-- Import colors from `@/lib/theme`
+- Import colors, fonts, fontSizes, spacing from `@/lib/theme`
 - Typography: System sans-serif for body, Cormorant (serif) for headings
 - Color palette (from `lib/theme.ts`):
   - Background: `#FAFAFA`
@@ -81,16 +104,18 @@ stores/                # Zustand stores
 ### Fonts
 
 - Body text: System font (clean sans-serif)
-- Headings: `Cormorant-Medium`, `Cormorant-Bold`, `Cormorant-MediumItalic`
-- Loaded via `@expo-google-fonts/cormorant`
+- Headings: `Cormorant_500Medium`, `Cormorant_700Bold`, `Cormorant_500Medium_Italic`
+- Loaded via `@expo-google-fonts/cormorant` in `app/_layout.tsx`
+- Access via `fonts.serif`, `fonts.serifBold`, `fonts.serifItalic` from theme
 
 ### Navigation
 
-- Use `router.replace()` for auth redirects
-- Use `router.push()` for normal navigation
-- Use `router.back()` for back navigation
+- Use `router.replace()` for auth redirects and when navigation history may be empty
+- Use `router.push()` for normal navigation within a flow
+- Use `router.back()` only when certain there's navigation history
 - Auth flow handled in `app/_layout.tsx` via AuthGate component
-- Onboarding flow order configurable in `lib/onboarding-flow.ts`
+- Onboarding uses `router.replace()` for back navigation to avoid errors when history is empty
+- Onboarding step saved to database (`onboardingStep` field) for resume on app restart
 
 ### Data Fetching (Convex)
 
@@ -110,31 +135,39 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `multiple_choice`: Radio button selection from options array
 - `text`: Single-line text input
 - `essay`: Multi-line textarea for longer responses
-- `scale`: Slider from min to max (default 1-10) with optional labels
+- `scale`: Slider from min to max with optional labels (uses `@react-native-community/slider`)
+  - Auto-populates default middle value so Next button is enabled immediately
+  - Shows `scaleMaxLabel`/`scaleMinLabel` when at max/min values
+  - Uses local state during drag to prevent glitchy snapping behavior
 
 ### Photo Upload
 
 - 6-slot grid layout, first 2 required
-- Uses `react-native-image-crop-picker` for cropping
+- Uses `react-native-image-crop-picker` for cropping (native) or `expo-image-picker` (web fallback)
 - Upload flow: pick → crop → upload to Convex storage → save to photos table
 - Photos stored with `order` field (0-5) for display order
+
+---
 
 ## Database Schema (Convex)
 
 ### users
-- `clerkId`: string (indexed)
-- `phone`: string
+- `clerkId`: string (indexed by `by_clerk_id`)
+- `phone`: string (indexed by `by_phone`)
 - `name`: string (optional)
 - `avatarUrl`: string (optional)
-- `gender`: string (optional)
-- `location`: string (optional)
-- `sexuality`: string (optional)
+- `gender`: string (optional) - "Man", "Woman", "Non-binary"
+- `location`: string (optional) - Auto-detected city/state
+- `sexuality`: string (optional) - "Men", "Women", "Everyone"
 - `birthdate`: string (optional, ISO date)
 - `heightInches`: number (optional)
 - `onboardingComplete`: boolean (optional)
+- `onboardingStep`: string (optional) - Current step for resume: "basics", "photos", "ai-import", "questions", "complete"
 - `waitlistPosition`: number (optional)
 - `pushToken`: string (optional)
 - `notificationsEnabled`: boolean (optional)
+- `reminderHour`: number (optional)
+- `reminderMinute`: number (optional)
 
 ### photos
 - `userId`: Id<"users">
@@ -148,7 +181,7 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `text`: string
 - `type`: "multiple_choice" | "text" | "essay" | "scale"
 - `options`: string[] (optional, for multiple_choice)
-- `category`: string (optional)
+- `category`: string (optional) - 12 categories total
 - `scaleMin`, `scaleMax`: number (optional, for scale)
 - `scaleMinLabel`, `scaleMaxLabel`: string (optional)
 - Index: `by_order`
@@ -157,43 +190,204 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `userId`: Id<"users">
 - `questionId`: Id<"questions">
 - `value`: string
+- `source`: "ai" | "manual" (optional) - Tracks whether answer came from AI import or manual entry
 - Indexes: `by_user`, `by_user_question`
 
-## Seeding Questions
+### userProfiles (AI-extracted structured data)
+- `userId`: Id<"users"> (indexed by `by_user`)
+- `values`: string[] - Core values extracted from essays (e.g., ["honesty", "family", "growth"])
+- `interests`: string[] - Hobbies and interests (e.g., ["hiking", "cooking", "travel"])
+- `dealbreakers`: string[] - Non-negotiables (e.g., ["smoking", "no kids"])
+- `traits`: object
+  - `introversion`: number (1-10, 1=extrovert, 10=introvert)
+  - `adventurousness`: number (1-10)
+  - `ambition`: number (1-10)
+  - `emotionalOpenness`: number (1-10)
+  - `traditionalValues`: number (1-10)
+  - `independenceNeed`: number (1-10)
+- `relationshipStyle`: object
+  - `loveLanguage`: string (from Q64)
+  - `conflictStyle`: string (from Q53)
+  - `communicationFrequency`: string (from Q57)
+  - `financialApproach`: string (from Q67)
+  - `aloneTimeNeed`: number (from Q63)
+- `familyPlans`: object
+  - `wantsKids`: string ("yes", "no", "maybe", "already_has", "open")
+  - `kidsTimeline`: string (optional)
+  - `familyCloseness`: number (from Q71)
+  - `parentingStyle`: string (optional)
+- `lifestyle`: object
+  - `sleepSchedule`: string (from Q32)
+  - `exerciseLevel`: string (from Q24)
+  - `dietType`: string (optional, extracted from Q28)
+  - `alcoholUse`: string (from Q29)
+  - `drugUse`: string (from Q31)
+  - `petPreference`: string (extracted from Q23)
+  - `locationPreference`: string ("city", "suburb", "rural", "flexible")
+- `keywords`: string[] - Combined searchable keywords (15-25)
+- `processedAt`: number (timestamp)
+- `openaiModel`: string (e.g., "gpt-4o-mini")
+- `confidence`: number (0-1 confidence score)
 
-Questions must be seeded before the app works. Use the `questions.seed` mutation:
+---
 
+## Question Categories (12 total, 100 questions)
+
+1. **Basic Traits** (Q1-12): Commitment level, ethnicity, career, kids, politics, religion
+2. **Core Values** (Q13-20): Values, integrity, self-improvement, honesty
+3. **Lifestyle & Health** (Q21-35): Pets, exercise, diet, alcohol, drugs, sleep, health
+4. **Your Life Story** (Q36-45): Location preferences, dreams, fears, hardships, formative experiences
+5. **Social Life** (Q46-52): Social style, weekends, friend dynamics
+6. **Communication Style** (Q53-60): Conflict handling, affection, texting, apologies
+7. **Relationship Expectations** (Q61-70): Goals, ideal relationship, love language, finances, dealbreakers
+8. **Family & Kids** (Q71-78): Family closeness, parenting style, traditions
+9. **Intimacy** (Q79-84): Physical intimacy importance, PDA, emotional connection
+10. **Love Philosophy** (Q85-90): Soulmates, love definition, relationship advice
+11. **Leisure & Quirks** (Q91-95): Hobbies, music, media, quirks
+12. **Final Thoughts** (Q96-100): Non-negotiables, passions, motivations
+
+---
+
+## AI Profile Parsing System
+
+### Overview
+After a user completes all 100 questions, a background Convex action parses their answers using OpenAI to extract structured data for efficient compatibility matching.
+
+### Architecture Flow
+1. User completes onboarding → `completeOnboarding` mutation runs
+2. Mutation schedules `parseUserProfile` action via `ctx.scheduler.runAfter(0, ...)`
+3. Action fetches all answers with question details
+4. Action batches answers by category and runs 5 parallel OpenAI extractions:
+   - Values/Interests/Dealbreakers extraction
+   - Personality traits scoring (6 dimensions, 1-10 scale)
+   - Family plans extraction
+   - Lifestyle preferences extraction
+   - Keywords extraction
+5. Results combined with structured answers (multiple_choice, scale) from database
+6. Complete profile saved to `userProfiles` table
+
+### OpenAI Integration (`convex/lib/openai.ts`)
+- Lazy-initialized client using `OPENAI_API_KEY` environment variable
+- Default model: `gpt-4o-mini` (cost-efficient, ~$0.01-0.02 per user)
+- Retry logic with exponential backoff (3 retries)
+- JSON response format enforced
+- Error handling for rate limits, auth errors, parsing failures
+
+### Prompt Templates (`convex/lib/prompts.ts`)
+- `VALUES_INTERESTS_PROMPT`: Extracts values (max 10), interests (max 15), dealbreakers (max 5)
+- `PERSONALITY_TRAITS_PROMPT`: Rates 6 personality dimensions on 1-10 scale
+- `FAMILY_PLANS_PROMPT`: Extracts kids preference, timeline, parenting style
+- `LIFESTYLE_PROMPT`: Extracts diet, pet preference, location preference
+- `KEYWORDS_PROMPT`: Generates 15-25 searchable keywords
+- `CONFIDENCE_PROMPT`: Rates extraction confidence (0-1)
+
+### Question Groups for Extraction
 ```typescript
-// Example: Seed via Convex dashboard or script
-await ctx.runMutation(api.questions.seed, {
-  questions: [
-    {
-      order: 1,
-      text: "What does a perfect Sunday look like for you?",
-      type: "essay",
-      category: "Lifestyle",
-    },
-    {
-      order: 2,
-      text: "How important is physical fitness to you?",
-      type: "scale",
-      scaleMin: 1,
-      scaleMax: 10,
-      scaleMinLabel: "Not important",
-      scaleMaxLabel: "Very important",
-      category: "Lifestyle",
-    },
-    // ... 98 more questions
-  ],
-});
+EXTRACTION_QUESTION_GROUPS = {
+  valuesInterests: [4, 12, 13, 15, 16, 17, 18, 19, 25, 28, 40, 42, 48, 49, 52, 91, 92, 93, 94, 97, 98],
+  personalityTraits: [12, 13, 17, 18, 19, 40, 41, 43, 44, 45, 46, 48, 49, 50, 52, 54, 55, 58, 59, 60, 62, 68, 69, 70, 83, 84, 86, 87, 90, 94],
+  familyPlans: [72, 75, 76, 77, 78],
+  lifestyle: [23, 25, 28, 35, 39],
+  dealbreakers: [19, 50, 65, 96],
+  allOpenEnded: [2, 3, 4, 11, 12, 13, 15, 16, 17, 18, 19, 23, 25, 28, 35, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 52, 54, 55, 58, 59, 60, 62, 65, 66, 68, 69, 70, 72, 75, 76, 77, 78, 81, 83, 84, 86, 87, 88, 89, 90, 91, 92, 93, 94, 96, 97, 98, 99, 100],
+}
 ```
+
+---
+
+## Compatibility Scoring Algorithm (`convex/matching.ts`)
+
+### Weighted Scoring (total = 100%)
+- **Values alignment**: 25% - Jaccard similarity of values arrays
+- **Lifestyle compatibility**: 20% - Sleep, exercise, alcohol, drugs, location, pets
+- **Relationship style match**: 20% - Love language, conflict style, communication, finances, alone time
+- **Family plans alignment**: 15% - Kids preference (with compatibility matrix), family closeness
+- **Interest overlap**: 10% - Jaccard similarity of interests arrays
+- **Personality complementarity**: 10% - Similarity across 6 trait dimensions
+
+### Scoring Functions
+- `calculateArrayOverlap()`: Jaccard similarity for string arrays
+- `calculateNumericSimilarity()`: Normalized difference for 1-10 scales
+- `calculateCompatibility()`: Returns 0-100 score with detailed breakdown
+
+### Kids Compatibility Matrix
+```typescript
+// yes + yes = 1.0, yes + no = 0.1, maybe + maybe = 0.8, etc.
+kidsCompatibility = {
+  yes: { yes: 1, maybe: 0.7, open: 0.8, no: 0.1, already_has: 0.8, unknown: 0.5 },
+  no: { no: 1, maybe: 0.4, open: 0.5, yes: 0.1, already_has: 0.2, unknown: 0.5 },
+  // ... etc
+}
+```
+
+---
+
+## Onboarding Flow Details
+
+### Basics Screen (`app/(onboarding)/basics.tsx`)
+- **One question per page** with back/next navigation
+- **Step 1 - Gender**: "Man", "Woman", "Non-binary" options
+- **Step 2 - Interested In**: "Men", "Women", "Everyone" options
+- **Step 3 - Location**: "Enable Location" button using `expo-location`, auto-detects city/state
+- **Step 4 - Birthday**: `@react-native-community/datetimepicker`, shows calculated age, 18+ note
+- **Step 5 - Height**: Slider in feet/inches format
+
+### Photos Screen (`app/(onboarding)/photos.tsx`)
+- 6-slot grid, first 2 marked "Required"
+- Uses `react-native-image-crop-picker` with 1:1 aspect ratio
+- Saves `onboardingStep: "ai-import"` when continuing
+
+### AI Import Screen (`app/(onboarding)/ai-import.tsx`)
+- Choice screen: "Use AI to help answer" or "Answer manually"
+- If AI: copies prompt to clipboard, navigates to ai-paste screen
+- If manual: clears any AI answers, navigates to questions screen
+- Back button goes to photos screen
+
+### AI Paste Screen (`app/(onboarding)/ai-paste.tsx`)
+- Step 1: "Copy Prompt" button (shows "Prompt Copied" temporarily)
+- Step 2: Paste JSON response from ChatGPT/Claude
+- Fixed-height scrollable text input for JSON
+- Parses JSON, saves answers with `source: "ai"` to database
+- Shows success screen with count of imported answers
+- Saves `onboardingStep: "questions"` when continuing
+
+### Questions Screen (`app/(onboarding)/questions.tsx`)
+- One question per page with progress bar
+- Progress bar shows: category name with position (e.g., "Basic Traits (1/12)"), overall progress "X of 100"
+- Progress bar fills based on overall question count, not category
+- Auto-saves answers with `source: "manual"` on change
+- Scale questions auto-populate default value so Next button is enabled
+- Resumes at correct question on app reopen (tracks AI vs manual answers)
+- First question shows tip: "Your progress is saved automatically"
+- Back on first question shows confirmation modal if AI answers exist
+- After all questions: prompts to review AI answers or skip to completion
+
+### Complete Screen (`app/(onboarding)/complete.tsx`)
+- **Two-screen flow**:
+  1. **Profile Analysis Screen**: Shows AI-parsed profile data with Continue button
+     - Values (blue tags), Interests (green tags), Dealbreakers (red tags)
+     - Personality trait sliders (6 dimensions)
+     - Relationship style, Family plans, Lifestyle info grids
+     - Keywords tags
+     - Loading state while AI processes
+  2. **Waitlist Screen**: Shows position number, "coming soon" message, back button to profile
+
+---
 
 ## Environment Variables
 
+### Local (.env.local)
 ```
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
 EXPO_PUBLIC_CONVEX_URL=https://xxx.convex.cloud
 ```
+
+### Convex Environment (set via `bunx convex env set`)
+```
+OPENAI_API_KEY=sk-xxx
+```
+
+---
 
 ## Running the App
 
@@ -201,8 +395,14 @@ EXPO_PUBLIC_CONVEX_URL=https://xxx.convex.cloud
 # Install dependencies
 bun install
 
+# Set OpenAI API key in Convex
+bunx convex env set OPENAI_API_KEY sk-your-key-here
+
 # Start Convex dev server (keep running in separate terminal)
 bunx convex dev
+
+# Seed questions (run once)
+bunx convex run seedQuestions:seedQuestions
 
 # Start Expo
 bun start
@@ -210,50 +410,56 @@ bun start
 # Press 'i' for iOS simulator
 ```
 
+---
+
 ## Important Notes
 
-- **Development build required** for native modules
+- **Development build required** for native modules (image picker, slider)
 - iOS-first but works on Android
 - Convex handles all real-time sync automatically
 - Questions must be seeded before onboarding works
+- OpenAI API key must be set in Convex environment for profile parsing
+- Profile parsing runs automatically after onboarding completion
+- **Splash screen control**: Stays visible until routing is determined and first screen data is loaded
+- **Screen transitions**: First screen fades in smoothly using `useScreenReady` hook
+- **Onboarding resume**: Uses `onboardingStep` field in database to resume at correct step on app restart
+
+---
+
+## Implemented Features
+
+### ChatGPT/Claude Question Import Flow (IMPLEMENTED)
+
+**Purpose**: Let users skip manually answering questions that ChatGPT/Claude already knows about them from their conversation history.
+
+**User Flow**:
+1. After photos, user sees choice screen (`ai-import.tsx`):
+   - "Use AI to help answer" - copies prompt, goes to paste screen
+   - "Answer manually" - goes directly to questions
+2. AI paste screen (`ai-paste.tsx`):
+   - "Copy Prompt" button copies detailed prompt with all 100 questions
+   - Prompt instructs AI to give verbose answers (2-4 sentences for text/essay)
+   - User pastes JSON response into fixed-height scrollable text area
+   - "Import Answers" parses JSON and saves to database with `source: "ai"`
+3. Success screen shows count: "X of 100 questions answered!"
+4. Questions screen shows only unanswered questions
+5. After all questions answered, modal asks: "Review AI answers?"
+   - Yes: review each AI answer one by one, can edit
+   - No: skip to completion
+6. Back on first question shows confirmation: "Clear AI answers and go back?"
+
+**Technical Implementation**:
+- `lib/ai-import.ts`: `generateAIPrompt()` and `parseAIResponse()` functions
+- Answers stored with `source: "ai"` or `source: "manual"` field
+- Session AI answers tracked in MMKV for current session review flow
+- Database `source` field persists across app restarts
+- `clearAiAnswers` mutation deletes all AI-sourced answers for user
 
 ---
 
 ## Coming Soon Features
 
-These features are planned but not yet implemented. This documentation captures the full product vision.
-
----
-
-### ChatGPT Question Import Flow
-
-**Purpose**: Let users skip manually answering questions that ChatGPT already knows about them from their conversation history.
-
-**User Flow**:
-1. After basic info + photos, user sees two options:
-   - "Answer questions manually"
-   - "Let ChatGPT help answer for you"
-2. If they choose ChatGPT option, show explanation screen:
-   - "Copy this prompt into ChatGPT"
-   - "ChatGPT will only answer questions it's confident about"
-   - "Review the answers before pasting - edit anything you want to change"
-3. User taps "Copy Prompt" button - copies a prompt containing:
-   - Instructions for ChatGPT to answer only questions it knows with HIGH CERTAINTY
-   - All 100 questions in a structured format
-   - Instructions to return answers as JSON for easy parsing
-4. User goes to ChatGPT, pastes prompt, gets JSON response
-5. User returns to app, taps "Paste Answers"
-6. App parses JSON and shows: "ChatGPT answered X of 100 questions!"
-7. App then runs user through ONLY the unanswered questions (one per page)
-8. After completing remaining questions, OPTIONAL step:
-   - "Want to review the AI-answered questions?"
-   - If yes: show each AI-answered question one by one, user can edit or confirm
-   - If no: skip straight to completion
-
-**Technical Notes**:
-- JSON format should include question ID and answer value
-- Handle malformed JSON gracefully with error message
-- Store which answers came from AI vs manual (for analytics)
+These features are planned but not yet implemented.
 
 ---
 
@@ -372,58 +578,3 @@ These features are planned but not yet implemented. This documentation captures 
 - Location-based restaurant selection
 - Push notifications for match alerts and date reminders
 - Handle edge cases: restaurant fully booked, user cancels, etc.
-
----
-
-### Answer Parsing & Structured Data Extraction
-
-**Purpose**: Convert free-form essay answers into structured data for efficient matching. Avoids expensive AI calls comparing full essays for every potential match.
-
-**Problem Being Solved**:
-- Many questions have open-ended essay answers
-- Comparing User A's essays to User B's essays for compatibility = expensive
-- With thousands of users, this doesn't scale
-- Need structured data for fast compatibility scoring
-
-**How It Works**:
-1. After user completes all 100 questions, run AI parsing job
-2. AI reads through all their answers (especially essays)
-3. AI extracts structured data into predefined categories
-
-**Example - Spirituality Question**:
-- User writes: "I was raised Catholic but I'm not practicing anymore. I'd say I'm spiritual but not religious. I meditate and believe in something bigger than us, but I don't go to church. I'd want to raise my kids with some moral framework but not strict religion."
-- AI extracts:
-  - `religious_background`: "Catholic"
-  - `current_practice`: "spiritual_not_religious"
-  - `importance_level`: 3/10 (low-medium)
-  - `practices`: ["meditation"]
-  - `kids_religion_preference`: "flexible_moral_framework"
-  - `dealbreaker`: false
-
-**Categories to Extract** (examples):
-- Religion/spirituality (belief, practice level, importance, dealbreaker?)
-- Political views (leaning, importance, dealbreaker?)
-- Kids (wants them?, timeline, dealbreaker?)
-- Marriage (views on, timeline)
-- Lifestyle (introvert/extrovert, homebody/adventurer, etc.)
-- Career ambition level
-- Family closeness
-- Communication style
-- Conflict resolution style
-- Love languages
-- Dealbreakers (explicit list)
-- Interests/hobbies (tagged list)
-- Values (ranked list)
-
-**Matching Algorithm Uses**:
-- First pass: filter by dealbreakers (fast, structured)
-- Second pass: compatibility score from structured data (fast)
-- Third pass: AI reads relevant essays for nuance (only for top candidates)
-- This makes matching scalable
-
-**Technical Notes**:
-- Run parsing as background job after onboarding complete
-- Store structured data in separate table/fields
-- Re-run parsing if user updates answers
-- Need schema for all structured fields
-- Consider confidence scores for extracted data

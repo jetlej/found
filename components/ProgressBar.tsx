@@ -2,30 +2,39 @@ import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { StyleSheet, Text, View } from "react-native";
 
 interface ProgressBarProps {
-  current: number;
-  total: number;
-  category?: string;
-  categoryProgress?: number; // 0-1 progress within category
+  current: number; // Current question number (1-100)
+  total: number; // Total questions (100)
+  category?: string; // Category name
+  categoryPosition?: number; // Position within category (1-based)
+  categoryTotal?: number; // Total questions in category
 }
 
 export function ProgressBar({
   current,
   total,
   category,
-  categoryProgress,
+  categoryPosition,
+  categoryTotal,
 }: ProgressBarProps) {
-  // If category progress is provided, use it; otherwise fall back to overall progress
-  const progress = categoryProgress ?? Math.min(current / total, 1);
+  // Progress bar shows overall progress (X/100)
+  const progress = Math.min(current / total, 1);
 
   return (
     <View style={styles.container}>
-      {category && <Text style={styles.category}>{category}</Text>}
+      <View style={styles.header}>
+        {category && (
+          <View style={styles.categoryRow}>
+            <Text style={styles.category}>{category}</Text>
+            {categoryPosition && categoryTotal && (
+              <Text style={styles.categoryCount}> ({categoryPosition}/{categoryTotal})</Text>
+            )}
+          </View>
+        )}
+        <Text style={styles.overallCount}>{current} of {total}</Text>
+      </View>
       <View style={styles.barContainer}>
         <View style={[styles.barFill, { width: `${progress * 100}%` }]} />
       </View>
-      <Text style={styles.label}>
-        {current} of {total}
-      </Text>
     </View>
   );
 }
@@ -34,10 +43,27 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.sm,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
   category: {
     fontFamily: fonts.serif,
-    fontSize: fontSizes.lg,
+    fontSize: fontSizes.base,
     color: colors.text,
+  },
+  categoryCount: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
+  overallCount: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
   },
   barContainer: {
     height: 4,
@@ -49,9 +75,5 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: colors.primary,
     borderRadius: 2,
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
   },
 });

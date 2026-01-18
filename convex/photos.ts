@@ -11,6 +11,17 @@ export const getByUser = query({
   },
 });
 
+export const countByUser = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const photos = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    return photos.length;
+  },
+});
+
 export const add = mutation({
   args: {
     userId: v.id("users"),

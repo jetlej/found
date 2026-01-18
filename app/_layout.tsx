@@ -39,7 +39,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from "react-native";
 import "react-native-reanimated";
 
@@ -60,14 +60,18 @@ function getOnboardingRoute(user: any): string {
     return "/(onboarding)/basics";
   }
 
-  // Check if basics are complete (all required fields filled)
+  // Use saved onboarding step if available
+  if (user.onboardingStep) {
+    return `/(onboarding)/${user.onboardingStep}`;
+  }
+
+  // Fallback: check if basics are complete
   const basicsComplete = user.gender && user.sexuality && user.location && user.birthdate && user.heightInches;
   if (!basicsComplete) {
     return "/(onboarding)/basics";
   }
 
-  // If basics done, go to photos (photos screen will check if photos are done and redirect to questions)
-  // The photos and questions screens handle their own "resume" logic
+  // Default to photos if no step saved but basics done
   return "/(onboarding)/photos";
 }
 
@@ -158,6 +162,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useOfflineSync();
   usePushNotifications();
 
+  // Track if we've completed initial routing
+  const [hasRouted, setHasRouted] = useState(false);
+
   useEffect(() => {
     // Wait for auth and navigation to be ready
     // When offline, we can proceed with cached auth
@@ -173,6 +180,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (!inAuthGroup && !onLandingPage) {
         router.replace("/");
       }
+      setHasRouted(true);
     } else {
       // Signed in - check if user needs onboarding
       if (inAuthGroup || onLandingPage) {
@@ -187,25 +195,32 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           } else {
             router.replace("/(onboarding)/basics");
           }
+          setHasRouted(true);
         } else if (currentUser === undefined && isOnline) {
-          // Still loading user data
+          // Still loading user data - don't mark as routed yet
           return;
         } else if (!userData?.onboardingComplete) {
           // Determine which onboarding step to resume from
           const onboardingRoute = getOnboardingRoute(currentUser);
           router.replace(onboardingRoute);
+          setHasRouted(true);
         } else {
           router.replace("/(tabs)");
+          setHasRouted(true);
         }
-      } else if (
-        !inOnboarding &&
-        isOnline &&
-        currentUser !== undefined &&
-        !currentUser?.onboardingComplete
-      ) {
-        // Signed in but onboarding not complete - redirect to appropriate step
-        const onboardingRoute = getOnboardingRoute(currentUser);
-        router.replace(onboardingRoute);
+      } else {
+        // Already on a valid screen
+        if (
+          !inOnboarding &&
+          isOnline &&
+          currentUser !== undefined &&
+          !currentUser?.onboardingComplete
+        ) {
+          // Signed in but onboarding not complete - redirect to appropriate step
+          const onboardingRoute = getOnboardingRoute(currentUser);
+          router.replace(onboardingRoute);
+        }
+        setHasRouted(true);
       }
     }
   }, [
@@ -219,8 +234,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     cachedUser,
   ]);
 
-  // Show nothing until we know auth state (either from Clerk or cache)
-  if (!isLoaded && !offlineAuthLoaded) {
+  // Note: We don't hide splash screen here anymore.
+  // Individual screens use useScreenReady() hook to hide splash when their data is ready.
+
+  // Show nothing (keep splash screen visible) until routing is complete
+  // This prevents any flash of wrong screens
+  if (!hasRouted) {
     if (timedOut) {
       return (
         <View style={styles.errorContainer}>
@@ -232,20 +251,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         </View>
       );
     }
-    return null;
-  }
-  if (isOnline && !isLoaded) {
-    if (timedOut) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Auth Loading Failed</Text>
-          <Text style={styles.errorText}>
-            Clerk didn't initialize. Check your production instance
-            configuration.
-          </Text>
-        </View>
-      );
-    }
+    // Return null to keep native splash screen visible
     return null;
   }
 
@@ -285,11 +291,8 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+  // Note: We don't hide splash screen here anymore.
+  // AuthGate will hide it once routing is determined.
 
   // Show custom splash while fonts load (uses system serif as fallback)
   if (!loaded) {

@@ -1,6 +1,6 @@
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import Slider from "@react-native-community/slider";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -29,6 +29,16 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
+  // Local state for slider to show value while dragging
+  const [sliderValue, setSliderValue] = useState<number | null>(null);
+  const isSliding = useRef(false);
+
+  // Reset local slider value when question changes
+  useEffect(() => {
+    setSliderValue(null);
+    isSliding.current = false;
+  }, [question._id]);
+
   const renderInput = () => {
     switch (question.type) {
       case "multiple_choice":
@@ -89,7 +99,16 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
       case "scale":
         const min = question.scaleMin ?? 1;
         const max = question.scaleMax ?? 10;
-        const numValue = value ? parseInt(value, 10) : Math.floor((min + max) / 2);
+        const savedValue = value ? parseInt(value, 10) : null;
+        const displayValue = sliderValue ?? savedValue ?? Math.floor((min + max) / 2);
+
+        // Show the label text if at min/max and labels exist
+        const displayText =
+          displayValue === max && question.scaleMaxLabel
+            ? question.scaleMaxLabel
+            : displayValue === min && question.scaleMinLabel
+              ? question.scaleMinLabel
+              : String(displayValue);
 
         return (
           <View style={styles.scaleContainer}>
@@ -97,7 +116,7 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
               <Text style={styles.scaleLabel}>
                 {question.scaleMinLabel || min}
               </Text>
-              <Text style={styles.scaleValue}>{numValue}</Text>
+              <Text style={styles.scaleValue}>{displayText}</Text>
               <Text style={styles.scaleLabel}>
                 {question.scaleMaxLabel || max}
               </Text>
@@ -107,8 +126,22 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
               minimumValue={min}
               maximumValue={max}
               step={1}
-              value={numValue}
-              onValueChange={(v) => onChange(String(Math.round(v)))}
+              value={displayValue}
+              onSlidingStart={() => {
+                isSliding.current = true;
+              }}
+              onValueChange={(v) => {
+                if (isSliding.current) {
+                  setSliderValue(Math.round(v));
+                }
+              }}
+              onSlidingComplete={(v) => {
+                const rounded = Math.round(v);
+                isSliding.current = false;
+                // Keep the local value set to prevent jump-back glitch
+                setSliderValue(rounded);
+                onChange(String(rounded));
+              }}
               minimumTrackTintColor={colors.primary}
               maximumTrackTintColor={colors.border}
               thumbTintColor={colors.primary}

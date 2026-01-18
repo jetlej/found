@@ -5,13 +5,13 @@ import { useOfflineStore } from "@/stores/offline";
 import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
-    withDelay,
-    withTiming,
+    withTiming
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,7 +22,9 @@ export default function HomeScreen() {
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
   useEffect(() => {
-    fadeOpacity.value = withDelay(200, withTiming(1, { duration: 500 }));
+    // Hide splash screen and start fade-in
+    SplashScreen.hideAsync();
+    fadeOpacity.value = withTiming(1, { duration: 350 });
   }, []);
 
   const { isOnline, setOnline, cachedUser, setCachedUser } = useOfflineStore();

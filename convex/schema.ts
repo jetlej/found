@@ -18,6 +18,7 @@ export default defineSchema({
     birthdate: v.optional(v.string()), // ISO date string
     heightInches: v.optional(v.number()),
     // Onboarding state
+    onboardingStep: v.optional(v.string()), // "basics", "photos", "ai-import", "questions", "complete"
     onboardingComplete: v.optional(v.boolean()),
     waitlistPosition: v.optional(v.number()),
   })
@@ -52,6 +53,7 @@ export default defineSchema({
     userId: v.id("users"),
     questionId: v.id("questions"),
     value: v.string(), // JSON string for complex answers, plain string for simple
+    source: v.optional(v.union(v.literal("ai"), v.literal("manual"))), // Who provided this answer
   })
     .index("by_user", ["userId"])
     .index("by_user_question", ["userId", "questionId"]),

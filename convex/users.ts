@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 
 export const getOrCreate = mutation({
@@ -142,6 +143,13 @@ export const completeOnboarding = mutation({
       onboardingComplete: true,
       waitlistPosition: completedUsers.length + 1,
     });
+
+    // Schedule AI profile parsing in the background
+    await ctx.scheduler.runAfter(
+      0, // Run immediately
+      internal.actions.parseProfile.parseUserProfile,
+      { userId: user._id }
+    );
 
     return completedUsers.length + 1;
   },

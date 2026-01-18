@@ -55,4 +55,60 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_question", ["userId", "questionId"]),
+
+  // Structured profile data extracted from answers via AI
+  userProfiles: defineTable({
+    userId: v.id("users"),
+
+    // Extracted from essays - stored as structured data
+    values: v.array(v.string()), // ["honesty", "family", "growth", "adventure"]
+    interests: v.array(v.string()), // ["hiking", "cooking", "reading", "travel"]
+    dealbreakers: v.array(v.string()), // ["smoking", "no kids", "long distance"]
+
+    // Personality traits (1-10 scales derived from answers)
+    traits: v.object({
+      introversion: v.number(), // 1=extrovert, 10=introvert
+      adventurousness: v.number(),
+      ambition: v.number(),
+      emotionalOpenness: v.number(),
+      traditionalValues: v.number(),
+      independenceNeed: v.number(),
+    }),
+
+    // Relationship style
+    relationshipStyle: v.object({
+      loveLanguage: v.string(), // from Q64
+      conflictStyle: v.string(), // from Q53
+      communicationFrequency: v.string(), // from Q57
+      financialApproach: v.string(), // from Q67
+      aloneTimeNeed: v.number(), // from Q63
+    }),
+
+    // Family & Future
+    familyPlans: v.object({
+      wantsKids: v.string(), // "yes", "no", "maybe", "already has"
+      kidsTimeline: v.optional(v.string()),
+      familyCloseness: v.number(), // from Q71
+      parentingStyle: v.optional(v.string()),
+    }),
+
+    // Lifestyle compatibility factors
+    lifestyle: v.object({
+      sleepSchedule: v.string(), // from Q32
+      exerciseLevel: v.string(), // from Q24
+      dietType: v.optional(v.string()), // extracted from Q28
+      alcoholUse: v.string(), // from Q29
+      drugUse: v.string(), // from Q31
+      petPreference: v.string(), // extracted from Q23
+      locationPreference: v.string(), // "city", "suburb", "rural", "flexible"
+    }),
+
+    // Keywords for search/display
+    keywords: v.array(v.string()), // All extracted keywords combined
+
+    // Processing metadata
+    processedAt: v.number(),
+    openaiModel: v.string(),
+    confidence: v.number(), // 0-1 confidence score
+  }).index("by_user", ["userId"]),
 });

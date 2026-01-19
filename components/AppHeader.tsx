@@ -1,0 +1,148 @@
+import { api } from "@/convex/_generated/api";
+import { MAX_LEVEL } from "@/lib/categories";
+import { colors, fontSizes, spacing } from "@/lib/theme";
+import { useFontStore } from "@/stores/fonts";
+import { useAuth } from "@clerk/clerk-expo";
+import { useQuery } from "convex/react";
+import { useRouter } from "expo-router";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+
+interface AppHeaderProps {
+  showLevelLink?: boolean; // Whether tapping level navigates to journey
+  onLogoPress?: () => void;
+}
+
+export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps) {
+  const { userId } = useAuth();
+  const router = useRouter();
+  const { nextFont, getCurrentFont } = useFontStore();
+  const currentFont = getCurrentFont();
+
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? { clerkId: userId } : "skip"
+  );
+
+  const userPhotos = useQuery(
+    api.photos.getByUser,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
+
+  const firstPhotoUrl = userPhotos
+    ?.sort((a, b) => a.order - b.order)[0]?.url || null;
+
+  const level = currentUser?.level ?? 1;
+
+  const handleLevelPress = () => {
+    if (showLevelLink) {
+      router.push("/(tabs)/journey");
+    }
+  };
+
+  const handleLogoPress = () => {
+    if (onLogoPress) {
+      onLogoPress();
+    } else {
+      nextFont();
+    }
+  };
+
+  return (
+    <View style={styles.header}>
+      <Pressable
+        style={styles.headerLeft}
+        onPress={handleLevelPress}
+        disabled={!showLevelLink}
+      >
+        <Text style={styles.levelText}>Lvl {level}/{MAX_LEVEL}</Text>
+      </Pressable>
+      <Pressable onPress={handleLogoPress} style={styles.logoPressable}>
+        <Text style={[styles.logo, { fontFamily: currentFont.bold }]}>Found</Text>
+        <Text style={styles.fontLabel}>{currentFont.name}</Text>
+      </Pressable>
+      <View style={styles.headerRight}>
+        <Pressable
+          onPress={() => router.push("/profile")}
+          style={styles.headerAvatar}
+        >
+          {firstPhotoUrl ? (
+            <Image
+              source={{ uri: firstPhotoUrl }}
+              style={styles.headerAvatarImage}
+            />
+          ) : (
+            <View style={styles.headerAvatarPlaceholder}>
+              <Text style={styles.headerAvatarInitial}>
+                {currentUser?.name?.charAt(0)?.toUpperCase() || "?"}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  headerLeft: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  headerRight: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  logo: {
+    fontSize: fontSizes["2xl"],
+    color: colors.text,
+  },
+  logoPressable: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fontLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  levelText: {
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+  },
+  headerAvatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceSecondary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerAvatarInitial: {
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
+    color: colors.text,
+  },
+});

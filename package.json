@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.14",
-    "@expo-google-fonts/cormorant": "^0.4.2",
+    "@expo-google-fonts/dev": "^0.4.45",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/datetimepicker": "^8.5.1",
     "@react-native-community/netinfo": "^11.4.1",
@@ -50,7 +50,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-compressor": "^1.13.0",
-    "react-native-draggable-flatlist": "^4.0.3",
+    "react-native-drax": "^0.10.3",
     "react-native-image-crop-picker": "^0.51.1",
     "react-native-mmkv": "3",
     "react-native-nitro-modules": "^0.32.0",

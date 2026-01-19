@@ -22,6 +22,9 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
         },
+        tabBarIconStyle: {
+          marginBottom: 4,
+        },
         headerStyle: {
           backgroundColor: colors.background,
         },
@@ -34,6 +37,14 @@ export default function TabLayout() {
           title: "Home",
           headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="journey"
+        options={{
+          title: "Journey",
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabIcon name="map" color={color} />,
         }}
       />
       <Tabs.Screen

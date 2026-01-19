@@ -18,9 +18,12 @@ export default defineSchema({
     birthdate: v.optional(v.string()), // ISO date string
     heightInches: v.optional(v.number()),
     // Onboarding state
-    onboardingStep: v.optional(v.string()), // "basics", "photos", "ai-import", "questions", "complete"
+    onboardingStep: v.optional(v.string()), // "basics", "photos"
     onboardingComplete: v.optional(v.boolean()),
     waitlistPosition: v.optional(v.number()),
+    // Level system
+    level: v.optional(v.number()), // 1-12
+    completedCategories: v.optional(v.array(v.string())), // ["basic_traits", "core_values", ...]
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_phone", ["phone"]),

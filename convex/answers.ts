@@ -37,6 +37,32 @@ export const countByUser = query({
   },
 });
 
+export const countByUserForCategory = query({
+  args: {
+    userId: v.id("users"),
+    questionOrderStart: v.number(),
+    questionOrderEnd: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Get all questions in the range
+    const questions = await ctx.db.query("questions").collect();
+    const categoryQuestionIds = new Set(
+      questions
+        .filter((q) => q.order >= args.questionOrderStart && q.order <= args.questionOrderEnd)
+        .map((q) => q._id)
+    );
+
+    // Get user's answers
+    const answers = await ctx.db
+      .query("answers")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    // Count answers that match category questions
+    return answers.filter((a) => categoryQuestionIds.has(a.questionId)).length;
+  },
+});
+
 export const upsert = mutation({
   args: {
     userId: v.id("users"),

@@ -1,17 +1,18 @@
+import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
-import { Doc, Id } from "@/convex/_generated/dataModel";
+import { Doc } from "@/convex/_generated/dataModel";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -406,10 +407,8 @@ export default function MatchesScreen() {
 
   if (!myProfile) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Compatibility</Text>
-        </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <AppHeader />
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>📊</Text>
           <Text style={styles.emptyTitle}>Profile Not Ready</Text>
@@ -423,10 +422,8 @@ export default function MatchesScreen() {
 
   if (!testUserMatches || testUserMatches.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Compatibility</Text>
-        </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <AppHeader />
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>🧪</Text>
           <Text style={styles.emptyTitle}>No Test Users</Text>
@@ -443,12 +440,7 @@ export default function MatchesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Compatibility</Text>
-        <Text style={styles.headerSubtitle}>
-          Your scores vs {testUserMatches.length} test profiles
-        </Text>
-      </View>
+      <AppHeader />
 
       <ScrollView style={styles.scrollView}>
         {/* Your profile summary */}

@@ -4,7 +4,7 @@
 
 Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 100 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
 
-**Current Status**: Beta - Onboarding flow complete with AI profile parsing. Matching features coming soon.
+**Current Status**: Beta - Gamified journey system with category-based leveling. Matching features coming soon.
 
 ## Tech Stack
 
@@ -30,14 +30,13 @@ app/                    # Expo Router screens (file-based routing)
 ├── (onboarding)/      # Onboarding flow
 │   ├── _layout.tsx    # Onboarding stack layout
 │   ├── basics.tsx     # One-per-page: gender, location, sexuality, birthday, height
-│   ├── photos.tsx     # Photo upload (6 slots, 2 required)
-│   ├── ai-import.tsx  # Choice screen: use AI or answer manually
-│   ├── ai-paste.tsx   # AI prompt copy + JSON paste screen
-│   ├── questions.tsx  # 100 questions flow with progress bar
-│   └── complete.tsx   # Profile analysis display + waitlist screen
+│   ├── photos.tsx     # Photo upload (6 slots, 2 required) → completes Level 1
+│   └── questions.tsx  # Category-based questions with progress (modal presentation)
 ├── (tabs)/            # Main tab navigation (post-onboarding)
 │   ├── _layout.tsx    # Tab bar layout
-│   └── index.tsx      # Home screen
+│   ├── index.tsx      # Home screen
+│   ├── journey.tsx    # Journey/Level progression screen
+│   └── matches.tsx    # Matches screen (placeholder)
 └── profile.tsx        # Profile page (modal)
 
 convex/                # Convex backend
@@ -57,13 +56,16 @@ convex/                # Convex backend
     └── parseProfile.ts # Background action to parse answers into structured data
 
 components/            # Reusable components
-├── ProgressBar.tsx    # Progress indicator: category name (X/Y), overall progress bar, "X of 100"
+├── AppHeader.tsx      # Shared header: Lvl X/12 | Found | Avatar (used on all tabs)
+├── JourneyPath.tsx    # Category progression UI with animated completion/unlock
+├── ProgressBar.tsx    # Simple progress bar for questions
 ├── QuestionCard.tsx   # Renders different question types (multiple_choice, text, essay, scale)
 ├── AvatarPicker.tsx   # Avatar display + upload with cropping
 └── OfflineBanner.tsx  # Shows when device is offline
 
 lib/                   # Utilities
 ├── theme.ts           # Light theme colors + typography (fonts, fontSizes, spacing, colors)
+├── categories.ts      # 12 question categories with levels, question ranges, unlock descriptions
 ├── onboarding-flow.ts # Configurable onboarding step order for A/B testing
 ├── ai-import.ts       # AI prompt generation and JSON response parsing
 ├── clerk.tsx          # Clerk auth provider
@@ -162,7 +164,9 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `birthdate`: string (optional, ISO date)
 - `heightInches`: number (optional)
 - `onboardingComplete`: boolean (optional)
-- `onboardingStep`: string (optional) - Current step for resume: "basics", "photos", "ai-import", "questions", "complete"
+- `onboardingStep`: string (optional) - Current step for resume: "basics", "photos"
+- `level`: number (optional) - 1-12, derived from completed categories
+- `completedCategories`: string[] (optional) - ["basic_traits", "core_values", ...]
 - `waitlistPosition`: number (optional)
 - `pushToken`: string (optional)
 - `notificationsEnabled`: boolean (optional)
@@ -335,42 +339,18 @@ kidsCompatibility = {
 ### Photos Screen (`app/(onboarding)/photos.tsx`)
 - 6-slot grid, first 2 marked "Required"
 - Uses `react-native-image-crop-picker` with 1:1 aspect ratio
-- Saves `onboardingStep: "ai-import"` when continuing
-
-### AI Import Screen (`app/(onboarding)/ai-import.tsx`)
-- Choice screen: "Use AI to help answer" or "Answer manually"
-- If AI: copies prompt to clipboard, navigates to ai-paste screen
-- If manual: clears any AI answers, navigates to questions screen
-- Back button goes to photos screen
-
-### AI Paste Screen (`app/(onboarding)/ai-paste.tsx`)
-- Step 1: "Copy Prompt" button (shows "Prompt Copied" temporarily)
-- Step 2: Paste JSON response from ChatGPT/Claude
-- Fixed-height scrollable text input for JSON
-- Parses JSON, saves answers with `source: "ai"` to database
-- Shows success screen with count of imported answers
-- Saves `onboardingStep: "questions"` when continuing
+- On continue: calls `completeCategory("basic_traits")` and navigates to Journey tab
 
 ### Questions Screen (`app/(onboarding)/questions.tsx`)
-- One question per page with progress bar
-- Progress bar shows: category name with position (e.g., "Basic Traits (1/12)"), overall progress "X of 100"
-- Progress bar fills based on overall question count, not category
-- Auto-saves answers with `source: "manual"` on change
+- Opens as modal from Journey screen with `categoryId` param
+- Shows category name centered with X button to close
+- Progress bar + "X/Y" count for current category only
+- One question per page, auto-saves answers on change
 - Scale questions auto-populate default value so Next button is enabled
-- Resumes at correct question on app reopen (tracks AI vs manual answers)
-- First question shows tip: "Your progress is saved automatically"
-- Back on first question shows confirmation modal if AI answers exist
-- After all questions: prompts to review AI answers or skip to completion
-
-### Complete Screen (`app/(onboarding)/complete.tsx`)
-- **Two-screen flow**:
-  1. **Profile Analysis Screen**: Shows AI-parsed profile data with Continue button
-     - Values (blue tags), Interests (green tags), Dealbreakers (red tags)
-     - Personality trait sliders (6 dimensions)
-     - Relationship style, Family plans, Lifestyle info grids
-     - Keywords tags
-     - Loading state while AI processes
-  2. **Waitlist Screen**: Shows position number, "coming soon" message, back button to profile
+- Opens to first unanswered question (or last question if all answered)
+- Completing last question triggers `completeCategory` mutation
+- Navigates back to Journey with `completed` param to trigger animation
+- Back button on first question returns to Journey (modal dismiss animation)
 
 ---
 
@@ -427,6 +407,65 @@ bun start
 ---
 
 ## Implemented Features
+
+### Journey/Level System (IMPLEMENTED)
+
+**Purpose**: Gamify the 100 questions by breaking them into 12 categories. Users progress through levels by completing categories, with each level unlocking a new compatibility score.
+
+**User Flow**:
+1. After photos, user completes Level 1 (Basic Traits) and enters the Journey
+2. Journey screen shows linear path of 12 categories with icons
+3. Categories must be completed in order
+4. Tapping a category opens the questions modal
+5. Completing all questions in a category triggers completion animation
+6. Animation shows: collapse → turn green + checkmark → next category unlocks
+7. Each level unlocks that category's compatibility score with matches
+
+**Category Progression** (`lib/categories.ts`):
+| Level | Category | Questions | Unlock |
+|-------|----------|-----------|--------|
+| 1 | Basic Traits | Q1-12 | Waitlist entry & basic matching |
+| 2 | Core Values | Q13-20 | Core Values compatibility score |
+| 3 | Lifestyle & Health | Q21-35 | Lifestyle compatibility score |
+| 4 | Your Life Story | Q36-45 | Life Story compatibility score |
+| 5 | Social Life | Q46-52 | Social compatibility score |
+| 6 | Communication Style | Q53-60 | Communication compatibility score |
+| 7 | Relationship Expectations | Q61-70 | Relationship compatibility score |
+| 8 | Family & Kids | Q71-78 | Family compatibility score |
+| 9 | Intimacy | Q79-84 | Intimacy compatibility score |
+| 10 | Love Philosophy | Q85-90 | Philosophy compatibility score |
+| 11 | Leisure & Quirks | Q91-95 | Quirks compatibility score |
+| 12 | Final Thoughts | Q96-100 | Full profile & max visibility |
+
+**UI Components**:
+- `AppHeader`: Shows "Lvl X/12" on left, "Found" center, avatar right. Tapping level navigates to Journey tab.
+- `JourneyPath`: Scrollable list of category nodes with state-based styling:
+  - **Completed**: Green border/text, checkmark, pencil icon for editing
+  - **Current**: Black border, progress bar, unlock preview
+  - **Locked**: Gray border/text, lock icon
+  - **Animating**: Animated transition from current to completed
+  - **Unlocking**: Animated transition from locked to current
+
+**Completion Animation Sequence** (using `react-native-reanimated`):
+1. **0-450ms**: Content collapses (height + opacity animate to 0)
+2. **450-750ms**: Border, icon, text turn green + checkmark bounces in + pencil fades in
+3. **850-1150ms**: Next category's lock fades, border changes to black
+4. **1150-2100ms**: Next category's content expands, progress bar fades in, then unlock preview
+5. Auto-scrolls to center the animating category on screen
+
+**Technical Implementation**:
+- `justCompletedCategoryId` param triggers animation when returning from questions
+- `getNodeState()` determines node appearance based on completedCategories and animation state
+- Content height measured via `onLayout` for smooth animations (no hardcoded heights)
+- Progress bar fill animates from 0% to actual progress
+- DEV-only: Tap "Found" title on Journey screen to reset progress for testing
+
+**Convex Mutations**:
+- `completeCategory`: Adds category to completedCategories, increments level
+- `uncompleteCategory`: Removes category (for testing)
+- `resetJourney`: Clears all progress (DEV only)
+
+---
 
 ### ChatGPT/Claude Question Import Flow (IMPLEMENTED)
 

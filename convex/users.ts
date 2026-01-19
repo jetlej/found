@@ -224,3 +224,100 @@ export const listAll = query({
     return await ctx.db.query("users").collect();
   },
 });
+
+// Complete a category and level up
+export const completeCategory = mutation({
+  args: {
+    clerkId: v.string(),
+    categoryId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return;
+
+    const completedCategories = user.completedCategories ?? [];
+    
+    // Don't add if already completed
+    if (completedCategories.includes(args.categoryId)) {
+      return { level: user.level ?? 1, completedCategories };
+    }
+
+    const newCompletedCategories = [...completedCategories, args.categoryId];
+    const newLevel = newCompletedCategories.length;
+
+    await ctx.db.patch(user._id, {
+      completedCategories: newCompletedCategories,
+      level: newLevel,
+    });
+
+    // If this is the first category (basic_traits), also mark onboarding complete
+    if (args.categoryId === "basic_traits" && !user.onboardingComplete) {
+      const completedUsers = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("onboardingComplete"), true))
+        .collect();
+
+      await ctx.db.patch(user._id, {
+        onboardingComplete: true,
+        waitlistPosition: completedUsers.length + 1,
+      });
+    }
+
+    return { level: newLevel, completedCategories: newCompletedCategories };
+  },
+});
+
+// Uncomplete a category (for testing)
+export const uncompleteCategory = mutation({
+  args: {
+    clerkId: v.string(),
+    categoryId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return;
+
+    const completedCategories = user.completedCategories ?? [];
+    const newCompletedCategories = completedCategories.filter(
+      (id) => id !== args.categoryId
+    );
+    const newLevel = Math.max(1, newCompletedCategories.length);
+
+    await ctx.db.patch(user._id, {
+      completedCategories: newCompletedCategories,
+      level: newLevel,
+    });
+
+    return { level: newLevel, completedCategories: newCompletedCategories };
+  },
+});
+
+// Reset journey progress (for testing)
+export const resetJourney = mutation({
+  args: {
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return;
+
+    await ctx.db.patch(user._id, {
+      completedCategories: [],
+      level: 1,
+    });
+
+    return { level: 1, completedCategories: [] };
+  },
+});

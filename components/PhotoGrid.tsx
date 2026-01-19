@@ -15,10 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
-import DraggableFlatList, {
-  RenderItemParams,
-  ScaleDecorator,
-} from "react-native-draggable-flatlist";
+import { DraxProvider, DraxView } from "react-native-drax";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const ImageCropper =
@@ -197,108 +194,115 @@ export function PhotoGrid({
     );
   };
 
-  const handleDragEnd = async ({ data }: { data: PhotoItem[] }) => {
-    // Update local state with new order
-    const updatedItems = data.map((item, index) => ({
-      ...item,
-      order: index,
-    }));
-    setItems(updatedItems);
+  const handleSwap = async (fromIndex: number, toIndex: number) => {
+    // Swap items in local state
+    const newItems = [...items];
+    const temp = newItems[fromIndex];
+    newItems[fromIndex] = { ...newItems[toIndex], order: fromIndex, id: fromIndex.toString() };
+    newItems[toIndex] = { ...temp, order: toIndex, id: toIndex.toString() };
+    setItems(newItems);
 
-    // Get photo IDs that need reordering (only filled slots)
-    const filledItems = updatedItems.filter((item) => item.photoId);
-    if (filledItems.length < 2) return;
-
-    // Update database with new order
-    const photoIds = filledItems.map((item) => item.photoId!);
-    await reorderPhotos({ userId, photoIds });
+    // Update database
+    const filledItems = newItems.filter((item) => item.photoId);
+    if (filledItems.length >= 1) {
+      const photoIds = newItems
+        .filter((item) => item.photoId)
+        .map((item) => item.photoId!);
+      if (photoIds.length > 0) {
+        await reorderPhotos({ userId, photoIds });
+      }
+    }
   };
 
-  const renderItem = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<PhotoItem>) => {
+  const renderSlot = (item: PhotoItem, index: number) => {
     const hasImage = item.url || item.localUri;
-    const isRequired = showRequired && item.order < 2;
-    const isFirst = item.order === 0;
+    const isRequired = showRequired && index < 2;
+    const isFirst = index === 0;
 
-    return (
-      <ScaleDecorator>
-        <Pressable
-          style={[
-            styles.slot,
-            isRequired && !hasImage && styles.slotRequired,
-            isActive && styles.slotDragging,
-          ]}
-          onPress={() => !hasImage && pickImage(item.order)}
-          onLongPress={hasImage ? drag : undefined}
-          delayLongPress={150}
+    if (hasImage) {
+      return (
+        <DraxView
+          key={item.id}
+          style={[styles.slot]}
+          draggingStyle={styles.slotDragging}
+          dragReleasedStyle={styles.slot}
+          hoverDraggingStyle={styles.slotHover}
+          dragPayload={index}
+          longPressDelay={150}
+          receivingStyle={styles.slotReceiving}
+          onReceiveDragDrop={({ dragged }) => {
+            const fromIndex = dragged.payload as number;
+            if (fromIndex !== index) {
+              handleSwap(fromIndex, index);
+            }
+          }}
         >
-          {hasImage ? (
-            <>
-              <Image
-                source={{ uri: item.localUri || item.url }}
-                style={styles.image}
-              />
-              {item.uploading && (
-                <View style={styles.uploadingOverlay}>
-                  <Text style={styles.uploadingText}>...</Text>
-                </View>
-              )}
-              <Pressable
-                style={styles.removeButton}
-                onPress={() => handleRemove(item)}
-              >
-                <Ionicons name="close-circle" size={24} color={colors.text} />
-              </Pressable>
-              {isFirst && (
-                <View style={styles.mainBadge}>
-                  <Text style={styles.mainBadgeText}>Main</Text>
-                </View>
-              )}
-              {!isActive && (
-                <View style={styles.dragHint}>
-                  <Ionicons name="menu" size={16} color="rgba(255,255,255,0.8)" />
-                </View>
-              )}
-            </>
-          ) : (
-            <View style={styles.emptySlot}>
-              <Ionicons
-                name="add"
-                size={32}
-                color={isRequired ? colors.text : colors.textMuted}
-              />
-              {isRequired && (
-                <Text style={styles.requiredLabel}>Required</Text>
-              )}
+          <Image
+            source={{ uri: item.localUri || item.url }}
+            style={styles.image}
+          />
+          {item.uploading && (
+            <View style={styles.uploadingOverlay}>
+              <Text style={styles.uploadingText}>...</Text>
             </View>
           )}
+          <Pressable
+            style={styles.removeButton}
+            onPress={() => handleRemove(item)}
+          >
+            <Ionicons name="close-circle" size={24} color={colors.text} />
+          </Pressable>
+          {isFirst && (
+            <View style={styles.mainBadge}>
+              <Text style={styles.mainBadgeText}>Main</Text>
+            </View>
+          )}
+        </DraxView>
+      );
+    }
+
+    return (
+      <DraxView
+        key={item.id}
+        style={[styles.slot, isRequired && styles.slotRequired]}
+        receivingStyle={styles.slotReceiving}
+        dragPayload={index}
+        onReceiveDragDrop={({ dragged }) => {
+          const fromIndex = dragged.payload as number;
+          if (fromIndex !== index) {
+            handleSwap(fromIndex, index);
+          }
+        }}
+      >
+        <Pressable style={styles.emptySlot} onPress={() => pickImage(index)}>
+          <Ionicons
+            name="add"
+            size={32}
+            color={isRequired ? colors.text : colors.textMuted}
+          />
+          {isRequired && <Text style={styles.requiredLabel}>Required</Text>}
         </Pressable>
-      </ScaleDecorator>
+      </DraxView>
     );
   };
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <DraggableFlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        onDragEnd={handleDragEnd}
-        numColumns={3}
-        scrollEnabled={false}
-        contentContainerStyle={styles.grid}
-        columnWrapperStyle={styles.row}
-      />
+      <DraxProvider>
+        <View style={styles.grid}>
+          <View style={styles.row}>
+            {items.slice(0, 3).map((item, i) => renderSlot(item, i))}
+          </View>
+          <View style={styles.row}>
+            {items.slice(3, 6).map((item, i) => renderSlot(item, i + 3))}
+          </View>
+        </View>
+      </DraxProvider>
       <Text style={styles.photoCount}>
         {filledCount} of 6 photos
         {showRequired && filledCount < 2 && " (2 required)"}
       </Text>
-      <Text style={styles.dragHintText}>
-        Hold and drag photos to reorder
-      </Text>
+      <Text style={styles.dragHintText}>Hold and drag photos to reorder</Text>
     </GestureHandlerRootView>
   );
 }
@@ -311,8 +315,8 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
   },
   row: {
+    flexDirection: "row",
     gap: GRID_GAP,
-    marginBottom: GRID_GAP,
   },
   slot: {
     width: SLOT_WIDTH,
@@ -328,13 +332,22 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   slotDragging: {
-    opacity: 0.9,
+    opacity: 0.8,
     transform: [{ scale: 1.05 }],
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+  },
+  slotHover: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  slotReceiving: {
+    borderColor: colors.success,
+    borderWidth: 2,
+    backgroundColor: colors.surface,
   },
   image: {
     width: "100%",
@@ -380,14 +393,6 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
     fontSize: fontSizes.xs,
     fontWeight: "600",
-  },
-  dragHint: {
-    position: "absolute",
-    top: spacing.xs,
-    left: spacing.xs,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 4,
-    padding: 2,
   },
   photoCount: {
     fontSize: fontSizes.sm,

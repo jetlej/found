@@ -1,13 +1,13 @@
+import { AppHeader } from "@/components/AppHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { api } from "@/convex/_generated/api";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
 import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
-import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -17,12 +17,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const { userId } = useAuth();
-  const router = useRouter();
 
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
   useEffect(() => {
-    // Hide splash screen and start fade-in
     SplashScreen.hideAsync();
     fadeOpacity.value = withTiming(1, { duration: 350 });
   }, []);
@@ -33,16 +31,6 @@ export default function HomeScreen() {
     api.users.current,
     userId ? { clerkId: userId } : "skip"
   );
-
-  // Get user's photos to show first one as profile pic
-  const userPhotos = useQuery(
-    api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
-  );
-
-  // Get first photo URL (sorted by order)
-  const firstPhotoUrl = userPhotos
-    ?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   useEffect(() => {
     if (currentUser && currentUser._id) {
@@ -60,33 +48,11 @@ export default function HomeScreen() {
     }
   }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl]);
 
-  const effectiveUser = currentUser ?? cachedUser;
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
         <OfflineBanner />
-
-        <View style={styles.header}>
-          <Text style={styles.logo}>Found</Text>
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={styles.headerAvatar}
-          >
-            {firstPhotoUrl ? (
-              <Image
-                source={{ uri: firstPhotoUrl }}
-                style={styles.headerAvatarImage}
-              />
-            ) : (
-              <View style={styles.headerAvatarPlaceholder}>
-                <Text style={styles.headerAvatarInitial}>
-                  {effectiveUser?.name?.charAt(0)?.toUpperCase() || "?"}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <AppHeader />
 
         <View style={styles.content}>
           <Text style={styles.title}>You're on the waitlist!</Text>
@@ -119,47 +85,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-  },
-  logo: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["2xl"],
-    color: colors.text,
-    letterSpacing: 1,
-  },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-  },
-  headerAvatarImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.border,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  headerAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  headerAvatarInitial: {
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
-    color: colors.text,
-  },
   content: {
     flex: 1,
     justifyContent: "center",
@@ -167,7 +92,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   title: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.serifBold,
     fontSize: fontSizes["3xl"],
     color: colors.text,
     marginBottom: spacing.sm,

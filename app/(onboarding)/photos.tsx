@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PhotosScreen() {
@@ -22,7 +22,7 @@ export default function PhotosScreen() {
     currentUser?._id ? { userId: currentUser._id } : "skip"
   );
 
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
+  const completeCategory = useMutation(api.users.completeCategory);
 
   // Screen ready state for smooth fade-in from splash
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
@@ -33,13 +33,22 @@ export default function PhotosScreen() {
   }, []);
 
   const [photoCount, setPhotoCount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isValid = photoCount >= 2;
 
   const handleContinue = async () => {
-    if (userId) {
-      await setOnboardingStep({ clerkId: userId, step: "ai-import" });
+    if (!userId || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Complete basic_traits category (Level 1) and mark onboarding complete
+      await completeCategory({ clerkId: userId, categoryId: "basic_traits" });
+      // Navigate to main tabs (journey tab)
+      router.replace("/(tabs)/journey");
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      setIsSubmitting(false);
     }
-    router.push("/(onboarding)/ai-import");
   };
 
   if (!currentUser?._id) {
@@ -67,11 +76,15 @@ export default function PhotosScreen() {
 
         <View style={styles.footer}>
           <Pressable
-            style={[styles.button, !isValid && styles.buttonDisabled]}
+            style={[styles.button, (!isValid || isSubmitting) && styles.buttonDisabled]}
             onPress={handleContinue}
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
           >
-            <Text style={styles.buttonText}>Continue</Text>
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.primaryText} />
+            ) : (
+              <Text style={styles.buttonText}>Continue</Text>
+            )}
           </Pressable>
         </View>
       </Animated.View>

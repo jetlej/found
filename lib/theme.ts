@@ -31,12 +31,13 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  // Body text - clean sans-serif
-  sans: 'System',
-  // Headings - elegant serif/cursive
-  serif: 'Cormorant-Medium',
-  serifBold: 'Cormorant-Bold',
-  serifItalic: 'Cormorant-MediumItalic',
+  // Body text
+  sans: 'Figtree-Regular',
+  sansBold: 'Figtree-Bold',
+  // Headings
+  serif: 'Figtree-Medium',
+  serifBold: 'Figtree-Bold',
+  serifItalic: 'Figtree-Regular',
 } as const;
 
 export const fontSizes = {

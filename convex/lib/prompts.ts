@@ -346,43 +346,57 @@ export function formatQAPairs(
 }
 
 // Question categories and which questions belong to each extraction type
+// Updated for restructured 89-question format with 6 categories
 export const EXTRACTION_QUESTION_GROUPS = {
   // For values/interests extraction - questions about personality, hobbies, values
-  valuesInterests: [4, 12, 13, 15, 16, 17, 18, 19, 25, 28, 40, 42, 48, 49, 52, 91, 92, 93, 94, 97, 98],
+  // Category 2 essays + hobbies + lifestyle essays
+  valuesInterests: [24, 44, 45, 70, 71, 86, 87, 88, 89],
   
   // For personality traits (expanded to 11 dimensions) - questions revealing personality
-  personalityTraits: [12, 13, 17, 18, 19, 40, 41, 43, 44, 45, 46, 48, 49, 50, 51, 52, 54, 55, 56, 58, 59, 60, 62, 63, 68, 69, 70, 83, 84, 85, 86, 87, 89, 90, 94],
+  // Category 2 (Who You Are) + some relationship style questions
+  personalityTraits: [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 46, 47, 48, 51, 52, 67, 68],
   
   // For family plans - questions about kids and family
-  familyPlans: [72, 75, 76, 77, 78],
+  // Category 1 kids questions + Category 5 family questions
+  familyPlans: [5, 6, 7, 8, 9, 72, 73, 74, 79, 80],
   
   // For lifestyle extraction - questions about daily life
-  lifestyle: [23, 25, 28, 35, 39],
+  // Category 4 (Lifestyle) + substance questions from Category 1
+  lifestyle: [25, 27, 29, 31, 60, 61, 62, 65, 66, 67],
   
-  // For dealbreakers - questions explicitly about requirements
-  dealbreakers: [19, 50, 65, 96],
+  // For dealbreakers - questions explicitly about requirements/dealbreakers
+  // Essay dealbreaker + all checklist preference questions
+  dealbreakers: [2, 4, 6, 8, 15, 17, 20, 23, 26, 28, 30, 32, 45, 59],
   
   // For life story extraction - narrative elements
-  lifeStory: [16, 40, 41, 42, 43, 44, 45],
+  // Category 5 (Life & Future) essays + Category 6 essays
+  lifeStory: [79, 80, 81, 83, 84, 85],
   
   // For social profile - social style and preferences
-  socialProfile: [46, 47, 48, 49, 51, 52],
+  // Category 2 social questions + Category 4 social questions
+  socialProfile: [33, 67, 68, 69, 70],
   
   // For intimacy profile - physical and emotional intimacy
-  intimacyProfile: [79, 80, 81, 82, 83, 84],
+  // Category 3 (Relationship Style) intimacy questions
+  intimacyProfile: [53, 54, 55, 58],
   
   // For love philosophy - beliefs about love and relationships
-  lovePhilosophy: [85, 86, 87, 88, 89, 90],
+  // Category 6 (The Deeper Stuff) + healthy relationship essay
+  lovePhilosophy: [58, 82, 83],
   
   // For partner preferences - what they want in a partner
-  partnerPreferences: [19, 50, 65, 68, 69, 96],
+  // All checklist questions + dealbreaker essays
+  partnerPreferences: [2, 4, 6, 8, 15, 17, 20, 23, 26, 28, 30, 32, 45, 59],
   
   // For bio elements - conversation starters and unique facts
-  bioElements: [12, 42, 44, 91, 94, 97, 98, 99],
+  // Essays that reveal personality + hobbies + quirks
+  bioElements: [24, 44, 45, 70, 84, 85, 86, 87, 88, 89],
   
   // For health snapshot
-  health: [33, 34, 35],
+  // Category 4 health questions + health essay
+  health: [63, 64, 71],
   
   // All open-ended questions for keyword extraction
-  allOpenEnded: [2, 3, 4, 11, 12, 13, 15, 16, 17, 18, 19, 23, 25, 28, 35, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 52, 54, 55, 58, 59, 60, 62, 65, 66, 68, 69, 70, 72, 75, 76, 77, 78, 81, 83, 84, 86, 87, 88, 89, 90, 91, 92, 93, 94, 96, 97, 98, 99, 100],
+  // Essays and text questions only
+  allOpenEnded: [24, 44, 45, 58, 59, 70, 71, 79, 80, 81, 83, 84, 85, 86, 87, 88, 89],
 };

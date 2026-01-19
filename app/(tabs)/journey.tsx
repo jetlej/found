@@ -73,7 +73,7 @@ export default function JourneyScreen() {
   );
 
   const level = currentUser?.level ?? 1;
-  const completedCategories = currentUser?.completedCategories ?? ["basic_traits"];
+  const completedCategories = currentUser?.completedCategories ?? ["the_basics"];
 
   // Find the current (next uncompleted) category
   const currentCategory = useMemo(() => {

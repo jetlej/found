@@ -69,6 +69,7 @@ export const upsert = mutation({
     questionId: v.id("questions"),
     value: v.string(),
     source: v.optional(v.union(v.literal("ai"), v.literal("manual"))),
+    isDealbreaker: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -79,10 +80,13 @@ export const upsert = mutation({
       .first();
 
     if (existing) {
-      // When updating, also update source if provided (manual edit of AI answer)
-      const updates: { value: string; source?: "ai" | "manual" } = { value: args.value };
+      // When updating, also update source and isDealbreaker if provided
+      const updates: { value: string; source?: "ai" | "manual"; isDealbreaker?: boolean } = { value: args.value };
       if (args.source) {
         updates.source = args.source;
+      }
+      if (args.isDealbreaker !== undefined) {
+        updates.isDealbreaker = args.isDealbreaker;
       }
       await ctx.db.patch(existing._id, updates);
       return existing._id;
@@ -93,6 +97,7 @@ export const upsert = mutation({
       questionId: args.questionId,
       value: args.value,
       source: args.source ?? "manual",
+      isDealbreaker: args.isDealbreaker,
     });
   },
 });

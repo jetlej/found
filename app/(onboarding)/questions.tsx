@@ -35,6 +35,7 @@ export default function QuestionsScreen() {
   const completeCategory = useMutation(api.users.completeCategory);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [dealbreakers, setDealbreakers] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [initialized, setInitialized] = useState(false);
@@ -58,10 +59,15 @@ export default function QuestionsScreen() {
   useEffect(() => {
     if (userAnswers && categoryQuestions.length > 0 && !initialized) {
       const existingAnswers: Record<string, string> = {};
+      const existingDealbreakers: Record<string, boolean> = {};
       for (const answer of userAnswers) {
         existingAnswers[answer.questionId] = answer.value;
+        if (answer.isDealbreaker !== undefined) {
+          existingDealbreakers[answer.questionId] = answer.isDealbreaker;
+        }
       }
       setAnswers(existingAnswers);
+      setDealbreakers(existingDealbreakers);
       
       // Find first unanswered question in this category
       const firstUnansweredIndex = categoryQuestions.findIndex(
@@ -80,6 +86,7 @@ export default function QuestionsScreen() {
 
   const currentQuestion = categoryQuestions[currentIndex] as Question | undefined;
   const currentAnswer = currentQuestion ? answers[currentQuestion._id] || "" : "";
+  const currentDealbreaker = currentQuestion ? dealbreakers[currentQuestion._id] : undefined;
   const totalQuestions = categoryQuestions.length;
   const isLastQuestion = currentIndex === totalQuestions - 1;
 
@@ -104,6 +111,14 @@ export default function QuestionsScreen() {
     }));
   }, [currentQuestion]);
 
+  const handleDealbreakerChange = useCallback((isDealbreaker: boolean) => {
+    if (!currentQuestion) return;
+    setDealbreakers((prev) => ({
+      ...prev,
+      [currentQuestion._id]: isDealbreaker,
+    }));
+  }, [currentQuestion]);
+
   const saveCurrentAnswer = async () => {
     if (!currentUser?._id || !currentQuestion || !currentAnswer) return;
 
@@ -114,6 +129,7 @@ export default function QuestionsScreen() {
         questionId: currentQuestion._id as any,
         value: currentAnswer,
         source: "manual",
+        isDealbreaker: dealbreakers[currentQuestion._id],
       });
     } catch (err) {
       console.error("Failed to save answer:", err);
@@ -211,6 +227,8 @@ export default function QuestionsScreen() {
               question={currentQuestion}
               value={currentAnswer}
               onChange={handleAnswerChange}
+              isDealbreaker={currentDealbreaker}
+              onDealbreakerChange={handleDealbreakerChange}
             />
           </View>
 

@@ -1,19 +1,14 @@
 // Category definitions for the level system
 // Each category completion = +1 level
+// Restructured to 6 categories with front-loaded compatibility filters
 
 export type CategoryId =
-  | "basic_traits"
-  | "core_values"
-  | "lifestyle_health"
-  | "life_story"
-  | "social_life"
-  | "communication_style"
-  | "relationship_expectations"
-  | "family_kids"
-  | "intimacy"
-  | "love_philosophy"
-  | "leisure_quirks"
-  | "final_thoughts";
+  | "the_basics"
+  | "who_you_are"
+  | "relationship_style"
+  | "lifestyle"
+  | "life_future"
+  | "deeper_stuff";
 
 export interface Category {
   id: CategoryId;
@@ -26,104 +21,56 @@ export interface Category {
 
 export const CATEGORIES: Category[] = [
   {
-    id: "basic_traits",
-    name: "Basic Traits",
-    dbName: "Basic Traits",
+    id: "the_basics",
+    name: "The Basics",
+    dbName: "The Basics",
     level: 1,
-    questionRange: [1, 12],
-    unlockDescription: "Waitlist entry & basic matching",
+    questionRange: [1, 32],
+    unlockDescription: "Core matching & compatibility filters",
   },
   {
-    id: "core_values",
-    name: "Core Values",
-    dbName: "Core Values",
+    id: "who_you_are",
+    name: "Who You Are",
+    dbName: "Who You Are",
     level: 2,
-    questionRange: [13, 20],
-    unlockDescription: "Core Values compatibility score",
+    questionRange: [33, 45],
+    unlockDescription: "Personality compatibility score",
   },
   {
-    id: "lifestyle_health",
-    name: "Lifestyle & Health",
-    dbName: "Lifestyle & Health",
+    id: "relationship_style",
+    name: "Relationship Style",
+    dbName: "Relationship Style",
     level: 3,
-    questionRange: [21, 35],
-    unlockDescription: "Lifestyle compatibility score",
-  },
-  {
-    id: "life_story",
-    name: "Your Life Story",
-    dbName: "Your Life Story",
-    level: 4,
-    questionRange: [36, 45],
-    unlockDescription: "Life Story compatibility score",
-  },
-  {
-    id: "social_life",
-    name: "Social Life",
-    dbName: "Social Life",
-    level: 5,
-    questionRange: [46, 52],
-    unlockDescription: "Social compatibility score",
-  },
-  {
-    id: "communication_style",
-    name: "Communication Style",
-    dbName: "Communication Style",
-    level: 6,
-    questionRange: [53, 60],
-    unlockDescription: "Communication compatibility score",
-  },
-  {
-    id: "relationship_expectations",
-    name: "Relationship Expectations",
-    dbName: "Relationship Expectations",
-    level: 7,
-    questionRange: [61, 70],
+    questionRange: [46, 59],
     unlockDescription: "Relationship compatibility score",
   },
   {
-    id: "family_kids",
-    name: "Family & Kids",
-    dbName: "Family & Kids",
-    level: 8,
-    questionRange: [71, 78],
-    unlockDescription: "Family compatibility score",
+    id: "lifestyle",
+    name: "Lifestyle",
+    dbName: "Lifestyle",
+    level: 4,
+    questionRange: [60, 71],
+    unlockDescription: "Lifestyle compatibility score",
   },
   {
-    id: "intimacy",
-    name: "Intimacy",
-    dbName: "Intimacy",
-    level: 9,
-    questionRange: [79, 84],
-    unlockDescription: "Intimacy compatibility score",
+    id: "life_future",
+    name: "Life & Future",
+    dbName: "Life & Future",
+    level: 5,
+    questionRange: [72, 81],
+    unlockDescription: "Life goals compatibility score",
   },
   {
-    id: "love_philosophy",
-    name: "Love Philosophy",
-    dbName: "Love Philosophy",
-    level: 10,
-    questionRange: [85, 90],
-    unlockDescription: "Philosophy compatibility score",
-  },
-  {
-    id: "leisure_quirks",
-    name: "Leisure & Quirks",
-    dbName: "Leisure & Quirks",
-    level: 11,
-    questionRange: [91, 95],
-    unlockDescription: "Quirks compatibility score",
-  },
-  {
-    id: "final_thoughts",
-    name: "Final Thoughts",
-    dbName: "Final Thoughts",
-    level: 12,
-    questionRange: [96, 100],
+    id: "deeper_stuff",
+    name: "The Deeper Stuff",
+    dbName: "The Deeper Stuff",
+    level: 6,
+    questionRange: [82, 89],
     unlockDescription: "Full profile & max visibility",
   },
 ];
 
-export const MAX_LEVEL = 12;
+export const MAX_LEVEL = 6;
 
 export function getCategoryById(id: CategoryId): Category | undefined {
   return CATEGORIES.find((c) => c.id === id);
@@ -131,6 +78,10 @@ export function getCategoryById(id: CategoryId): Category | undefined {
 
 export function getCategoryByLevel(level: number): Category | undefined {
   return CATEGORIES.find((c) => c.level === level);
+}
+
+export function getCategoryByDbName(dbName: string): Category | undefined {
+  return CATEGORIES.find((c) => c.dbName === dbName);
 }
 
 export function getNextCategory(completedCategories: string[]): Category | undefined {

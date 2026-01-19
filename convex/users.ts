@@ -341,8 +341,8 @@ export const completeCategory = mutation({
       level: newLevel,
     });
 
-    // If this is the first category (basic_traits), also mark onboarding complete
-    if (args.categoryId === "basic_traits" && !user.onboardingComplete) {
+    // If this is the first category (the_basics), also mark onboarding complete
+    if (args.categoryId === "the_basics" && !user.onboardingComplete) {
       // Generate unique referral code
       let referralCode = generateReferralCode();
       let existingCode = await ctx.db

@@ -22,8 +22,8 @@ export default defineSchema({
     onboardingComplete: v.optional(v.boolean()),
     waitlistPosition: v.optional(v.number()),
     // Level system
-    level: v.optional(v.number()), // 1-12
-    completedCategories: v.optional(v.array(v.string())), // ["basic_traits", "core_values", ...]
+    level: v.optional(v.number()), // 1-6
+    completedCategories: v.optional(v.array(v.string())), // ["the_basics", "who_you_are", ...]
     // Status & Referrals
     status: v.optional(v.string()), // "waitlist", "active", "inactive", "paid", etc.
     referralCode: v.optional(v.string()), // unique 6-char code to share
@@ -43,27 +43,33 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
 
   questions: defineTable({
-    order: v.number(), // 1-100
+    order: v.number(), // 1-89
     text: v.string(),
     type: v.union(
       v.literal("multiple_choice"),
       v.literal("text"),
       v.literal("essay"),
-      v.literal("scale")
+      v.literal("scale"),
+      v.literal("checklist") // Multi-select with "Open to any" option
     ),
-    options: v.optional(v.array(v.string())), // For multiple_choice
-    category: v.optional(v.string()), // e.g., "values", "lifestyle", "relationships"
+    options: v.optional(v.array(v.string())), // For multiple_choice and checklist
+    category: v.optional(v.string()), // e.g., "The Basics", "Who You Are"
     scaleMin: v.optional(v.number()), // For scale type, default 1
     scaleMax: v.optional(v.number()), // For scale type, default 10
     scaleMinLabel: v.optional(v.string()), // e.g., "Not at all"
     scaleMaxLabel: v.optional(v.string()), // e.g., "Extremely"
+    // For checklist type: links to the question whose options to use
+    linkedQuestionOrder: v.optional(v.number()), // e.g., Q2 links to Q1's options
+    // Whether this question can have a dealbreaker toggle (non-checklist questions)
+    hasDealbreaker: v.optional(v.boolean()),
   }).index("by_order", ["order"]),
 
   answers: defineTable({
     userId: v.id("users"),
     questionId: v.id("questions"),
-    value: v.string(), // JSON string for complex answers, plain string for simple
+    value: v.string(), // JSON string for complex answers (checklist = JSON array), plain string for simple
     source: v.optional(v.union(v.literal("ai"), v.literal("manual"))), // Who provided this answer
+    isDealbreaker: v.optional(v.boolean()), // Whether user marked this preference as a dealbreaker
   })
     .index("by_user", ["userId"])
     .index("by_user_question", ["userId", "questionId"]),
@@ -95,29 +101,29 @@ export default defineSchema({
 
     // Relationship style
     relationshipStyle: v.object({
-      loveLanguage: v.string(), // from Q64
-      conflictStyle: v.string(), // from Q53
-      communicationFrequency: v.string(), // from Q57
-      financialApproach: v.string(), // from Q67
-      aloneTimeNeed: v.number(), // from Q63
+      loveLanguage: v.string(), // from Q49
+      conflictStyle: v.string(), // from Q46
+      communicationFrequency: v.string(), // from Q50
+      financialApproach: v.string(), // from Q56
+      aloneTimeNeed: v.number(), // from Q48
     }),
 
     // Family & Future
     familyPlans: v.object({
       wantsKids: v.string(), // "yes", "no", "maybe", "already has"
       kidsTimeline: v.optional(v.string()),
-      familyCloseness: v.number(), // from Q71
+      familyCloseness: v.number(), // from Q72
       parentingStyle: v.optional(v.string()),
     }),
 
     // Lifestyle compatibility factors
     lifestyle: v.object({
-      sleepSchedule: v.string(), // from Q32
-      exerciseLevel: v.string(), // from Q24
-      dietType: v.optional(v.string()), // extracted from Q28
-      alcoholUse: v.string(), // from Q29
+      sleepSchedule: v.string(), // from Q60
+      exerciseLevel: v.string(), // from Q61
+      dietType: v.optional(v.string()), // extracted from Q62
+      alcoholUse: v.string(), // from Q25
       drugUse: v.string(), // from Q31
-      petPreference: v.string(), // extracted from Q23
+      petPreference: v.string(), // extracted from Q65-66
       locationPreference: v.string(), // "city", "suburb", "rural", "flexible"
     }),
 

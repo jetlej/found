@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -14,22 +15,32 @@ export interface Question {
   _id: string;
   order: number;
   text: string;
-  type: "multiple_choice" | "text" | "essay" | "scale";
+  type: "multiple_choice" | "text" | "essay" | "scale" | "checklist";
   options?: string[];
   category?: string;
   scaleMin?: number;
   scaleMax?: number;
   scaleMinLabel?: string;
   scaleMaxLabel?: string;
+  linkedQuestionOrder?: number;
+  hasDealbreaker?: boolean;
 }
 
 interface QuestionCardProps {
   question: Question;
   value: string;
   onChange: (value: string) => void;
+  isDealbreaker?: boolean;
+  onDealbreakerChange?: (isDealbreaker: boolean) => void;
 }
 
-export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
+export function QuestionCard({
+  question,
+  value,
+  onChange,
+  isDealbreaker,
+  onDealbreakerChange,
+}: QuestionCardProps) {
   // Local state for slider to show value while dragging
   const [sliderValue, setSliderValue] = useState<number | null>(null);
   const isSliding = useRef(false);
@@ -39,6 +50,17 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
     setSliderValue(null);
     isSliding.current = false;
   }, [question._id]);
+
+  // Parse checklist value from JSON
+  const getChecklistValue = (): string[] => {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
 
   const renderInput = () => {
     switch (question.type) {
@@ -67,6 +89,120 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
                 </Text>
               </Pressable>
             ))}
+            {/* Dealbreaker toggle for multiple choice with hasDealbreaker */}
+            {question.hasDealbreaker && value && onDealbreakerChange && (
+              <View style={styles.dealbreakerContainer}>
+                <Text style={styles.dealbreakerLabel}>This is a dealbreaker</Text>
+                <Switch
+                  value={isDealbreaker ?? false}
+                  onValueChange={onDealbreakerChange}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+            )}
+          </View>
+        );
+
+      case "checklist":
+        const selectedOptions = getChecklistValue();
+        const options = question.options || [];
+        const hasOpenToAny = options.includes("Open to any");
+        const nonOpenOptions = options.filter((o) => o !== "Open to any");
+        const isOpenToAny = selectedOptions.includes("Open to any");
+        
+        // Show dealbreaker toggle if specific options selected (not just "Open to any")
+        const showDealbreaker = 
+          selectedOptions.length > 0 && 
+          !isOpenToAny && 
+          onDealbreakerChange;
+
+        const handleChecklistToggle = (option: string) => {
+          let newSelected: string[];
+
+          if (option === "Open to any") {
+            if (isOpenToAny) {
+              // Uncheck "Open to any" and all options
+              newSelected = [];
+            } else {
+              // Check "Open to any" and all other options
+              newSelected = [...options];
+            }
+          } else {
+            if (selectedOptions.includes(option)) {
+              // Uncheck this option
+              newSelected = selectedOptions.filter((o) => o !== option);
+              // Also uncheck "Open to any" if it was checked
+              newSelected = newSelected.filter((o) => o !== "Open to any");
+            } else {
+              // Check this option
+              newSelected = [...selectedOptions, option];
+              // If all non-open options are now selected, also check "Open to any"
+              const allNonOpenSelected = nonOpenOptions.every((o) =>
+                newSelected.includes(o)
+              );
+              if (allNonOpenSelected && hasOpenToAny) {
+                newSelected = [...options];
+              }
+            }
+          }
+
+          onChange(JSON.stringify(newSelected));
+          
+          // Reset dealbreaker if switching to "Open to any"
+          if (newSelected.includes("Open to any") && onDealbreakerChange) {
+            onDealbreakerChange(false);
+          }
+        };
+
+        return (
+          <View style={styles.optionsContainer}>
+            {options.map((option) => {
+              const isChecked = selectedOptions.includes(option);
+              const isOpenOption = option === "Open to any";
+
+              return (
+                <Pressable
+                  key={option}
+                  style={[
+                    styles.option,
+                    isChecked && styles.optionSelected,
+                    isOpenOption && styles.openToAnyOption,
+                  ]}
+                  onPress={() => handleChecklistToggle(option)}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      isChecked && styles.checkboxSelected,
+                    ]}
+                  >
+                    {isChecked && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      isChecked && styles.optionTextSelected,
+                      isOpenOption && styles.openToAnyText,
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {/* Dealbreaker toggle - shown when specific options are selected */}
+            {showDealbreaker && (
+              <View style={styles.dealbreakerContainer}>
+                <Text style={styles.dealbreakerLabel}>This is a dealbreaker</Text>
+                <Switch
+                  value={isDealbreaker ?? false}
+                  onValueChange={onDealbreakerChange}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+            )}
           </View>
         );
 
@@ -147,6 +283,18 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
               maximumTrackTintColor={colors.border}
               thumbTintColor={colors.primary}
             />
+            {/* Dealbreaker toggle for scale with hasDealbreaker */}
+            {question.hasDealbreaker && value && onDealbreakerChange && (
+              <View style={styles.dealbreakerContainer}>
+                <Text style={styles.dealbreakerLabel}>This is a dealbreaker</Text>
+                <Switch
+                  value={isDealbreaker ?? false}
+                  onValueChange={onDealbreakerChange}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+            )}
           </View>
         );
 
@@ -203,6 +351,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.surfaceSecondary,
   },
+  openToAnyOption: {
+    marginBottom: spacing.sm,
+  },
   radio: {
     width: 22,
     height: 22,
@@ -221,6 +372,24 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: colors.primary,
   },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  checkmark: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   optionText: {
     flex: 1,
     fontSize: fontSizes.base,
@@ -228,6 +397,9 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     fontWeight: "600",
+  },
+  openToAnyText: {
+    fontStyle: "italic",
   },
   textInput: {
     backgroundColor: colors.surface,
@@ -263,5 +435,20 @@ const styles = StyleSheet.create({
   slider: {
     width: "100%",
     height: 40,
+  },
+  dealbreakerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 12,
+    marginTop: spacing.md,
+  },
+  dealbreakerLabel: {
+    fontSize: fontSizes.base,
+    color: colors.text,
+    fontWeight: "500",
   },
 });

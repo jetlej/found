@@ -41,8 +41,8 @@ export default function PhotosScreen() {
     
     setIsSubmitting(true);
     try {
-      // Complete basic_traits category (Level 1) and mark onboarding complete
-      await completeCategory({ clerkId: userId, categoryId: "basic_traits" });
+      // Complete the_basics category (Level 1) and mark onboarding complete
+      await completeCategory({ clerkId: userId, categoryId: "the_basics" });
       // Navigate to main tabs (journey tab)
       router.replace("/(tabs)/journey");
     } catch (error) {

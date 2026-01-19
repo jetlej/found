@@ -436,24 +436,24 @@ export const parseUserProfile = internalAction({
         planningStyle: personalityTraits.planningStyle,
       },
       relationshipStyle: {
-        loveLanguage: getAnswerByOrder(64) || "unknown",
-        conflictStyle: getAnswerByOrder(53) || "unknown",
-        communicationFrequency: getAnswerByOrder(57) || "unknown",
-        financialApproach: getAnswerByOrder(67) || "unknown",
-        aloneTimeNeed: getScaleAnswer(63),
+        loveLanguage: getAnswerByOrder(49) || "unknown", // Q49: Love language
+        conflictStyle: getAnswerByOrder(46) || "unknown", // Q46: Conflict handling
+        communicationFrequency: getAnswerByOrder(50) || "unknown", // Q50: Texting style
+        financialApproach: getAnswerByOrder(56) || "unknown", // Q56: Finances
+        aloneTimeNeed: getScaleAnswer(48), // Q48: Together time
       },
       familyPlans: {
         wantsKids: familyPlans.wantsKids,
         kidsTimeline: familyPlans.kidsTimeline ?? undefined,
-        familyCloseness: getScaleAnswer(71),
+        familyCloseness: getScaleAnswer(72), // Q72: Family closeness
         parentingStyle: familyPlans.parentingStyle ?? undefined,
       },
       lifestyle: {
-        sleepSchedule: getAnswerByOrder(32) || "unknown",
-        exerciseLevel: getAnswerByOrder(24) || "unknown",
+        sleepSchedule: getAnswerByOrder(60) || "unknown", // Q60: Morning/night owl
+        exerciseLevel: getAnswerByOrder(61) || "unknown", // Q61: Exercise frequency
         dietType: lifestyle.dietType ?? undefined,
-        alcoholUse: getAnswerByOrder(29) || "unknown",
-        drugUse: getAnswerByOrder(31) || "unknown",
+        alcoholUse: getAnswerByOrder(25) || "unknown", // Q25: Alcohol
+        drugUse: getAnswerByOrder(31) || "unknown", // Q31: Other drugs
         petPreference: lifestyle.petPreference,
         locationPreference: lifestyle.locationPreference,
       },
@@ -507,21 +507,21 @@ export const parseUserProfile = internalAction({
       },
       // Demographics from structured answers (Phase 8)
       demographics: {
-        ethnicity: getAnswerByOrder(2) || undefined,
-        religion: getAnswerByOrder(11) || undefined,
-        religiosity: getScaleAnswer(10),
-        politicalLeaning: getAnswerByOrder(9) || undefined,
-        politicalIntensity: getScaleAnswer(8),
-        hasKids: getScaleAnswer(5, 0) > 0,
+        ethnicity: getAnswerByOrder(14) || undefined, // Q14: Ethnicity
+        religion: getAnswerByOrder(16) || undefined, // Q16: Religion
+        religiosity: getScaleAnswer(18), // Q18: Religion importance
+        politicalLeaning: getAnswerByOrder(19) || undefined, // Q19: Politics
+        politicalIntensity: getScaleAnswer(21), // Q21: Politics importance
+        hasKids: getAnswerByOrder(5) === "Yes", // Q5: Has children (Yes/No)
       },
       // Health from structured answers (Phase 9)
       health: {
-        physicalHealthRating: getScaleAnswer(33),
-        mentalHealthRating: getScaleAnswer(34),
-        healthNotes: openEndedAnswers.find((a: AnswerWithQuestion) => a.questionOrder === 35)?.value ?? undefined,
-        smokingStatus: getAnswerByOrder(30) || "unknown",
-        drinkingFrequency: getAnswerByOrder(29) || "unknown",
-        drugUse: getAnswerByOrder(31) || "unknown",
+        physicalHealthRating: getScaleAnswer(63), // Q63: Physical health
+        mentalHealthRating: getScaleAnswer(64), // Q64: Mental health
+        healthNotes: openEndedAnswers.find((a: AnswerWithQuestion) => a.questionOrder === 71)?.value ?? undefined, // Q71: Health/lifestyle notes
+        smokingStatus: getAnswerByOrder(27) || "unknown", // Q27: Smoking
+        drinkingFrequency: getAnswerByOrder(25) || "unknown", // Q25: Drinking
+        drugUse: getAnswerByOrder(31) || "unknown", // Q31: Other drugs
       },
       // Generated bio (Phase 10)
       generatedBio: bioResult.bio || undefined,

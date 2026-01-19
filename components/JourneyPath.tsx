@@ -1,23 +1,17 @@
 import { CATEGORIES, Category, getQuestionCountForCategory } from "@/lib/categories";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
-    IconBabyCarriage,
     IconBook,
     IconCheck,
     IconDiamond,
-    IconFlag,
     IconHeart,
-    IconHeartHandshake,
     IconLeaf,
     IconLock,
-    IconMessage,
-    IconMusic,
     IconPencil,
     IconPlayerTrackNext,
     IconPlayerTrackPrev,
     IconStar,
     IconUser,
-    IconUsers,
 } from "@tabler/icons-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -49,18 +43,12 @@ interface JourneyPathProps {
 type NodeState = "completed" | "current" | "locked" | "animating" | "unlocking";
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
-  basic_traits: IconUser,
-  core_values: IconDiamond,
-  lifestyle_health: IconLeaf,
-  life_story: IconBook,
-  social_life: IconUsers,
-  communication_style: IconMessage,
-  relationship_expectations: IconHeart,
-  family_kids: IconBabyCarriage,
-  intimacy: IconHeartHandshake,
-  love_philosophy: IconStar,
-  leisure_quirks: IconMusic,
-  final_thoughts: IconFlag,
+  the_basics: IconUser,
+  who_you_are: IconDiamond,
+  relationship_style: IconHeart,
+  lifestyle: IconLeaf,
+  life_future: IconBook,
+  deeper_stuff: IconStar,
 };
 
 function getNodeState(

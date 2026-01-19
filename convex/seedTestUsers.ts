@@ -1,11 +1,33 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { DEFAULT_MODEL } from "./lib/openai";
+
+// Internal query to find a user by name
+export const findUserByName = internalQuery({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const users = await ctx.db.query("users").collect();
+    return users.find((u) => u.name === args.name) || null;
+  },
+});
+
+// Internal query to count photos for a user
+export const countUserPhotos = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const photos = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    return photos.length;
+  },
+});
 
 // Internal mutation to create a test user and their answers
 export const createTestUser = internalMutation({
   args: {
     name: v.string(),
+    gender: v.optional(v.string()),
     answers: v.record(v.string(), v.string()),
   },
   handler: async (ctx, args) => {
@@ -17,7 +39,7 @@ export const createTestUser = internalMutation({
         .toString()
         .padStart(7, "0")}`,
       name: args.name,
-      gender: "Non-binary",
+      gender: args.gender || "Non-binary",
       sexuality: "Everyone",
       location: "San Francisco, CA",
       birthdate: "1995-06-15",
@@ -200,5 +222,37 @@ export const createTestProfile = internalMutation({
       openaiModel: DEFAULT_MODEL,
       confidence: 0.95,
     });
+  },
+});
+
+// Internal mutation to save a photo record for a test user (called from action after storage)
+export const saveTestUserPhoto = internalMutation({
+  args: {
+    userId: v.id("users"),
+    storageId: v.id("_storage"),
+    url: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Delete any existing photos for this user
+    const existingPhotos = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    for (const photo of existingPhotos) {
+      await ctx.db.delete(photo._id);
+    }
+
+    // Create the photo record
+    await ctx.db.insert("photos", {
+      userId: args.userId,
+      storageId: args.storageId,
+      url: args.url,
+      order: 0,
+    });
+
+    // Also set as avatar
+    await ctx.db.patch(args.userId, { avatarUrl: args.url });
+
+    return args.url;
   },
 });

@@ -226,3 +226,35 @@ export function formatCost(cost: number): string {
   }
   return `$${cost.toFixed(4)}`;
 }
+
+// Generate an image using OpenAI's image generation API
+export async function generateImage(
+  prompt: string,
+  options: {
+    size?: "1024x1024" | "1024x1792" | "1792x1024";
+  } = {}
+): Promise<ArrayBuffer> {
+  const client = getOpenAIClient();
+  const { size = "1024x1024" } = options;
+
+  const response = await client.images.generate({
+    model: "dall-e-3",
+    prompt,
+    n: 1,
+    size,
+    response_format: "b64_json",
+  });
+
+  const b64 = response.data[0].b64_json;
+  if (!b64) {
+    throw new Error("No image data returned from OpenAI");
+  }
+
+  // Convert base64 to ArrayBuffer for Convex
+  const binaryString = atob(b64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}

@@ -4,12 +4,16 @@ import { Doc } from "./_generated/dataModel";
 
 // Weights for different compatibility factors (must sum to 1.0)
 const WEIGHTS = {
-  values: 0.25, // Core values alignment
-  lifestyle: 0.2, // Daily habits compatibility
-  relationshipStyle: 0.2, // How they approach relationships
-  familyPlans: 0.15, // Kids and family alignment
-  interests: 0.1, // Shared hobbies
-  personality: 0.1, // Complementary traits
+  values: 0.15, // Core values alignment
+  lifestyle: 0.12, // Daily habits compatibility
+  relationshipStyle: 0.12, // How they approach relationships
+  familyPlans: 0.15, // Kids and family alignment (critical)
+  interests: 0.08, // Shared hobbies
+  personality: 0.12, // Complementary traits (11 dimensions now)
+  socialCompatibility: 0.08, // Social style alignment
+  intimacyCompatibility: 0.08, // Intimacy preferences
+  lovePhilosophy: 0.05, // Beliefs about love
+  partnerPreferences: 0.05, // Match against what they want
 };
 
 // Calculate overlap between two arrays (Jaccard similarity)
@@ -237,8 +241,7 @@ function calculateInterestsScore(
   return calculateArrayOverlap(profile1.interests, profile2.interests);
 }
 
-// Calculate personality complementarity
-// Some traits work better when similar, others when complementary
+// Calculate personality complementarity (expanded to 11 dimensions)
 function calculatePersonalityScore(
   profile1: Doc<"userProfiles">,
   profile2: Doc<"userProfiles">
@@ -247,29 +250,218 @@ function calculatePersonalityScore(
   const traits2 = profile2.traits;
 
   let score = 0;
+  let factors = 0;
 
-  // Introversion - similar is usually better
+  // Original 6 traits - similar is usually better
   score += calculateNumericSimilarity(traits1.introversion, traits2.introversion);
-
-  // Adventurousness - similar is usually better
+  factors++;
+  
   score += calculateNumericSimilarity(traits1.adventurousness, traits2.adventurousness);
-
-  // Ambition - similar is usually better
+  factors++;
+  
   score += calculateNumericSimilarity(traits1.ambition, traits2.ambition);
-
-  // Emotional openness - similar is usually better
+  factors++;
+  
   score += calculateNumericSimilarity(traits1.emotionalOpenness, traits2.emotionalOpenness);
-
+  factors++;
+  
   // Traditional values - similar is usually better (can be a dealbreaker if very different)
   score += calculateNumericSimilarity(traits1.traditionalValues, traits2.traditionalValues);
-
+  factors++;
+  
   // Independence need - can be complementary or similar
   score += calculateNumericSimilarity(traits1.independenceNeed, traits2.independenceNeed);
+  factors++;
 
-  return score / 6;
+  // New 5 traits (Phase 1)
+  // Romantic style - similar is better (both romantic or both practical)
+  score += calculateNumericSimilarity(traits1.romanticStyle, traits2.romanticStyle);
+  factors++;
+  
+  // Social energy - similar is better (both homebodies or both social)
+  score += calculateNumericSimilarity(traits1.socialEnergy, traits2.socialEnergy);
+  factors++;
+  
+  // Communication style - similar is better
+  score += calculateNumericSimilarity(traits1.communicationStyle, traits2.communicationStyle);
+  factors++;
+  
+  // Attachment style - complementary can work (avoidant + anxious is tricky though)
+  // For now, similar is safer
+  score += calculateNumericSimilarity(traits1.attachmentStyle, traits2.attachmentStyle);
+  factors++;
+  
+  // Planning style - some flexibility here, but similar is generally better
+  score += calculateNumericSimilarity(traits1.planningStyle, traits2.planningStyle);
+  factors++;
+
+  return score / factors;
 }
 
-// Main compatibility calculation function
+// Calculate social compatibility (Phase 3)
+function calculateSocialCompatibilityScore(
+  profile1: Doc<"userProfiles">,
+  profile2: Doc<"userProfiles">
+): number {
+  const social1 = profile1.socialProfile;
+  const social2 = profile2.socialProfile;
+
+  // If either profile doesn't have social data, return neutral
+  if (!social1 || !social2) return 0.5;
+
+  let score = 0;
+  let factors = 0;
+
+  // Social style match
+  if (social1.socialStyle === social2.socialStyle) {
+    score += 1;
+  } else {
+    // Adjacent styles are okay
+    const styles = ["introverted", "quiet", "balanced", "active", "very_active"];
+    const idx1 = styles.indexOf(social1.socialStyle);
+    const idx2 = styles.indexOf(social2.socialStyle);
+    if (idx1 >= 0 && idx2 >= 0) {
+      const diff = Math.abs(idx1 - idx2);
+      score += 1 - (diff * 0.2);
+    } else {
+      score += 0.5;
+    }
+  }
+  factors++;
+
+  // Go out frequency - similar is better
+  score += calculateNumericSimilarity(social1.goOutFrequency, social2.goOutFrequency);
+  factors++;
+
+  // Friend approval importance - if both care a lot, it matters more
+  score += calculateNumericSimilarity(social1.friendApprovalImportance, social2.friendApprovalImportance);
+  factors++;
+
+  return score / factors;
+}
+
+// Calculate intimacy compatibility (Phase 4)
+function calculateIntimacyCompatibilityScore(
+  profile1: Doc<"userProfiles">,
+  profile2: Doc<"userProfiles">
+): number {
+  const intimacy1 = profile1.intimacyProfile;
+  const intimacy2 = profile2.intimacyProfile;
+
+  // If either profile doesn't have intimacy data, return neutral
+  if (!intimacy1 || !intimacy2) return 0.5;
+
+  let score = 0;
+  let factors = 0;
+
+  // Physical intimacy importance - similar expectations are better
+  score += calculateNumericSimilarity(
+    intimacy1.physicalIntimacyImportance,
+    intimacy2.physicalIntimacyImportance
+  );
+  factors++;
+
+  // Physical attraction importance - similar is better
+  score += calculateNumericSimilarity(
+    intimacy1.physicalAttractionImportance,
+    intimacy2.physicalAttractionImportance
+  );
+  factors++;
+
+  // PDA comfort - similar is better
+  const pdaLevels = ["uncomfortable", "private", "moderate", "comfortable", "loves_it"];
+  const pda1 = pdaLevels.indexOf(intimacy1.pdaComfort);
+  const pda2 = pdaLevels.indexOf(intimacy2.pdaComfort);
+  if (pda1 >= 0 && pda2 >= 0) {
+    score += 1 - (Math.abs(pda1 - pda2) * 0.2);
+  } else {
+    score += 0.5;
+  }
+  factors++;
+
+  // Connection triggers overlap
+  if (intimacy1.connectionTriggers.length > 0 && intimacy2.connectionTriggers.length > 0) {
+    score += calculateArrayOverlap(intimacy1.connectionTriggers, intimacy2.connectionTriggers);
+    factors++;
+  }
+
+  return score / factors;
+}
+
+// Calculate love philosophy compatibility (Phase 5)
+function calculateLovePhilosophyScore(
+  profile1: Doc<"userProfiles">,
+  profile2: Doc<"userProfiles">
+): number {
+  const love1 = profile1.lovePhilosophy;
+  const love2 = profile2.lovePhilosophy;
+
+  // If either profile doesn't have love philosophy data, return neutral
+  if (!love1 || !love2) return 0.5;
+
+  let score = 0;
+  let factors = 0;
+
+  // Soulmate belief - similar is better (both believers or both skeptics)
+  if (love1.believesInSoulmates === love2.believesInSoulmates) {
+    score += 1;
+  } else {
+    score += 0.6; // Can still work if different
+  }
+  factors++;
+
+  // Romantic gestures overlap
+  if (love1.romanticGestures.length > 0 && love2.romanticGestures.length > 0) {
+    score += calculateArrayOverlap(love1.romanticGestures, love2.romanticGestures);
+    factors++;
+  }
+
+  // Love recognition signs overlap
+  if (love1.loveRecognition.length > 0 && love2.loveRecognition.length > 0) {
+    score += calculateArrayOverlap(love1.loveRecognition, love2.loveRecognition);
+    factors++;
+  }
+
+  return factors > 0 ? score / factors : 0.5;
+}
+
+// Calculate partner preferences match (Phase 6)
+// This checks if profile2 matches what profile1 is looking for (and vice versa)
+function calculatePartnerPreferencesScore(
+  profile1: Doc<"userProfiles">,
+  profile2: Doc<"userProfiles">
+): number {
+  const prefs1 = profile1.partnerPreferences;
+  const prefs2 = profile2.partnerPreferences;
+
+  // If either profile doesn't have partner preferences, return neutral
+  if (!prefs1 || !prefs2) return 0.5;
+
+  let score = 0;
+  let factors = 0;
+
+  // Check if profile2's qualities match profile1's must-haves
+  // This is a simplified check - in production you'd want semantic matching
+  if (prefs1.mustHaves.length > 0 && profile2.values.length > 0) {
+    const match = calculateArrayOverlap(prefs1.mustHaves, [...profile2.values, ...profile2.interests]);
+    score += match;
+    factors++;
+  }
+
+  // Check if profile1's qualities match profile2's must-haves
+  if (prefs2.mustHaves.length > 0 && profile1.values.length > 0) {
+    const match = calculateArrayOverlap(prefs2.mustHaves, [...profile1.values, ...profile1.interests]);
+    score += match;
+    factors++;
+  }
+
+  // Check for red flag conflicts (if profile1's traits appear in profile2's red flags)
+  // This would need semantic matching in production
+  
+  return factors > 0 ? score / factors : 0.5;
+}
+
+// Main compatibility calculation function (expanded)
 export function calculateCompatibility(
   profile1: Doc<"userProfiles">,
   profile2: Doc<"userProfiles">
@@ -282,6 +474,10 @@ export function calculateCompatibility(
     familyPlans: number;
     interests: number;
     personality: number;
+    socialCompatibility: number;
+    intimacyCompatibility: number;
+    lovePhilosophy: number;
+    partnerPreferences: number;
   };
 } {
   const breakdown = {
@@ -291,6 +487,10 @@ export function calculateCompatibility(
     familyPlans: calculateFamilyPlansScore(profile1, profile2),
     interests: calculateInterestsScore(profile1, profile2),
     personality: calculatePersonalityScore(profile1, profile2),
+    socialCompatibility: calculateSocialCompatibilityScore(profile1, profile2),
+    intimacyCompatibility: calculateIntimacyCompatibilityScore(profile1, profile2),
+    lovePhilosophy: calculateLovePhilosophyScore(profile1, profile2),
+    partnerPreferences: calculatePartnerPreferencesScore(profile1, profile2),
   };
 
   // Calculate weighted score
@@ -300,7 +500,11 @@ export function calculateCompatibility(
     breakdown.relationshipStyle * WEIGHTS.relationshipStyle +
     breakdown.familyPlans * WEIGHTS.familyPlans +
     breakdown.interests * WEIGHTS.interests +
-    breakdown.personality * WEIGHTS.personality;
+    breakdown.personality * WEIGHTS.personality +
+    breakdown.socialCompatibility * WEIGHTS.socialCompatibility +
+    breakdown.intimacyCompatibility * WEIGHTS.intimacyCompatibility +
+    breakdown.lovePhilosophy * WEIGHTS.lovePhilosophy +
+    breakdown.partnerPreferences * WEIGHTS.partnerPreferences;
 
   // Convert to 0-100 scale
   return {
@@ -312,6 +516,10 @@ export function calculateCompatibility(
       familyPlans: Math.round(breakdown.familyPlans * 100),
       interests: Math.round(breakdown.interests * 100),
       personality: Math.round(breakdown.personality * 100),
+      socialCompatibility: Math.round(breakdown.socialCompatibility * 100),
+      intimacyCompatibility: Math.round(breakdown.intimacyCompatibility * 100),
+      lovePhilosophy: Math.round(breakdown.lovePhilosophy * 100),
+      partnerPreferences: Math.round(breakdown.partnerPreferences * 100),
     },
   };
 }

@@ -9,14 +9,14 @@ import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Animated,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useMMKVObject } from "react-native-mmkv";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AIImportScreen() {
   const { userId } = useAuth();

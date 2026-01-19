@@ -1,5 +1,7 @@
 # Found - AI Matchmaking Dating App
 
+> **IMPORTANT**: Convex does NOT auto-sync. After ANY change to files in the `convex/` directory, you MUST run `bunx convex dev` (or ensure it's running) to push changes to the dev deployment before testing.
+
 ## Project Overview
 
 Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 100 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
@@ -12,7 +14,7 @@ Found is an AI matchmaking dating app for people serious about finding real part
 - **Navigation**: Expo Router (file-based routing)
 - **Backend**: Convex (real-time database, no migrations needed)
 - **Authentication**: Clerk (phone/SMS auth)
-- **AI**: OpenAI API (gpt-4o-mini for profile parsing)
+- **AI**: OpenAI API (gpt-5-mini-2025-08-07 for profile parsing)
 - **Offline Storage**: MMKV v3 with Zustand persist middleware
 - **Language**: TypeScript
 - **Package Manager**: Bun
@@ -202,13 +204,18 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `values`: string[] - Core values extracted from essays (e.g., ["honesty", "family", "growth"])
 - `interests`: string[] - Hobbies and interests (e.g., ["hiking", "cooking", "travel"])
 - `dealbreakers`: string[] - Non-negotiables (e.g., ["smoking", "no kids"])
-- `traits`: object
-  - `introversion`: number (1-10, 1=extrovert, 10=introvert)
-  - `adventurousness`: number (1-10)
-  - `ambition`: number (1-10)
-  - `emotionalOpenness`: number (1-10)
-  - `traditionalValues`: number (1-10)
-  - `independenceNeed`: number (1-10)
+- `traits`: object (11 personality dimensions, 1-10 scale)
+  - `introversion`: number (1=extrovert, 10=introvert)
+  - `adventurousness`: number (1=routine-lover, 10=thrill-seeker)
+  - `ambition`: number (1=content, 10=driven)
+  - `emotionalOpenness`: number (1=private, 10=open book)
+  - `traditionalValues`: number (1=progressive, 10=traditional)
+  - `independenceNeed`: number (1=togetherness, 10=space needed)
+  - `romanticStyle`: number (1=practical, 10=deeply romantic)
+  - `socialEnergy`: number (1=homebody, 10=social butterfly)
+  - `communicationStyle`: number (1=reserved, 10=expressive)
+  - `attachmentStyle`: number (1=avoidant, 10=anxious)
+  - `planningStyle`: number (1=spontaneous, 10=structured)
 - `relationshipStyle`: object
   - `loveLanguage`: string (from Q64)
   - `conflictStyle`: string (from Q53)
@@ -223,14 +230,46 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `lifestyle`: object
   - `sleepSchedule`: string (from Q32)
   - `exerciseLevel`: string (from Q24)
-  - `dietType`: string (optional, extracted from Q28)
+  - `dietType`: string (optional)
   - `alcoholUse`: string (from Q29)
   - `drugUse`: string (from Q31)
-  - `petPreference`: string (extracted from Q23)
+  - `petPreference`: string
   - `locationPreference`: string ("city", "suburb", "rural", "flexible")
+- `lifeStory`: object (optional)
+  - `proudestAchievement`, `definingHardship`, `biggestRisk`: string (optional)
+  - `dreams`, `fears`, `formativeExperiences`: string[]
+  - `favoriteStory`: string (optional)
+- `socialProfile`: object (optional)
+  - `socialStyle`: string
+  - `weekendStyle`, `idealFridayNight`, `socialCircleVision`: string (optional)
+  - `goOutFrequency`, `friendApprovalImportance`: number
+- `intimacyProfile`: object (optional)
+  - `physicalIntimacyImportance`, `physicalAttractionImportance`: number
+  - `pdaComfort`: string
+  - `emotionalIntimacyApproach`, `healthyIntimacyVision`: string (optional)
+  - `connectionTriggers`: string[]
+- `lovePhilosophy`: object (optional)
+  - `believesInSoulmates`: boolean
+  - `loveDefinition`, `healthyRelationshipVision`, `bestAdviceReceived`: string (optional)
+  - `loveRecognition`, `romanticGestures`: string[]
+- `partnerPreferences`: object (optional)
+  - `mustHaves`, `niceToHaves`, `redFlags`, `importantQualities`, `dealbreakersInPartner`: string[]
+- `bioElements`: object (optional)
+  - `conversationStarters`, `interestingFacts`, `uniqueQuirks`, `passions`: string[]
+  - `whatTheySek`: string (optional)
+- `demographics`: object (optional)
+  - `ethnicity`, `religion`, `politicalLeaning`: string (optional)
+  - `religiosity`, `politicalIntensity`: number
+  - `hasKids`: boolean
+- `health`: object (optional)
+  - `physicalHealthRating`, `mentalHealthRating`: number
+  - `healthNotes`: string (optional)
+  - `smokingStatus`, `drinkingFrequency`, `drugUse`: string
+- `generatedBio`: string (optional) - Full paragraph bio (150-200 words)
+- `shortBio`: string (optional) - One-sentence bio for match cards (starts with "A/An...")
 - `keywords`: string[] - Combined searchable keywords (15-25)
 - `processedAt`: number (timestamp)
-- `openaiModel`: string (e.g., "gpt-4o-mini")
+- `openaiModel`: string (e.g., "gpt-5-mini-2025-08-07")
 - `confidence`: number (0-1 confidence score)
 
 ---
@@ -261,58 +300,93 @@ After a user completes all 100 questions, a background Convex action parses thei
 1. User completes onboarding → `completeOnboarding` mutation runs
 2. Mutation schedules `parseUserProfile` action via `ctx.scheduler.runAfter(0, ...)`
 3. Action fetches all answers with question details
-4. Action batches answers by category and runs 5 parallel OpenAI extractions:
-   - Values/Interests/Dealbreakers extraction
-   - Personality traits scoring (6 dimensions, 1-10 scale)
-   - Family plans extraction
-   - Lifestyle preferences extraction
-   - Keywords extraction
+4. Action runs 14 parallel OpenAI extractions in 3 batches:
+   - **Batch 1**: Values/Interests, Personality (11 traits), Family, Lifestyle, Keywords
+   - **Batch 2**: Life Story, Social Profile, Intimacy, Love Philosophy, Partner Prefs, Bio Elements
+   - **Batch 3**: Confidence, Full Bio, Short Bio
 5. Results combined with structured answers (multiple_choice, scale) from database
 6. Complete profile saved to `userProfiles` table
 
 ### OpenAI Integration (`convex/lib/openai.ts`)
 - Lazy-initialized client using `OPENAI_API_KEY` environment variable
-- Default model: `gpt-4o-mini` (cost-efficient, ~$0.01-0.02 per user)
+- Default model: `gpt-5-mini-2025-08-07` (~$0.01 per user full parse)
 - Retry logic with exponential backoff (3 retries)
 - JSON response format enforced
+- Token usage and cost tracking logged to console
 - Error handling for rate limits, auth errors, parsing failures
 
 ### Prompt Templates (`convex/lib/prompts.ts`)
 - `VALUES_INTERESTS_PROMPT`: Extracts values (max 10), interests (max 15), dealbreakers (max 5)
-- `PERSONALITY_TRAITS_PROMPT`: Rates 6 personality dimensions on 1-10 scale
+- `PERSONALITY_TRAITS_PROMPT`: Rates 11 personality dimensions on 1-10 scale
 - `FAMILY_PLANS_PROMPT`: Extracts kids preference, timeline, parenting style
 - `LIFESTYLE_PROMPT`: Extracts diet, pet preference, location preference
+- `LIFE_STORY_PROMPT`: Extracts achievements, hardships, dreams, fears
+- `SOCIAL_PROFILE_PROMPT`: Extracts social style, going out frequency
+- `INTIMACY_PROFILE_PROMPT`: Extracts intimacy preferences, PDA comfort
+- `LOVE_PHILOSOPHY_PROMPT`: Extracts soulmate beliefs, romantic gestures
+- `PARTNER_PREFERENCES_PROMPT`: Extracts must-haves, red flags, dealbreakers
+- `BIO_ELEMENTS_PROMPT`: Extracts quirks, conversation starters, passions
 - `KEYWORDS_PROMPT`: Generates 15-25 searchable keywords
 - `CONFIDENCE_PROMPT`: Rates extraction confidence (0-1)
+- `getBioGenerationPrompt(gender)`: Generates full paragraph bio with correct pronouns
+- `getShortBioPrompt()`: Generates one-sentence bio starting with "A/An [profession]..."
 
-### Question Groups for Extraction
-```typescript
-EXTRACTION_QUESTION_GROUPS = {
-  valuesInterests: [4, 12, 13, 15, 16, 17, 18, 19, 25, 28, 40, 42, 48, 49, 52, 91, 92, 93, 94, 97, 98],
-  personalityTraits: [12, 13, 17, 18, 19, 40, 41, 43, 44, 45, 46, 48, 49, 50, 52, 54, 55, 58, 59, 60, 62, 68, 69, 70, 83, 84, 86, 87, 90, 94],
-  familyPlans: [72, 75, 76, 77, 78],
-  lifestyle: [23, 25, 28, 35, 39],
-  dealbreakers: [19, 50, 65, 96],
-  allOpenEnded: [2, 3, 4, 11, 12, 13, 15, 16, 17, 18, 19, 23, 25, 28, 35, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 52, 54, 55, 58, 59, 60, 62, 65, 66, 68, 69, 70, 72, 75, 76, 77, 78, 81, 83, 84, 86, 87, 88, 89, 90, 91, 92, 93, 94, 96, 97, 98, 99, 100],
-}
+### Flexible Section Regeneration
+To regenerate specific sections without re-running the full parse:
+
+```bash
+bunx convex run actions/parseProfile:regenerateSections '{"userId": "...", "sections": ["shortBio", "bio"]}'
 ```
+
+**Available sections:**
+- `values` - Values, interests, dealbreakers
+- `personality` - All 11 personality traits
+- `lifestyle` - Diet, pets, location preferences
+- `family` - Kids, family plans
+- `keywords` - Searchable keywords
+- `lifeStory` - Dreams, fears, achievements
+- `social` - Social style, going out frequency
+- `intimacy` - Intimacy preferences
+- `lovePhilosophy` - Soulmates, romantic gestures
+- `partnerPrefs` - Must-haves, red flags, dealbreakers
+- `bioElements` - Quirks, conversation starters
+- `confidence` - Extraction confidence score
+- `bio` - Full paragraph bio (uses gender for pronouns)
+- `shortBio` - One-sentence bio (starts with "A/An...")
 
 ---
 
-## Compatibility Scoring Algorithm (`convex/matching.ts`)
+## Compatibility Scoring Algorithm (`app/(tabs)/matches.tsx`)
 
-### Weighted Scoring (total = 100%)
-- **Values alignment**: 25% - Jaccard similarity of values arrays
-- **Lifestyle compatibility**: 20% - Sleep, exercise, alcohol, drugs, location, pets
-- **Relationship style match**: 20% - Love language, conflict style, communication, finances, alone time
-- **Family plans alignment**: 15% - Kids preference (with compatibility matrix), family closeness
-- **Interest overlap**: 10% - Jaccard similarity of interests arrays
-- **Personality complementarity**: 10% - Similarity across 6 trait dimensions
+### Weighted Scoring (11 categories, total = 100%)
+| Category | Weight | Data Sources |
+|----------|--------|--------------|
+| Values | 15% | `values[]` Jaccard similarity |
+| Personality | 15% | All 11 traits similarity |
+| Lifestyle | 12% | Sleep, exercise, location, pets |
+| Relationship Style | 12% | Love language, conflict, communication, finances |
+| Family Plans | 12% | Kids preference matrix, family closeness |
+| Social | 10% | `goOutFrequency`, `socialStyle` similarity |
+| Intimacy | 8% | `physicalIntimacyImportance`, `pdaComfort` |
+| Love Philosophy | 6% | `believesInSoulmates`, `romanticGestures` overlap |
+| Interests | 5% | `interests[]` Jaccard similarity |
+| Attachment | 3% | Research-based pairing (secure+secure=100%, avoidant+anxious=35%) |
+| Demographics | 2% | Religion/politics weighted by how much each person cares |
 
 ### Scoring Functions
 - `calculateArrayOverlap()`: Jaccard similarity for string arrays
 - `calculateNumericSimilarity()`: Normalized difference for 1-10 scales
 - `calculateCompatibility()`: Returns 0-100 score with detailed breakdown
+- `checkMustHaves()`: Evaluates if profile meets must-have requirements
+- `checkDealbreakers()`: Detects dealbreaker triggers with severity levels
+- `getFrictionPoints()`: Identifies potential compatibility concerns
+
+### Must-Haves & Dealbreakers Matching
+The matches page shows bidirectional must-have/dealbreaker checks:
+- **Must-Haves**: Cross-references `partnerPreferences.mustHaves[]` against profile traits/values
+- **Dealbreakers**: Checks substances, kids, religion, politics, personality extremes
+- **Severity levels**: clear (✓), warning (⚠), triggered (✗)
+- **Watch Out For**: Auto-detected friction points from low-scoring areas
 
 ### Kids Compatibility Matrix
 ```typescript
@@ -493,6 +567,39 @@ bun start
 - Session AI answers tracked in MMKV for current session review flow
 - Database `source` field persists across app restarts
 - `clearAiAnswers` mutation deletes all AI-sourced answers for user
+
+---
+
+### Matches Page (IMPLEMENTED)
+
+**Purpose**: Display compatibility scores between the current user and potential matches, with detailed breakdowns of why they're compatible or not.
+
+**UI Structure** (`app/(tabs)/matches.tsx`):
+1. **Your Profile Card** (expandable):
+   - Shows your photo, name, and short bio when collapsed
+   - Tap to expand and see full profile details
+   
+2. **Match Cards** (sorted by compatibility score):
+   - Photo, name, location, compatibility % badge
+   - **Short bio** displayed when collapsed (one-sentence, starts with "A/An...")
+   - Tap to expand for full details
+
+**Expanded Match View**:
+1. **Compatibility Breakdown** - All 11 category scores with progress bars
+2. **Shared Values** - Green tags showing overlapping values
+3. **Shared Interests** - Green tags showing overlapping interests
+4. **Must-Haves Check**:
+   - "Does [Name] meet yours?" with ✓/✗ for each must-have
+   - "Do you meet [Name]'s?" (bidirectional)
+5. **Dealbreakers Check**:
+   - "Your dealbreakers" with ✓ (clear) / ⚠ (warning) / ✗ (triggered)
+   - "[Name]'s dealbreakers" (bidirectional)
+6. **Watch Out For** - Auto-detected friction points (different sleep schedules, conflict styles, etc.)
+7. **Full Profile** - All parsed profile data (traits, life story, etc.)
+
+**Personality Trait Display Convention**:
+- Sliders always show conservative/structured on LEFT, liberal/spontaneous on RIGHT
+- Inverted traits (where DB value is backwards): introversion, traditionalValues, planningStyle
 
 ---
 

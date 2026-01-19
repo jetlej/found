@@ -8,8 +8,8 @@ import {
 } from "@/hooks/usePushNotifications";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import { IconChevronRight, IconPencil } from "@tabler/icons-react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { IconChevronRight, IconPencil } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";

@@ -2,22 +2,21 @@ import { api } from "@/convex/_generated/api";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
-import { IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Animated,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

@@ -106,6 +106,12 @@ export const createTestProfile = internalMutation({
         emotionalOpenness: v.number(),
         traditionalValues: v.number(),
         independenceNeed: v.number(),
+        // New traits (Phase 1)
+        romanticStyle: v.optional(v.number()),
+        socialEnergy: v.optional(v.number()),
+        communicationStyle: v.optional(v.number()),
+        attachmentStyle: v.optional(v.number()),
+        planningStyle: v.optional(v.number()),
       }),
     }),
     extractedData: v.object({
@@ -153,7 +159,20 @@ export const createTestProfile = internalMutation({
       values: args.extractedData.values,
       interests: args.extractedData.interests,
       dealbreakers: args.extractedData.dealbreakers,
-      traits: args.persona.traits,
+      traits: {
+        introversion: args.persona.traits.introversion,
+        adventurousness: args.persona.traits.adventurousness,
+        ambition: args.persona.traits.ambition,
+        emotionalOpenness: args.persona.traits.emotionalOpenness,
+        traditionalValues: args.persona.traits.traditionalValues,
+        independenceNeed: args.persona.traits.independenceNeed,
+        // New traits with defaults
+        romanticStyle: args.persona.traits.romanticStyle ?? 5,
+        socialEnergy: args.persona.traits.socialEnergy ?? 5,
+        communicationStyle: args.persona.traits.communicationStyle ?? 5,
+        attachmentStyle: args.persona.traits.attachmentStyle ?? 5,
+        planningStyle: args.persona.traits.planningStyle ?? 5,
+      },
       relationshipStyle: {
         loveLanguage: args.structuredAnswers.loveLanguage,
         conflictStyle: args.structuredAnswers.conflictStyle,

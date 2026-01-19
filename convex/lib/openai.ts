@@ -15,10 +15,31 @@ export function getOpenAIClient(): OpenAI {
 }
 
 // Default model for profile parsing (cost-efficient)
-export const DEFAULT_MODEL = "gpt-4o-mini";
+export const DEFAULT_MODEL = "gpt-5-mini-2025-08-07";
 
 // Higher accuracy model for complex extractions
-export const ACCURATE_MODEL = "gpt-4o";
+export const ACCURATE_MODEL = "gpt-5-mini-2025-08-07";
+
+// Pricing per 1M tokens (GPT-5 mini estimated pricing)
+// Update these values based on actual OpenAI pricing
+export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  "gpt-5-mini-2025-08-07": { input: 0.15, output: 0.60 }, // $ per 1M tokens
+  "gpt-4o-mini": { input: 0.15, output: 0.60 },
+  "gpt-4o": { input: 2.50, output: 10.00 },
+};
+
+// Type for tracking API usage
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export interface ApiCallResult<T> {
+  data: T;
+  usage: TokenUsage;
+  cost: number; // in dollars
+}
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -33,6 +54,14 @@ type ChatMessage = {
   content: string;
 };
 
+// Calculate cost from token usage
+export function calculateCost(usage: TokenUsage, model: string = DEFAULT_MODEL): number {
+  const pricing = MODEL_PRICING[model] || MODEL_PRICING["gpt-5-mini-2025-08-07"];
+  const inputCost = (usage.promptTokens / 1_000_000) * pricing.input;
+  const outputCost = (usage.completionTokens / 1_000_000) * pricing.output;
+  return inputCost + outputCost;
+}
+
 // Generic function to call OpenAI with retry logic
 export async function callOpenAI<T>(
   messages: ChatMessage[],
@@ -43,10 +72,24 @@ export async function callOpenAI<T>(
     responseFormat?: "json" | "text";
   } = {}
 ): Promise<T> {
+  const result = await callOpenAIWithUsage<T>(messages, options);
+  return result.data;
+}
+
+// Call OpenAI and return usage statistics
+export async function callOpenAIWithUsage<T>(
+  messages: ChatMessage[],
+  options: {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    responseFormat?: "json" | "text";
+  } = {}
+): Promise<ApiCallResult<T>> {
   const client = getOpenAIClient();
   const {
     model = DEFAULT_MODEL,
-    temperature = 0.3,
+    temperature,
     maxTokens = 2000,
     responseFormat = "json",
   } = options;
@@ -55,11 +98,12 @@ export async function callOpenAI<T>(
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
+      // Note: gpt-5-mini doesn't support temperature param, so we omit it
       const response = await client.chat.completions.create({
         model,
         messages,
-        temperature,
-        max_tokens: maxTokens,
+        ...(temperature !== undefined && { temperature }),
+        max_completion_tokens: maxTokens,
         response_format:
           responseFormat === "json" ? { type: "json_object" } : { type: "text" },
       });
@@ -69,15 +113,27 @@ export async function callOpenAI<T>(
         throw new Error("No content in OpenAI response");
       }
 
+      // Extract usage data
+      const usage: TokenUsage = {
+        promptTokens: response.usage?.prompt_tokens || 0,
+        completionTokens: response.usage?.completion_tokens || 0,
+        totalTokens: response.usage?.total_tokens || 0,
+      };
+
+      const cost = calculateCost(usage, model);
+
+      let data: T;
       if (responseFormat === "json") {
         try {
-          return JSON.parse(content) as T;
+          data = JSON.parse(content) as T;
         } catch (parseError) {
           throw new Error(`Failed to parse JSON response: ${content}`);
         }
+      } else {
+        data = content as T;
       }
 
-      return content as T;
+      return { data, usage, cost };
     } catch (error: any) {
       lastError = error;
 
@@ -127,4 +183,46 @@ export async function extractStructuredData<T>(
     maxTokens: options.maxTokens,
     responseFormat: "json",
   });
+}
+
+// Structured extraction with usage tracking
+export async function extractStructuredDataWithUsage<T>(
+  systemPrompt: string,
+  userContent: string,
+  options: {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+  } = {}
+): Promise<ApiCallResult<T>> {
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userContent },
+  ];
+
+  return callOpenAIWithUsage<T>(messages, {
+    ...options,
+    maxTokens: options.maxTokens,
+    responseFormat: "json",
+  });
+}
+
+// Helper to aggregate multiple usage results
+export function aggregateUsage(usages: TokenUsage[]): TokenUsage {
+  return usages.reduce(
+    (acc, usage) => ({
+      promptTokens: acc.promptTokens + usage.promptTokens,
+      completionTokens: acc.completionTokens + usage.completionTokens,
+      totalTokens: acc.totalTokens + usage.totalTokens,
+    }),
+    { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+  );
+}
+
+// Helper to format cost for display
+export function formatCost(cost: number): string {
+  if (cost < 0.01) {
+    return `$${(cost * 100).toFixed(4)}¢`;
+  }
+  return `$${cost.toFixed(4)}`;
 }

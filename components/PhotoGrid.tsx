@@ -6,14 +6,14 @@ import { useMutation } from "convex/react";
 import * as ExpoImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Alert,
+    Dimensions,
+    Image,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { DraxProvider, DraxView } from "react-native-drax";
 import { GestureHandlerRootView } from "react-native-gesture-handler";

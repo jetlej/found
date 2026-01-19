@@ -1,25 +1,25 @@
 import { api } from "@/convex/_generated/api";
-import { generateAIPrompt, parseAIResponse, getAnswerCount } from "@/lib/ai-import";
+import { generateAIPrompt, getAnswerCount, parseAIResponse } from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import { IconArrowLeft, IconCheck, IconCircleCheck, IconClipboard, IconCopy } from "@tabler/icons-react-native";
-import * as Clipboard from "expo-clipboard";
 import { useMutation, useQuery } from "convex/react";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useMMKVObject } from "react-native-mmkv";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AIPasteScreen() {
   const { userId } = useAuth();

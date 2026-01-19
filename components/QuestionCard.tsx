@@ -3,6 +3,7 @@ import Slider from "@react-native-community/slider";
 import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -157,7 +158,13 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.questionText}>{question.text}</Text>
-      {renderInput()}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {renderInput()}
+      </ScrollView>
     </View>
   );
 }
@@ -165,6 +172,12 @@ export function QuestionCard({ question, value, onChange }: QuestionCardProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
   questionText: {
     fontFamily: fonts.serif,

@@ -9,9 +9,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -61,7 +61,6 @@ export default function HomeScreen() {
           </Text>
 
           <View style={styles.card}>
-            <Text style={styles.cardEmoji}>💝</Text>
             <Text style={styles.cardTitle}>Matching Coming Soon</Text>
             <Text style={styles.cardText}>
               We'll notify you when it's your turn to start meeting people who truly get you.

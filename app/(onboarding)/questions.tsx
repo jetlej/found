@@ -188,7 +188,12 @@ export default function QuestionsScreen() {
               <Text style={styles.categoryLabel}>{category.name}</Text>
               <Pressable
                 style={styles.closeButton}
-                onPress={() => router.back()}
+                onPress={async () => {
+                  if (currentAnswer) {
+                    await saveCurrentAnswer();
+                  }
+                  router.back();
+                }}
               >
                 <IconX size={20} color={colors.textSecondary} />
               </Pressable>

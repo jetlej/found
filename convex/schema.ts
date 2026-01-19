@@ -70,7 +70,7 @@ export default defineSchema({
     interests: v.array(v.string()), // ["hiking", "cooking", "reading", "travel"]
     dealbreakers: v.array(v.string()), // ["smoking", "no kids", "long distance"]
 
-    // Personality traits (1-10 scales derived from answers)
+    // Personality traits (1-10 scales derived from answers) - 11 dimensions
     traits: v.object({
       introversion: v.number(), // 1=extrovert, 10=introvert
       adventurousness: v.number(),
@@ -78,6 +78,12 @@ export default defineSchema({
       emotionalOpenness: v.number(),
       traditionalValues: v.number(),
       independenceNeed: v.number(),
+      // New dimensions (Phase 1) - optional for backwards compatibility
+      romanticStyle: v.optional(v.number()), // 1=practical, 10=romantic
+      socialEnergy: v.optional(v.number()), // 1=homebody, 10=social butterfly
+      communicationStyle: v.optional(v.number()), // 1=reserved, 10=expressive
+      attachmentStyle: v.optional(v.number()), // 1=avoidant, 10=anxious
+      planningStyle: v.optional(v.number()), // 1=spontaneous, 10=structured
     }),
 
     // Relationship style
@@ -107,6 +113,89 @@ export default defineSchema({
       petPreference: v.string(), // extracted from Q23
       locationPreference: v.string(), // "city", "suburb", "rural", "flexible"
     }),
+
+    // Life story - narrative elements (Phase 2)
+    lifeStory: v.optional(v.object({
+      proudestAchievement: v.optional(v.string()),
+      definingHardship: v.optional(v.string()),
+      biggestRisk: v.optional(v.string()),
+      dreams: v.array(v.string()),
+      fears: v.array(v.string()),
+      formativeExperiences: v.array(v.string()),
+      favoriteStory: v.optional(v.string()),
+    })),
+
+    // Social profile (Phase 3)
+    socialProfile: v.optional(v.object({
+      socialStyle: v.string(), // "very active" | "balanced" | "introverted"
+      weekendStyle: v.optional(v.string()),
+      idealFridayNight: v.optional(v.string()),
+      goOutFrequency: v.number(), // 1-10
+      friendApprovalImportance: v.number(), // 1-10
+      socialCircleVision: v.optional(v.string()),
+    })),
+
+    // Intimacy profile (Phase 4)
+    intimacyProfile: v.optional(v.object({
+      physicalIntimacyImportance: v.number(), // 1-10
+      physicalAttractionImportance: v.number(), // 1-10
+      pdaComfort: v.string(),
+      emotionalIntimacyApproach: v.optional(v.string()),
+      connectionTriggers: v.array(v.string()),
+      healthyIntimacyVision: v.optional(v.string()),
+    })),
+
+    // Love philosophy (Phase 5)
+    lovePhilosophy: v.optional(v.object({
+      believesInSoulmates: v.boolean(),
+      loveDefinition: v.optional(v.string()),
+      loveRecognition: v.array(v.string()), // signs they're in love
+      romanticGestures: v.array(v.string()),
+      healthyRelationshipVision: v.optional(v.string()),
+      bestAdviceReceived: v.optional(v.string()),
+    })),
+
+    // Partner preferences (Phase 6)
+    partnerPreferences: v.optional(v.object({
+      mustHaves: v.array(v.string()),
+      niceToHaves: v.array(v.string()),
+      redFlags: v.array(v.string()),
+      importantQualities: v.array(v.string()),
+      dealbreakersInPartner: v.array(v.string()),
+    })),
+
+    // Bio elements for AI descriptions (Phase 7)
+    bioElements: v.optional(v.object({
+      conversationStarters: v.array(v.string()),
+      interestingFacts: v.array(v.string()),
+      uniqueQuirks: v.array(v.string()),
+      passions: v.array(v.string()),
+      whatTheySek: v.optional(v.string()),
+    })),
+
+    // Demographics snapshot (Phase 8)
+    demographics: v.optional(v.object({
+      ethnicity: v.optional(v.string()),
+      religion: v.optional(v.string()),
+      religiosity: v.number(), // 1-10
+      politicalLeaning: v.optional(v.string()),
+      politicalIntensity: v.number(), // 1-10
+      hasKids: v.boolean(),
+    })),
+
+    // Health snapshot (Phase 9)
+    health: v.optional(v.object({
+      physicalHealthRating: v.number(), // 1-10
+      mentalHealthRating: v.number(), // 1-10
+      healthNotes: v.optional(v.string()),
+      smokingStatus: v.string(),
+      drinkingFrequency: v.string(),
+      drugUse: v.string(),
+    })),
+
+    // Generated bio (Phase 10)
+    generatedBio: v.optional(v.string()),
+    shortBio: v.optional(v.string()), // One-sentence bio for match cards
 
     // Keywords for search/display
     keywords: v.array(v.string()), // All extracted keywords combined

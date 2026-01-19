@@ -118,7 +118,6 @@ export default function JourneyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   description: {
     paddingHorizontal: spacing.xl,

@@ -8,7 +8,7 @@ import {
 } from "@/hooks/usePushNotifications";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { IconChevronRight, IconPencil } from "@tabler/icons-react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
@@ -225,7 +225,7 @@ export default function ProfileScreen() {
               </View>
             )}
             <View style={styles.editBadge}>
-              <Ionicons name="pencil" size={12} color={colors.primaryText} />
+              <IconPencil size={12} color={colors.primaryText} />
             </View>
           </Pressable>
           {isEditingName ? (
@@ -271,8 +271,7 @@ export default function ProfileScreen() {
           ) : (
             <Pressable onPress={handleEditName} style={styles.nameRow}>
               <Text style={styles.name}>{currentUser?.name ?? "User"}</Text>
-              <Ionicons
-                name="pencil"
+              <IconPencil
                 size={16}
                 color={colors.textMuted}
                 style={styles.pencilIcon}
@@ -321,7 +320,7 @@ export default function ProfileScreen() {
                 <Text style={styles.timeText}>
                   {formatTime(reminderHour, reminderMinute)}
                 </Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                <IconChevronRight size={18} color={colors.textMuted} />
               </View>
             </Pressable>
           )}

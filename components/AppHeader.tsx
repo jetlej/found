@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
-import { MAX_LEVEL } from "@/lib/categories";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
+import { IconBoltFilled } from "@tabler/icons-react-native";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
@@ -43,7 +43,10 @@ export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps)
         onPress={handleLevelPress}
         disabled={!showLevelLink}
       >
-        <Text style={styles.levelText}>Lvl {level}/{MAX_LEVEL}</Text>
+        <View style={styles.levelBadge}>
+          <IconBoltFilled size={16} color={colors.text} />
+          <Text style={styles.levelText}>Level {level}</Text>
+        </View>
       </Pressable>
       {onLogoPress ? (
         <Pressable onPress={onLogoPress}>
@@ -97,6 +100,11 @@ const styles = StyleSheet.create({
     fontSize: fontSizes["2xl"],
     color: colors.text,
     letterSpacing: -1,
+  },
+  levelBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
   levelText: {
     fontSize: fontSizes.sm,

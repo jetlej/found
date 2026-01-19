@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { colors, fontSizes, spacing } from "@/lib/theme";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { IconCircleX, IconPlus } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as ExpoImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
@@ -250,7 +250,7 @@ export function PhotoGrid({
             style={styles.removeButton}
             onPress={() => handleRemove(item)}
           >
-            <Ionicons name="close-circle" size={24} color={colors.text} />
+            <IconCircleX size={24} color={colors.text} />
           </Pressable>
           {isFirst && (
             <View style={styles.mainBadge}>
@@ -275,8 +275,7 @@ export function PhotoGrid({
         }}
       >
         <Pressable style={styles.emptySlot} onPress={() => pickImage(index)}>
-          <Ionicons
-            name="add"
+          <IconPlus
             size={32}
             color={isRequired ? colors.text : colors.textMuted}
           />

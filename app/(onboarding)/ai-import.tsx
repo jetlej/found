@@ -3,7 +3,7 @@ import { useScreenReady } from "@/hooks/useScreenReady";
 import { generateAIPrompt } from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { IconArrowLeft, IconEdit, IconSparkles } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
@@ -58,7 +58,7 @@ export default function AIImportScreen() {
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <IconArrowLeft size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>Time for your 100 questions</Text>
           <Text style={styles.subtitle}>
@@ -68,14 +68,14 @@ export default function AIImportScreen() {
 
         <View style={styles.choiceContainer}>
           <Pressable style={styles.choiceButton} onPress={handleUseAI}>
-            <Ionicons name="sparkles" size={24} color={colors.primaryText} />
+            <IconSparkles size={24} color={colors.primaryText} />
             <Text style={styles.choiceButtonText}>Use AI to help answer</Text>
           </Pressable>
 
           <Text style={styles.orText}>or</Text>
 
           <Pressable style={styles.choiceButton} onPress={handleAnswerManually}>
-            <Ionicons name="create-outline" size={24} color={colors.primaryText} />
+            <IconEdit size={24} color={colors.primaryText} />
             <Text style={styles.choiceButtonText}>Answer manually</Text>
           </Pressable>
         </View>

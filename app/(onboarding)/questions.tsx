@@ -4,7 +4,7 @@ import { useScreenReady } from "@/hooks/useScreenReady";
 import { CategoryId, getCategoryById } from "@/lib/categories";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { IconX } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -190,7 +190,7 @@ export default function QuestionsScreen() {
                 style={styles.closeButton}
                 onPress={() => router.back()}
               >
-                <FontAwesome name="close" size={20} color={colors.textSecondary} />
+                <IconX size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
             <View style={styles.progressRow}>

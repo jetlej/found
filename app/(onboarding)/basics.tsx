@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery } from "convex/react";
 import * as Location from "expo-location";
@@ -253,7 +253,7 @@ export default function BasicsScreen() {
 
             {location ? (
               <View style={styles.locationResult}>
-                <Ionicons name="location" size={24} color={colors.success} />
+                <IconMapPin size={24} color={colors.success} />
                 <Text style={styles.locationText}>{location}</Text>
               </View>
             ) : (
@@ -266,7 +266,7 @@ export default function BasicsScreen() {
                   <ActivityIndicator color={colors.primaryText} />
                 ) : (
                   <>
-                    <Ionicons name="location-outline" size={24} color={colors.primaryText} />
+                    <IconMapPinSearch size={24} color={colors.primaryText} />
                     <Text style={styles.locationButtonText}>Enable Location</Text>
                   </>
                 )}

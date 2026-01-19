@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { generateAIPrompt, parseAIResponse, getAnswerCount } from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { IconArrowLeft, IconCheck, IconCircleCheck, IconClipboard, IconCopy } from "@tabler/icons-react-native";
 import * as Clipboard from "expo-clipboard";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
@@ -122,7 +122,7 @@ export default function AIPasteScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.successContent}>
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={64} color={colors.success} />
+            <IconCircleCheck size={64} color={colors.success} />
           </View>
           <Text style={styles.successTitle}>
             {importedCount} of 100 questions answered!
@@ -153,7 +153,7 @@ export default function AIPasteScreen() {
         >
           <View style={styles.header}>
             <Pressable style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <IconArrowLeft size={24} color={colors.text} />
             </Pressable>
           </View>
 
@@ -161,7 +161,7 @@ export default function AIPasteScreen() {
             <Text style={styles.stepNumber}>Step 1</Text>
             <Text style={styles.stepTitle}>Paste into ChatGPT or Claude</Text>
             <Pressable style={styles.copyButton} onPress={handleCopyPrompt}>
-              <Ionicons name={justCopied ? "checkmark" : "copy-outline"} size={18} color={colors.primaryText} />
+              {justCopied ? <IconCheck size={18} color={colors.primaryText} /> : <IconCopy size={18} color={colors.primaryText} />}
               <Text style={styles.copyButtonText}>
                 {justCopied ? "Prompt Copied" : "Copy Prompt"}
               </Text>
@@ -172,7 +172,7 @@ export default function AIPasteScreen() {
             <Text style={styles.stepNumber}>Step 2</Text>
             <Text style={styles.stepTitle}>Paste the response here</Text>
             <Pressable style={styles.pasteButton} onPress={handlePasteFromClipboard}>
-              <Ionicons name="clipboard-outline" size={18} color={colors.text} />
+              <IconClipboard size={18} color={colors.text} />
               <Text style={styles.pasteButtonText}>Paste from clipboard</Text>
             </Pressable>
             <TextInput

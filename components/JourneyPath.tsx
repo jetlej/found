@@ -1,6 +1,24 @@
 import { CATEGORIES, Category, getQuestionCountForCategory } from "@/lib/categories";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import {
+    IconBabyCarriage,
+    IconBook,
+    IconCheck,
+    IconDiamond,
+    IconFlag,
+    IconHeart,
+    IconHeartHandshake,
+    IconLeaf,
+    IconLock,
+    IconMessage,
+    IconMusic,
+    IconPencil,
+    IconPlayerTrackNext,
+    IconPlayerTrackPrev,
+    IconStar,
+    IconUser,
+    IconUsers,
+} from "@tabler/icons-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Dimensions, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -30,19 +48,19 @@ interface JourneyPathProps {
 
 type NodeState = "completed" | "current" | "locked" | "animating" | "unlocking";
 
-const CATEGORY_ICONS: Record<CategoryId, keyof typeof FontAwesome.glyphMap> = {
-  basic_traits: "user",
-  core_values: "diamond",
-  lifestyle_health: "leaf",
-  life_story: "book",
-  social_life: "users",
-  communication_style: "comment",
-  relationship_expectations: "heart",
-  family_kids: "child",
-  intimacy: "heart-o",
-  love_philosophy: "star",
-  leisure_quirks: "music",
-  final_thoughts: "flag",
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
+  basic_traits: IconUser,
+  core_values: IconDiamond,
+  lifestyle_health: IconLeaf,
+  life_story: IconBook,
+  social_life: IconUsers,
+  communication_style: IconMessage,
+  relationship_expectations: IconHeart,
+  family_kids: IconBabyCarriage,
+  intimacy: IconHeartHandshake,
+  love_philosophy: IconStar,
+  leisure_quirks: IconMusic,
+  final_thoughts: IconFlag,
 };
 
 function getNodeState(
@@ -124,13 +142,27 @@ function CategoryNode({
   // Reset animation values when state becomes "animating"
   useEffect(() => {
     if (state === "animating") {
-      // Reset to initial state (black, expanded, no checkmark)
+      // Reset to initial state (black bg, white text, no checkmark)
       checkmarkScale.value = 0;
       checkmarkOpacity.value = 0;
       borderColorProgress.value = 0;
       titleColorProgress.value = 0;
       connectorColorProgress.value = 0;
       contentOpacity.value = 1;
+    }
+  }, [state]);
+  
+  // Reset unlock animation values when state becomes "unlocking"
+  useEffect(() => {
+    if (state === "unlocking") {
+      // Reset to initial state (gold border, light bg)
+      unlockBorderProgress.value = 0;
+      unlockContentHeight.value = 0;
+      progressSectionOpacity.value = 0;
+      unlockPreviewOpacity.value = 0;
+      lockScale.value = 1;
+      lockOpacity.value = 1;
+      progressBarWidth.value = 0;
     }
   }, [state]);
   
@@ -231,14 +263,15 @@ function CategoryNode({
   }, [state, animationPhase, progress, measuredContentHeight]);
   
   // Animated styles for completing category
+  // Background goes from black (current) to white (completed)
   const animatedBorderStyle = useAnimatedStyle(() => {
     if (state !== "animating") return {};
-    const borderColor = interpolateColor(
+    const backgroundColor = interpolateColor(
       borderColorProgress.value,
       [0, 1],
-      [colors.text, colors.success]
+      [colors.text, colors.surface]
     );
-    return { borderColor };
+    return { backgroundColor };
   });
   
   const animatedConnectorStyle = useAnimatedStyle(() => {
@@ -246,28 +279,35 @@ function CategoryNode({
     const backgroundColor = interpolateColor(
       connectorColorProgress.value,
       [0, 1],
-      [colors.border, colors.success]
+      [colors.border, colors.text]
     );
     return { backgroundColor };
   });
   
+  // Text/icon go from white (current) to black (completed)
   const animatedTitleStyle = useAnimatedStyle(() => {
     if (state !== "animating") return {};
     const color = interpolateColor(
       titleColorProgress.value,
       [0, 1],
-      [colors.text, colors.success]
+      ["#FFFFFF", colors.text]
     );
     return { color };
   });
   
-  // For animating the icon color - we use two overlapping icons
-  const animatedIconBlackStyle = useAnimatedStyle(() => {
-    if (state !== "animating") return { opacity: 1 };
+  // For animating the icon color - white fades out, black fades in
+  const animatedIconWhiteStyle = useAnimatedStyle(() => {
+    if (state !== "animating") return { opacity: 0 };
     return { opacity: 1 - titleColorProgress.value };
   });
   
-  const animatedIconGreenStyle = useAnimatedStyle(() => {
+  const animatedIconBlackStyle = useAnimatedStyle(() => {
+    if (state !== "animating") return { opacity: 1 };
+    return { opacity: titleColorProgress.value };
+  });
+  
+  // Pencil fades in with titleColorProgress
+  const animatedPencilStyle = useAnimatedStyle(() => {
     if (state !== "animating") return { opacity: 0 };
     return { opacity: titleColorProgress.value };
   });
@@ -292,14 +332,25 @@ function CategoryNode({
     const borderColor = interpolateColor(
       unlockBorderProgress.value,
       [0, 1],
-      ["#CCCCCC", colors.text]
+      ["#AAAAAA", colors.text]
     );
     const backgroundColor = interpolateColor(
       unlockBorderProgress.value,
       [0, 1],
-      [colors.background, colors.surface]
+      [colors.background, colors.text]
     );
     return { borderColor, backgroundColor };
+  });
+  
+  // Text color for unlocking: gold → white (synced with background)
+  const animatedUnlockTitleStyle = useAnimatedStyle(() => {
+    if (state !== "unlocking") return {};
+    const color = interpolateColor(
+      unlockBorderProgress.value,
+      [0, 1],
+      ["#AAAAAA", "#FFFFFF"]
+    );
+    return { color };
   });
   
   const animatedLockStyle = useAnimatedStyle(() => {
@@ -307,6 +358,17 @@ function CategoryNode({
       transform: [{ scale: lockScale.value }],
       opacity: lockOpacity.value,
     };
+  });
+  
+  // For unlocking icon: gold → white (synced with background)
+  const animatedUnlockIconGoldStyle = useAnimatedStyle(() => {
+    if (state !== "unlocking") return { opacity: 1 };
+    return { opacity: 1 - unlockBorderProgress.value };
+  });
+  
+  const animatedUnlockIconWhiteStyle = useAnimatedStyle(() => {
+    if (state !== "unlocking") return { opacity: 0 };
+    return { opacity: unlockBorderProgress.value };
   });
   
   const animatedUnlockContentStyle = useAnimatedStyle(() => {
@@ -335,12 +397,16 @@ function CategoryNode({
 
   const iconColor =
     state === "completed"
-      ? colors.success
-      : state === "locked"
-        ? colors.textMuted
-        : state === "unlocking" && animationPhase !== "expanding" && animationPhase !== "done"
-          ? colors.textMuted
-          : colors.text;
+      ? colors.text
+      : state === "current"
+        ? "#FFFFFF"
+        : state === "locked"
+          ? "#AAAAAA"
+          : state === "unlocking" && (animationPhase === "expanding" || animationPhase === "done")
+            ? "#FFFFFF"
+            : state === "unlocking"
+              ? "#AAAAAA"
+              : colors.text;
   
   const measurementContent = (
       <View pointerEvents="none" style={styles.measureWrapper} onLayout={handleContentLayout}>
@@ -368,36 +434,41 @@ function CategoryNode({
         <Animated.View style={[styles.node, styles.nodeCurrent, animatedBorderStyle]}>
           <View style={styles.nodeHeader}>
             <View style={styles.nodeHeaderLeft}>
-              <View style={styles.categoryIconWrapper}>
-                <Animated.View style={[styles.categoryIconAbsolute, animatedIconBlackStyle]}>
-                  <FontAwesome name={CATEGORY_ICONS[category.id]} size={14} color={colors.text} />
-                </Animated.View>
-                <Animated.View style={[styles.categoryIconAbsolute, animatedIconGreenStyle]}>
-                  <FontAwesome name={CATEGORY_ICONS[category.id]} size={14} color={colors.success} />
-                </Animated.View>
-              </View>
+              {(() => {
+                const CategoryIcon = CATEGORY_ICONS[category.id];
+                return (
+                  <View style={styles.categoryIconWrapper}>
+                    <Animated.View style={[styles.categoryIconAbsolute, animatedIconWhiteStyle]}>
+                      <CategoryIcon size={21} color="#FFFFFF" />
+                    </Animated.View>
+                    <Animated.View style={[styles.categoryIconAbsolute, animatedIconBlackStyle]}>
+                      <CategoryIcon size={21} color={colors.text} />
+                    </Animated.View>
+                  </View>
+                );
+              })()}
               <Animated.Text style={[styles.nodeName, animatedTitleStyle]}>
                 {category.name}
               </Animated.Text>
-              <Animated.View style={[styles.inlineIcon, animatedIconGreenStyle]}>
-                <FontAwesome name="pencil" size={12} color={colors.textSecondary} />
+              <Animated.View style={[styles.inlineIcon, animatedPencilStyle]}>
+                <IconPencil size={12} color={colors.textSecondary} />
               </Animated.View>
             </View>
             <Animated.View style={animatedCheckmarkStyle}>
-              <FontAwesome name="check" size={14} color={colors.success} />
+              <IconCheck size={14} color={colors.success} />
             </Animated.View>
           </View>
           
           <Animated.View style={[styles.collapsibleContent, animatedContentStyle]}>
             <View style={styles.progressSection}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: "100%" }]} />
+              <View style={[styles.progressBar, styles.progressBarCurrent]}>
+                <View style={[styles.progressFill, styles.progressFillCurrent, { width: "100%" }]} />
               </View>
-              <Text style={styles.progressText}>{questionCount}/{questionCount}</Text>
+              <Text style={[styles.progressText, styles.progressTextCurrent]}>{questionCount}/{questionCount}</Text>
             </View>
             <View style={styles.unlockPreview}>
-              <Text style={styles.unlockLabel}>Unlock:</Text>
-              <Text style={styles.unlockText}>{category.unlockDescription}</Text>
+              <Text style={[styles.unlockLabel, styles.unlockLabelCurrent]}>Unlock:</Text>
+              <Text style={[styles.unlockText, styles.unlockTextCurrent]}>{category.unlockDescription}</Text>
             </View>
           </Animated.View>
           {measurementContent}
@@ -416,31 +487,38 @@ function CategoryNode({
         <Animated.View style={[styles.node, styles.nodeLocked, animatedUnlockBorderStyle]}>
           <View style={styles.nodeHeader}>
             <View style={styles.nodeHeaderLeft}>
-              <FontAwesome
-                name={CATEGORY_ICONS[category.id]}
-                size={14}
-                color={iconColor}
-                style={styles.categoryIcon}
-              />
-              <Text style={[styles.nodeName, animationPhase === "expanding" || animationPhase === "done" ? {} : styles.nodeNameLocked]}>
+              {(() => {
+                const CategoryIcon = CATEGORY_ICONS[category.id];
+                return (
+                  <View style={styles.categoryIconWrapper}>
+                    <Animated.View style={[styles.categoryIconAbsolute, animatedUnlockIconGoldStyle]}>
+                      <CategoryIcon size={21} color="#AAAAAA" />
+                    </Animated.View>
+                    <Animated.View style={[styles.categoryIconAbsolute, animatedUnlockIconWhiteStyle]}>
+                      <CategoryIcon size={21} color="#FFFFFF" />
+                    </Animated.View>
+                  </View>
+                );
+              })()}
+              <Animated.Text style={[styles.nodeName, animatedUnlockTitleStyle]}>
                 {category.name}
-              </Text>
+              </Animated.Text>
             </View>
             <Animated.View style={animatedLockStyle}>
-              <FontAwesome name="lock" size={14} color={colors.textMuted} />
+              <IconLock size={14} color="#AAAAAA" />
             </Animated.View>
           </View>
           
           <Animated.View style={[styles.collapsibleContent, animatedUnlockContentStyle]}>
             <Animated.View style={[styles.progressSection, animatedProgressSectionStyle]}>
-              <View style={styles.progressBar}>
-                <Animated.View style={[styles.progressFill, animatedProgressBarStyle]} />
+              <View style={[styles.progressBar, styles.progressBarCurrent]}>
+                <Animated.View style={[styles.progressFill, styles.progressFillCurrent, animatedProgressBarStyle]} />
               </View>
-              <Text style={styles.progressText}>{safeAnsweredCount}/{questionCount}</Text>
+              <Text style={[styles.progressText, styles.progressTextCurrent]}>{safeAnsweredCount}/{questionCount}</Text>
             </Animated.View>
             <Animated.View style={[styles.unlockPreview, animatedUnlockPreviewStyle]}>
-              <Text style={styles.unlockLabel}>Unlock:</Text>
-              <Text style={styles.unlockText}>{category.unlockDescription}</Text>
+              <Text style={[styles.unlockLabel, styles.unlockLabelCurrent]}>Unlock:</Text>
+              <Text style={[styles.unlockText, styles.unlockTextCurrent]}>{category.unlockDescription}</Text>
             </Animated.View>
           </Animated.View>
           {measurementContent}
@@ -471,54 +549,53 @@ function CategoryNode({
       >
         <View style={styles.nodeHeader}>
           <View style={styles.nodeHeaderLeft}>
-            <FontAwesome
-              name={CATEGORY_ICONS[category.id]}
-              size={14}
-              color={iconColor}
-              style={styles.categoryIcon}
-            />
+            {(() => {
+              const CategoryIcon = CATEGORY_ICONS[category.id];
+              return <View style={styles.categoryIcon}><CategoryIcon size={21} color={iconColor} /></View>;
+            })()}
             <Text style={[
               styles.nodeName,
               state === "completed" && styles.nodeNameCompleted,
+              state === "current" && styles.nodeNameCurrent,
               state === "locked" && styles.nodeNameLocked,
             ]}>
               {category.name}
             </Text>
             {state === "completed" && (
               <Pressable style={styles.inlineIcon} onPress={onPress}>
-                <FontAwesome name="pencil" size={12} color={colors.textSecondary} />
+                <IconPencil size={12} color={colors.textSecondary} />
               </Pressable>
             )}
             {__DEV__ && false && state === "current" && onTestComplete && (
               <Pressable style={styles.testIconButton} onPress={onTestComplete}>
-                <FontAwesome name="forward" size={10} color={colors.textMuted} />
+                <IconPlayerTrackNext size={10} color={colors.textMuted} />
               </Pressable>
             )}
             {__DEV__ && false && isLastCompleted && onTestUncomplete && (
               <Pressable style={styles.testIconButton} onPress={onTestUncomplete}>
-                <FontAwesome name="backward" size={10} color={colors.textMuted} />
+                <IconPlayerTrackPrev size={10} color={colors.textMuted} />
               </Pressable>
             )}
           </View>
           {state === "completed" && (
-            <FontAwesome name="check" size={14} color={colors.success} />
+            <IconCheck size={14} color={colors.success} />
           )}
           {state === "locked" && (
-            <FontAwesome name="lock" size={14} color={colors.textMuted} />
+            <IconLock size={14} color="#AAAAAA" />
           )}
         </View>
         
         {state === "current" && (
           <>
             <View style={styles.progressSection}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+              <View style={[styles.progressBar, styles.progressBarCurrent]}>
+                <View style={[styles.progressFill, styles.progressFillCurrent, { width: `${progress * 100}%` }]} />
               </View>
-              <Text style={styles.progressText}>{answeredCount}/{questionCount}</Text>
+              <Text style={[styles.progressText, styles.progressTextCurrent]}>{answeredCount}/{questionCount}</Text>
             </View>
             <View style={styles.unlockPreview}>
-              <Text style={styles.unlockLabel}>Unlock:</Text>
-              <Text style={styles.unlockText}>{category.unlockDescription}</Text>
+              <Text style={[styles.unlockLabel, styles.unlockLabelCurrent]}>Unlock:</Text>
+              <Text style={[styles.unlockText, styles.unlockTextCurrent]}>{category.unlockDescription}</Text>
             </View>
           </>
         )}
@@ -697,7 +774,7 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   connectorCompleted: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.text,
   },
   node: {
     backgroundColor: colors.surface,
@@ -708,15 +785,15 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   nodeCompleted: {
-    borderColor: colors.success,
+    borderColor: colors.text,
     backgroundColor: colors.surface,
   },
   nodeCurrent: {
     borderColor: colors.text,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.text,
   },
   nodeLocked: {
-    borderColor: "#CCCCCC",
+    borderColor: "#AAAAAA",
     backgroundColor: colors.background,
   },
   nodeHeader: {
@@ -730,13 +807,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   categoryIcon: {
-    width: 14,
     marginRight: spacing.sm,
-    textAlign: "center",
   },
   categoryIconWrapper: {
-    width: 14,
-    height: 14,
+    width: 21,
+    height: 21,
     marginRight: spacing.sm,
   },
   categoryIconAbsolute: {
@@ -757,10 +832,13 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   nodeNameCompleted: {
-    color: colors.success,
+    color: colors.text,
+  },
+  nodeNameCurrent: {
+    color: "#FFFFFF",
   },
   nodeNameLocked: {
-    color: "#888888",
+    color: "#AAAAAA",
   },
   nodeQuestionCount: {
     fontSize: fontSizes.sm,
@@ -782,16 +860,25 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     overflow: "hidden",
   },
+  progressBarCurrent: {
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
   progressFill: {
     height: "100%",
     backgroundColor: colors.text,
     borderRadius: 3,
+  },
+  progressFillCurrent: {
+    backgroundColor: "#FFFFFF",
   },
   progressText: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     minWidth: 36,
     textAlign: "right",
+  },
+  progressTextCurrent: {
+    color: "rgba(255,255,255,0.7)",
   },
   unlockPreview: {
     marginTop: spacing.sm,
@@ -803,10 +890,16 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: spacing.xs,
   },
+  unlockLabelCurrent: {
+    color: "rgba(255,255,255,0.6)",
+  },
   unlockText: {
     fontSize: fontSizes.sm,
     color: colors.text,
     fontWeight: "500",
+  },
+  unlockTextCurrent: {
+    color: "#FFFFFF",
   },
   measureWrapper: {
     position: "absolute",

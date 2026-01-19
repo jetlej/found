@@ -1,6 +1,6 @@
 import { colors, fontSizes, spacing } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { IconCloudOff } from "@tabler/icons-react-native";
 import { StyleSheet, Text, View } from "react-native";
 
 export function OfflineBanner() {
@@ -12,7 +12,7 @@ export function OfflineBanner() {
 
   return (
     <View style={styles.offlineBanner}>
-      <Ionicons name="cloud-offline-outline" size={16} color={colors.warning} />
+      <IconCloudOff size={16} color={colors.warning} />
       <Text style={styles.offlineText}>You're offline</Text>
     </View>
   );

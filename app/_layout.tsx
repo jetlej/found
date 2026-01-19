@@ -13,28 +13,11 @@ import { colors } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
 import { useAuth } from "@clerk/clerk-expo";
 import {
-    // Figtree
     Figtree_400Regular,
     Figtree_500Medium,
     Figtree_600SemiBold,
     Figtree_700Bold,
-    // Fredoka
-    Fredoka_400Regular,
-    Fredoka_500Medium,
-    Fredoka_600SemiBold,
-    Fredoka_700Bold,
-    // Instrument Sans
-    InstrumentSans_400Regular,
-    InstrumentSans_400Regular_Italic,
-    InstrumentSans_500Medium,
-    InstrumentSans_600SemiBold,
-    InstrumentSans_700Bold,
-    // Readex Pro
-    ReadexPro_400Regular,
-    ReadexPro_500Medium,
-    ReadexPro_600SemiBold,
-    ReadexPro_700Bold,
-} from "@expo-google-fonts/dev";
+} from "@expo-google-fonts/figtree";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useQuery } from "convex/react";
@@ -298,27 +281,10 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
-    // Figtree
     "Figtree-Regular": Figtree_400Regular,
     "Figtree-Medium": Figtree_500Medium,
     "Figtree-SemiBold": Figtree_600SemiBold,
     "Figtree-Bold": Figtree_700Bold,
-    // Fredoka
-    "Fredoka-Regular": Fredoka_400Regular,
-    "Fredoka-Medium": Fredoka_500Medium,
-    "Fredoka-SemiBold": Fredoka_600SemiBold,
-    "Fredoka-Bold": Fredoka_700Bold,
-    // Instrument Sans
-    "InstrumentSans-Regular": InstrumentSans_400Regular,
-    "InstrumentSans-Medium": InstrumentSans_500Medium,
-    "InstrumentSans-SemiBold": InstrumentSans_600SemiBold,
-    "InstrumentSans-Bold": InstrumentSans_700Bold,
-    "InstrumentSans-Italic": InstrumentSans_400Regular_Italic,
-    // Readex Pro
-    "ReadexPro-Regular": ReadexPro_400Regular,
-    "ReadexPro-Medium": ReadexPro_500Medium,
-    "ReadexPro-SemiBold": ReadexPro_600SemiBold,
-    "ReadexPro-Bold": ReadexPro_700Bold,
   });
 
   useEffect(() => {

@@ -110,16 +110,29 @@ function CategoryNode({
   const collapseStartedRef = useRef(false);
   
   // Animation values for completing category
-  const checkmarkScale = useSharedValue(state === "animating" ? 0 : 1);
-  const checkmarkOpacity = useSharedValue(state === "animating" ? 0 : 1);
-  const borderColorProgress = useSharedValue(state === "animating" ? 0 : 1);
-  const titleColorProgress = useSharedValue(state === "animating" ? 0 : 1);
-  const connectorColorProgress = useSharedValue(state === "animating" ? 0 : 1);
+  const checkmarkScale = useSharedValue(0);
+  const checkmarkOpacity = useSharedValue(0);
+  const borderColorProgress = useSharedValue(0);
+  const titleColorProgress = useSharedValue(0);
+  const connectorColorProgress = useSharedValue(0);
   
   // Collapsing content animation (for completing category)
   // Start expanded, will animate to collapsed
   const contentHeight = useSharedValue(0);
   const contentOpacity = useSharedValue(1);
+  
+  // Reset animation values when state becomes "animating"
+  useEffect(() => {
+    if (state === "animating") {
+      // Reset to initial state (black, expanded, no checkmark)
+      checkmarkScale.value = 0;
+      checkmarkOpacity.value = 0;
+      borderColorProgress.value = 0;
+      titleColorProgress.value = 0;
+      connectorColorProgress.value = 0;
+      contentOpacity.value = 1;
+    }
+  }, [state]);
   
   // Unlocking category animation values
   const unlockBorderProgress = useSharedValue(0);
@@ -250,10 +263,12 @@ function CategoryNode({
   
   // For animating the icon color - we use two overlapping icons
   const animatedIconBlackStyle = useAnimatedStyle(() => {
+    if (state !== "animating") return { opacity: 1 };
     return { opacity: 1 - titleColorProgress.value };
   });
   
   const animatedIconGreenStyle = useAnimatedStyle(() => {
+    if (state !== "animating") return { opacity: 0 };
     return { opacity: titleColorProgress.value };
   });
   
@@ -715,7 +730,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   categoryIcon: {
+    width: 14,
     marginRight: spacing.sm,
+    textAlign: "center",
   },
   categoryIconWrapper: {
     width: 14,
@@ -730,7 +747,6 @@ const styles = StyleSheet.create({
   inlineIcon: {
     marginLeft: spacing.xs,
     padding: 4,
-    opacity: 0.5,
   },
   collapsibleContent: {
     overflow: "hidden",

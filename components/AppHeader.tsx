@@ -1,7 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { MAX_LEVEL } from "@/lib/categories";
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import { useFontStore } from "@/stores/fonts";
+import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
@@ -15,8 +14,6 @@ interface AppHeaderProps {
 export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps) {
   const { userId } = useAuth();
   const router = useRouter();
-  const { nextFont, getCurrentFont } = useFontStore();
-  const currentFont = getCurrentFont();
 
   const currentUser = useQuery(
     api.users.current,
@@ -39,14 +36,6 @@ export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps)
     }
   };
 
-  const handleLogoPress = () => {
-    if (onLogoPress) {
-      onLogoPress();
-    } else {
-      nextFont();
-    }
-  };
-
   return (
     <View style={styles.header}>
       <Pressable
@@ -56,10 +45,13 @@ export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps)
       >
         <Text style={styles.levelText}>Lvl {level}/{MAX_LEVEL}</Text>
       </Pressable>
-      <Pressable onPress={handleLogoPress} style={styles.logoPressable}>
-        <Text style={[styles.logo, { fontFamily: currentFont.bold }]}>Found</Text>
-        <Text style={styles.fontLabel}>{currentFont.name}</Text>
-      </Pressable>
+      {onLogoPress ? (
+        <Pressable onPress={onLogoPress}>
+          <Text style={styles.logo}>Found.</Text>
+        </Pressable>
+      ) : (
+        <Text style={styles.logo}>Found.</Text>
+      )}
       <View style={styles.headerRight}>
         <Pressable
           onPress={() => router.push("/profile")}
@@ -101,17 +93,10 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   logo: {
+    fontFamily: fonts.serifBold,
     fontSize: fontSizes["2xl"],
     color: colors.text,
-  },
-  logoPressable: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  fontLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: 2,
+    letterSpacing: -1,
   },
   levelText: {
     fontSize: fontSizes.sm,

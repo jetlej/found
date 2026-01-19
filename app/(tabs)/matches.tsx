@@ -1751,7 +1751,7 @@ export default function MatchesScreen() {
                     { backgroundColor: getScoreColor(match.score) },
                   ]}
                 >
-                  <Text style={styles.scoreText}>{match.score}%</Text>
+                  <Text style={styles.scoreText}>{match.score}</Text>
                 </View>
               </View>
 
@@ -2073,9 +2073,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   scoreBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
   shortBio: {
     fontSize: fontSizes.sm,

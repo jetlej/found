@@ -56,7 +56,7 @@ SplashScreen.preventAutoHideAsync();
 // Helper to determine which onboarding step to resume from
 function getOnboardingRoute(user: any): string {
   if (!user) {
-    return "/(onboarding)/basics";
+    return "/(onboarding)/referral";
   }
 
   // Use saved onboarding step if available
@@ -67,7 +67,7 @@ function getOnboardingRoute(user: any): string {
   // Fallback: check if basics are complete (name is now required)
   const basicsComplete = user.name && user.gender && user.sexuality && user.location && user.birthdate && user.heightInches;
   if (!basicsComplete) {
-    return "/(onboarding)/basics";
+    return "/(onboarding)/referral";
   }
 
   // Default to photos if no step saved but basics done
@@ -192,7 +192,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           if (cachedUser.onboardingComplete) {
             router.replace("/(tabs)");
           } else {
-            router.replace("/(onboarding)/basics");
+            router.replace("/(onboarding)/referral");
           }
           setHasRouted(true);
         } else if (currentUser === undefined && isOnline) {

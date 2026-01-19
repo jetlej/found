@@ -126,6 +126,16 @@ export const updateBasics = mutation({
   },
 });
 
+// Generate a unique 6-character referral code
+function generateReferralCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude confusing chars like 0/O, 1/I
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 export const completeOnboarding = mutation({
   args: { clerkId: v.string() },
   handler: async (ctx, args) => {
@@ -136,16 +146,43 @@ export const completeOnboarding = mutation({
 
     if (!user) return;
 
-    // Calculate waitlist position (count of users who completed before + 1)
-    const completedUsers = await ctx.db
+    // Generate unique referral code
+    let referralCode = generateReferralCode();
+    let existingCode = await ctx.db
       .query("users")
-      .filter((q) => q.eq(q.field("onboardingComplete"), true))
-      .collect();
+      .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+      .first();
+    while (existingCode) {
+      referralCode = generateReferralCode();
+      existingCode = await ctx.db
+        .query("users")
+        .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+        .first();
+    }
+
+    // Set waitlist end time to 7 days from now
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const waitlistEndsAt = Date.now() + sevenDaysMs;
 
     await ctx.db.patch(user._id, {
       onboardingComplete: true,
-      waitlistPosition: completedUsers.length + 1,
+      status: "waitlist",
+      referralCode,
+      waitlistEndsAt,
+      referralCount: user.referralCount ?? 0,
     });
+
+    // If this user was referred by someone, credit the referrer now
+    if (user.referredBy) {
+      const referrer = await ctx.db.get(user.referredBy);
+      if (referrer) {
+        const newReferralCount = (referrer.referralCount ?? 0) + 1;
+        await ctx.db.patch(referrer._id, {
+          referralCount: newReferralCount,
+          status: "active", // Referrer gets in immediately
+        });
+      }
+    }
 
     // Schedule AI profile parsing in the background
     await ctx.scheduler.runAfter(
@@ -154,7 +191,49 @@ export const completeOnboarding = mutation({
       { userId: user._id }
     );
 
-    return completedUsers.length + 1;
+    return { referralCode, waitlistEndsAt };
+  },
+});
+
+export const applyReferralCode = mutation({
+  args: {
+    clerkId: v.string(),
+    code: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return { success: false, error: "User not found" };
+
+    // Can't use your own code
+    if (user.referralCode === args.code.toUpperCase()) {
+      return { success: false, error: "You can't use your own referral code" };
+    }
+
+    // Already has a referrer
+    if (user.referredBy) {
+      return { success: false, error: "You've already used a referral code" };
+    }
+
+    // Find the referrer
+    const referrer = await ctx.db
+      .query("users")
+      .withIndex("by_referral_code", (q) => q.eq("referralCode", args.code.toUpperCase()))
+      .first();
+
+    if (!referrer) {
+      return { success: false, error: "Invalid referral code" };
+    }
+
+    // Update the current user with referredBy (referrer gets credit when this user completes onboarding)
+    await ctx.db.patch(user._id, {
+      referredBy: referrer._id,
+    });
+
+    return { success: true, referrerName: referrer.name };
   },
 });
 
@@ -264,15 +343,43 @@ export const completeCategory = mutation({
 
     // If this is the first category (basic_traits), also mark onboarding complete
     if (args.categoryId === "basic_traits" && !user.onboardingComplete) {
-      const completedUsers = await ctx.db
+      // Generate unique referral code
+      let referralCode = generateReferralCode();
+      let existingCode = await ctx.db
         .query("users")
-        .filter((q) => q.eq(q.field("onboardingComplete"), true))
-        .collect();
+        .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+        .first();
+      while (existingCode) {
+        referralCode = generateReferralCode();
+        existingCode = await ctx.db
+          .query("users")
+          .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+          .first();
+      }
+
+      // Set waitlist end time to 7 days from now
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const waitlistEndsAt = Date.now() + sevenDaysMs;
 
       await ctx.db.patch(user._id, {
         onboardingComplete: true,
-        waitlistPosition: completedUsers.length + 1,
+        status: "waitlist",
+        referralCode,
+        waitlistEndsAt,
+        referralCount: user.referralCount ?? 0,
       });
+
+      // If this user was referred by someone, credit the referrer now
+      if (user.referredBy) {
+        const referrer = await ctx.db.get(user.referredBy);
+        if (referrer) {
+          const newReferralCount = (referrer.referralCount ?? 0) + 1;
+          await ctx.db.patch(referrer._id, {
+            referralCount: newReferralCount,
+            status: "active", // Referrer gets in immediately
+          });
+        }
+      }
     }
 
     return { level: newLevel, completedCategories: newCompletedCategories };

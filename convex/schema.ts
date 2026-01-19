@@ -24,9 +24,16 @@ export default defineSchema({
     // Level system
     level: v.optional(v.number()), // 1-12
     completedCategories: v.optional(v.array(v.string())), // ["basic_traits", "core_values", ...]
+    // Status & Referrals
+    status: v.optional(v.string()), // "waitlist", "active", "inactive", "paid", etc.
+    referralCode: v.optional(v.string()), // unique 6-char code to share
+    referredBy: v.optional(v.id("users")), // who referred this user
+    referralCount: v.optional(v.number()), // number of successful referrals
+    waitlistEndsAt: v.optional(v.number()), // timestamp when 7-day wait ends
   })
     .index("by_clerk_id", ["clerkId"])
-    .index("by_phone", ["phone"]),
+    .index("by_phone", ["phone"])
+    .index("by_referral_code", ["referralCode"]),
 
   photos: defineTable({
     userId: v.id("users"),

@@ -1,5 +1,7 @@
+import { InterestPicker } from "@/components/InterestPicker";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import Slider from "@react-native-community/slider";
+import MultiSlider from "@ptomasroos/react-native-multi-slider";
 import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
@@ -14,15 +16,16 @@ import {
 export interface Question {
   _id: string;
   order: number;
+  questionKey: string;
   text: string;
-  type: "multiple_choice" | "text" | "essay" | "scale" | "checklist";
+  type: "multiple_choice" | "text" | "essay" | "scale" | "range" | "checklist" | "interest_picker";
   options?: string[];
   category?: string;
   scaleMin?: number;
   scaleMax?: number;
   scaleMinLabel?: string;
   scaleMaxLabel?: string;
-  linkedQuestionOrder?: number;
+  linkedQuestionKey?: string;
   hasDealbreaker?: boolean;
 }
 
@@ -44,10 +47,16 @@ export function QuestionCard({
   // Local state for slider to show value while dragging
   const [sliderValue, setSliderValue] = useState<number | null>(null);
   const isSliding = useRef(false);
+  
+  // Local state for range slider (min/max)
+  const [rangeMinValue, setRangeMinValue] = useState<number | null>(null);
+  const [rangeMaxValue, setRangeMaxValue] = useState<number | null>(null);
 
-  // Reset local slider value when question changes
+  // Reset local slider values when question changes
   useEffect(() => {
     setSliderValue(null);
+    setRangeMinValue(null);
+    setRangeMaxValue(null);
     isSliding.current = false;
   }, [question._id]);
 
@@ -206,6 +215,27 @@ export function QuestionCard({
           </View>
         );
 
+      case "interest_picker":
+        // Parse selected interest IDs from JSON
+        const selectedInterestIds = (() => {
+          if (!value) return [];
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })();
+
+        return (
+          <View style={styles.interestPickerContainer}>
+            <InterestPicker
+              selectedIds={selectedInterestIds}
+              onChange={(ids) => onChange(JSON.stringify(ids))}
+            />
+          </View>
+        );
+
       case "text":
         return (
           <TextInput
@@ -239,13 +269,27 @@ export function QuestionCard({
         const savedValue = value ? parseInt(value, 10) : null;
         const displayValue = sliderValue ?? savedValue ?? Math.floor((min + max) / 2);
 
-        // Show the label text if at min/max and labels exist
+        // Check if this is a height scale (labels contain feet/inches pattern)
+        const isHeightScale = 
+          question.scaleMinLabel?.includes("'") && 
+          question.scaleMaxLabel?.includes("'");
+
+        // Format height in feet/inches
+        const formatHeight = (inches: number) => {
+          const feet = Math.floor(inches / 12);
+          const remainingInches = inches % 12;
+          return `${feet}'${remainingInches}"`;
+        };
+
+        // Show the label text if at min/max and labels exist, or format height
         const displayText =
           displayValue === max && question.scaleMaxLabel
             ? question.scaleMaxLabel
             : displayValue === min && question.scaleMinLabel
               ? question.scaleMinLabel
-              : String(displayValue);
+              : isHeightScale
+                ? formatHeight(displayValue)
+                : String(displayValue);
 
         return (
           <View style={styles.scaleContainer}>
@@ -284,6 +328,108 @@ export function QuestionCard({
               thumbTintColor={colors.primary}
             />
             {/* Dealbreaker toggle for scale with hasDealbreaker */}
+            {question.hasDealbreaker && value && onDealbreakerChange && (
+              <View style={styles.dealbreakerContainer}>
+                <Text style={styles.dealbreakerLabel}>This is a dealbreaker</Text>
+                <Switch
+                  value={isDealbreaker ?? false}
+                  onValueChange={onDealbreakerChange}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+            )}
+          </View>
+        );
+
+      case "range":
+        const rangeMin = question.scaleMin ?? 1;
+        const rangeMax = question.scaleMax ?? 10;
+        
+        // Parse saved value as JSON {min, max}
+        const savedRange = value ? (() => {
+          try {
+            return JSON.parse(value);
+          } catch {
+            return null;
+          }
+        })() : null;
+        
+        const currentMin = rangeMinValue ?? savedRange?.min ?? rangeMin;
+        const currentMax = rangeMaxValue ?? savedRange?.max ?? rangeMax;
+
+        // Check if this is a height range (labels contain feet/inches pattern)
+        const isHeightRange = 
+          question.scaleMinLabel?.includes("'") && 
+          question.scaleMaxLabel?.includes("'");
+
+        // Format height in feet/inches
+        const formatHeightRange = (inches: number) => {
+          const feet = Math.floor(inches / 12);
+          const remainingInches = inches % 12;
+          return `${feet}'${remainingInches}"`;
+        };
+
+        const formatRangeValue = (val: number) => {
+          if (isHeightRange) return formatHeightRange(val);
+          return String(val);
+        };
+
+        return (
+          <View style={styles.rangeContainer}>
+            {/* Display current range */}
+            <View style={styles.rangeDisplay}>
+              <Text style={styles.rangeValue}>
+                {formatRangeValue(currentMin)} – {formatRangeValue(currentMax)}
+              </Text>
+            </View>
+
+            {/* Labels */}
+            <View style={styles.rangeLabels}>
+              <Text style={styles.rangeEndLabel}>{question.scaleMinLabel || rangeMin}</Text>
+              <Text style={styles.rangeEndLabel}>{question.scaleMaxLabel || rangeMax}</Text>
+            </View>
+
+            {/* Dual-thumb slider */}
+            <MultiSlider
+              values={[currentMin, currentMax]}
+              min={rangeMin}
+              max={rangeMax}
+              step={1}
+              sliderLength={280}
+              onValuesChange={(values) => {
+                setRangeMinValue(values[0]);
+                setRangeMaxValue(values[1]);
+              }}
+              onValuesChangeFinish={(values) => {
+                setRangeMinValue(values[0]);
+                setRangeMaxValue(values[1]);
+                onChange(JSON.stringify({ min: values[0], max: values[1] }));
+              }}
+              selectedStyle={{ backgroundColor: colors.primary }}
+              unselectedStyle={{ backgroundColor: colors.border }}
+              markerStyle={{
+                backgroundColor: colors.primary,
+                height: 24,
+                width: 24,
+                borderRadius: 12,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 3,
+                elevation: 3,
+              }}
+              pressedMarkerStyle={{
+                backgroundColor: colors.primary,
+                height: 28,
+                width: 28,
+                borderRadius: 14,
+              }}
+              containerStyle={{ alignSelf: "center" }}
+              trackStyle={{ height: 6, borderRadius: 3 }}
+            />
+
+            {/* Dealbreaker toggle */}
             {question.hasDealbreaker && value && onDealbreakerChange && (
               <View style={styles.dealbreakerContainer}>
                 <Text style={styles.dealbreakerLabel}>This is a dealbreaker</Text>
@@ -436,6 +582,27 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 40,
   },
+  rangeContainer: {
+    gap: spacing.lg,
+  },
+  rangeDisplay: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+  },
+  rangeValue: {
+    fontSize: fontSizes["2xl"],
+    fontWeight: "700",
+    color: colors.text,
+  },
+  rangeLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.sm,
+  },
+  rangeEndLabel: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
   dealbreakerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -450,5 +617,9 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.base,
     color: colors.text,
     fontWeight: "500",
+  },
+  interestPickerContainer: {
+    flex: 1,
+    minHeight: 400,
   },
 });

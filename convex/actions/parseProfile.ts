@@ -14,6 +14,7 @@ import {
 } from "../lib/openai";
 import {
   VALUES_INTERESTS_PROMPT,
+  CANONICAL_VALUES_PROMPT,
   PERSONALITY_TRAITS_PROMPT,
   FAMILY_PLANS_PROMPT,
   LIFESTYLE_PROMPT,
@@ -43,6 +44,11 @@ interface ValuesInterestsResult {
   values: string[];
   interests: string[];
   dealbreakers: string[];
+}
+
+interface CanonicalValuesResult {
+  canonicalValues: string[];
+  rawValues: string[];
 }
 
 interface PersonalityTraitsResult {
@@ -145,8 +151,10 @@ interface ShortBioResult {
 interface AnswerWithQuestion {
   questionText: string;
   questionOrder: number;
+  questionKey: string;
   questionType: string;
   value: string;
+  isDealbreaker: boolean;
 }
 
 // Internal action to parse a user's profile (called by scheduler)
@@ -177,6 +185,16 @@ export const parseUserProfile = internalAction({
     // Get structured answers (multiple choice, scale) for direct mapping
     const structuredAnswers = answersWithQuestions.filter(
       (a: AnswerWithQuestion) => a.questionType === "multiple_choice" || a.questionType === "scale"
+    );
+
+    // Get checklist answers for preference extraction
+    const checklistAnswers = answersWithQuestions.filter(
+      (a: AnswerWithQuestion) => a.questionType === "checklist"
+    );
+
+    // Get interest picker answer
+    const interestPickerAnswer = answersWithQuestions.find(
+      (a: AnswerWithQuestion) => a.questionType === "interest_picker"
     );
 
     // Get open-ended answers for AI extraction
@@ -230,6 +248,7 @@ export const parseUserProfile = internalAction({
     // Run all extractions in parallel (batch 1 - core extractions)
     const [
       valuesInterests,
+      canonicalValues,
       personalityTraits,
       familyPlans,
       lifestyle,
@@ -240,6 +259,12 @@ export const parseUserProfile = internalAction({
         VALUES_INTERESTS_PROMPT,
         formatAnswersForGroup(EXTRACTION_QUESTION_GROUPS.valuesInterests),
         { values: [], interests: [], dealbreakers: [] }
+      ),
+      trackedExtract<CanonicalValuesResult>(
+        "Canonical Values",
+        CANONICAL_VALUES_PROMPT,
+        formatAnswersForGroup(EXTRACTION_QUESTION_GROUPS.valuesInterests),
+        { canonicalValues: [], rawValues: [] }
       ),
       trackedExtract<PersonalityTraitsResult>(
         "Personality",
@@ -405,21 +430,83 @@ export const parseUserProfile = internalAction({
     console.log(`  Output tokens: ${totalUsage.completionTokens}`);
     console.log("=====================================================\n");
 
-    // Extract structured data from multiple choice/scale questions
-    const getAnswerByOrder = (order: number): string => {
-      const answer = structuredAnswers.find((a: AnswerWithQuestion) => a.questionOrder === order);
+    // Extract structured data from multiple choice/scale questions using questionKey
+    const getAnswerByKey = (key: string): string => {
+      const answer = structuredAnswers.find((a: AnswerWithQuestion) => a.questionKey === key);
       return answer?.value || "";
     };
 
-    const getScaleAnswer = (order: number, defaultValue: number = 5) => {
-      const value = parseInt(getAnswerByOrder(order), 10);
+    const getScaleAnswer = (key: string, defaultValue: number = 5) => {
+      const value = parseInt(getAnswerByKey(key), 10);
       return isNaN(value) ? defaultValue : value;
+    };
+
+    // Helper to parse checklist answers (JSON arrays)
+    const getChecklistAnswer = (key: string): string[] => {
+      const answer = checklistAnswers.find((a: AnswerWithQuestion) => a.questionKey === key);
+      if (!answer?.value) return [];
+      try {
+        const parsed = JSON.parse(answer.value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
+
+    // Helper to get answer with dealbreaker status
+    const getAnswerWithDealbreaker = (key: string) => {
+      return answersWithQuestions.find((a: AnswerWithQuestion) => a.questionKey === key);
+    };
+
+    // Extract selected interests from interest picker (Q90)
+    const selectedInterests: string[] = (() => {
+      if (!interestPickerAnswer?.value) return [];
+      try {
+        const parsed = JSON.parse(interestPickerAnswer.value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    })();
+
+    // Build preferences from checklist question pairs using questionKeys
+    // Each pair: selfKey (multiple_choice), prefKey (checklist)
+    const buildPreference = (selfKey: string, prefKey: string) => {
+      const self = getAnswerByKey(selfKey);
+      const openTo = getChecklistAnswer(prefKey);
+      const prefAnswer = getAnswerWithDealbreaker(prefKey);
+      const hasOpenToAny = openTo.includes("Open to any");
+      return {
+        self: self || "unknown",
+        openTo: openTo.filter(o => o !== "Open to any"),
+        isDealbreaker: prefAnswer?.isDealbreaker || (!hasOpenToAny && openTo.length > 0),
+      };
+    };
+
+    const preferences = {
+      relationshipGoals: buildPreference("relationship_goals_self", "relationship_goals_pref"),
+      relationshipStyle: buildPreference("relationship_style_self", "relationship_style_pref"),
+      hasChildren: buildPreference("has_children_self", "has_children_pref"),
+      wantsChildren: buildPreference("wants_children_self", "wants_children_pref"),
+      ethnicity: buildPreference("ethnicity_self", "ethnicity_pref"),
+      religion: buildPreference("religion_self", "religion_pref"),
+      politics: buildPreference("politics_self", "politics_pref"),
+      education: buildPreference("education_self", "education_pref"),
+      alcohol: buildPreference("alcohol_self", "alcohol_pref"),
+      smoking: buildPreference("smoking_self", "smoking_pref"),
+      marijuana: buildPreference("marijuana_self", "marijuana_pref"),
+      drugs: buildPreference("drugs_self", "drugs_pref"),
     };
 
     // Build the complete profile
     const profile = {
       userId: args.userId,
-      values: valuesInterests.values,
+      // New canonical matching fields
+      selectedInterests,
+      canonicalValues: canonicalValues.canonicalValues,
+      preferences,
+      // Legacy raw values (for display, not matching)
+      values: [...valuesInterests.values, ...canonicalValues.rawValues],
       interests: valuesInterests.interests,
       dealbreakers: valuesInterests.dealbreakers,
       traits: {
@@ -436,24 +523,24 @@ export const parseUserProfile = internalAction({
         planningStyle: personalityTraits.planningStyle,
       },
       relationshipStyle: {
-        loveLanguage: getAnswerByOrder(49) || "unknown", // Q49: Love language
-        conflictStyle: getAnswerByOrder(46) || "unknown", // Q46: Conflict handling
-        communicationFrequency: getAnswerByOrder(50) || "unknown", // Q50: Texting style
-        financialApproach: getAnswerByOrder(56) || "unknown", // Q56: Finances
-        aloneTimeNeed: getScaleAnswer(48), // Q48: Together time
+        loveLanguage: getAnswerByKey("love_language") || "unknown",
+        conflictStyle: getAnswerByKey("conflict_handling") || "unknown",
+        communicationFrequency: getAnswerByKey("texting_style") || "unknown",
+        financialApproach: getAnswerByKey("finances_handling") || "unknown",
+        aloneTimeNeed: getScaleAnswer("together_time_need"),
       },
       familyPlans: {
         wantsKids: familyPlans.wantsKids,
         kidsTimeline: familyPlans.kidsTimeline ?? undefined,
-        familyCloseness: getScaleAnswer(72), // Q72: Family closeness
+        familyCloseness: getScaleAnswer("family_closeness"),
         parentingStyle: familyPlans.parentingStyle ?? undefined,
       },
       lifestyle: {
-        sleepSchedule: getAnswerByOrder(60) || "unknown", // Q60: Morning/night owl
-        exerciseLevel: getAnswerByOrder(61) || "unknown", // Q61: Exercise frequency
+        sleepSchedule: getAnswerByKey("morning_night") || "unknown",
+        exerciseLevel: getAnswerByKey("exercise_frequency") || "unknown",
         dietType: lifestyle.dietType ?? undefined,
-        alcoholUse: getAnswerByOrder(25) || "unknown", // Q25: Alcohol
-        drugUse: getAnswerByOrder(31) || "unknown", // Q31: Other drugs
+        alcoholUse: getAnswerByKey("alcohol_self") || "unknown",
+        drugUse: getAnswerByKey("drugs_self") || "unknown",
         petPreference: lifestyle.petPreference,
         locationPreference: lifestyle.locationPreference,
       },
@@ -507,21 +594,21 @@ export const parseUserProfile = internalAction({
       },
       // Demographics from structured answers (Phase 8)
       demographics: {
-        ethnicity: getAnswerByOrder(14) || undefined, // Q14: Ethnicity
-        religion: getAnswerByOrder(16) || undefined, // Q16: Religion
-        religiosity: getScaleAnswer(18), // Q18: Religion importance
-        politicalLeaning: getAnswerByOrder(19) || undefined, // Q19: Politics
-        politicalIntensity: getScaleAnswer(21), // Q21: Politics importance
-        hasKids: getAnswerByOrder(5) === "Yes", // Q5: Has children (Yes/No)
+        ethnicity: getChecklistAnswer("ethnicity_self").join(", ") || undefined,
+        religion: getAnswerByKey("religion_self") || undefined,
+        religiosity: getScaleAnswer("religion_importance"),
+        politicalLeaning: getAnswerByKey("politics_self") || undefined,
+        politicalIntensity: getScaleAnswer("politics_importance"),
+        hasKids: getAnswerByKey("has_children_self") === "Yes",
       },
       // Health from structured answers (Phase 9)
       health: {
-        physicalHealthRating: getScaleAnswer(63), // Q63: Physical health
-        mentalHealthRating: getScaleAnswer(64), // Q64: Mental health
-        healthNotes: openEndedAnswers.find((a: AnswerWithQuestion) => a.questionOrder === 71)?.value ?? undefined, // Q71: Health/lifestyle notes
-        smokingStatus: getAnswerByOrder(27) || "unknown", // Q27: Smoking
-        drinkingFrequency: getAnswerByOrder(25) || "unknown", // Q25: Drinking
-        drugUse: getAnswerByOrder(31) || "unknown", // Q31: Other drugs
+        physicalHealthRating: getScaleAnswer("physical_health"),
+        mentalHealthRating: getScaleAnswer("mental_health"),
+        healthNotes: openEndedAnswers.find((a: AnswerWithQuestion) => a.questionKey === "health_lifestyle_notes")?.value ?? undefined,
+        smokingStatus: getAnswerByKey("smoking_self") || "unknown",
+        drinkingFrequency: getAnswerByKey("alcohol_self") || "unknown",
+        drugUse: getAnswerByKey("drugs_self") || "unknown",
       },
       // Generated bio (Phase 10)
       generatedBio: bioResult.bio || undefined,

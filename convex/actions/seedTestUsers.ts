@@ -232,16 +232,20 @@ Generate answers for ALL of the following questions. The answers should be:
 2. Realistic and detailed (2-4 sentences for essay questions)
 3. Varied in tone and style (not robotic)
 
-For multiple_choice questions, respond with EXACTLY one of the provided options.
-For scale questions, respond with a number within the given range.
-For text questions, respond with a short phrase or sentence.
-For essay questions, respond with 2-4 thoughtful sentences.
+ANSWER FORMAT BY QUESTION TYPE:
+- multiple_choice: Respond with EXACTLY one of the provided options (verbatim)
+- scale: Respond with a number within the given range
+- range: Respond with a JSON object like {"min": 25, "max": 45} within the given range
+- checklist: Respond with a JSON array of selected options from the list, e.g. ["Option 1", "Option 3"]. Include "Open to any" if the persona would be open to all options, otherwise select specific ones.
+- text: Respond with a short phrase or sentence
+- essay: Respond with 2-4 thoughtful sentences
+- interest_picker: Respond with a JSON array of 10-20 specific interests, e.g. ["hiking", "indie rock", "photography", "sci-fi movies"]
 
 QUESTIONS:
 {questions}
 
-Respond with a JSON object where keys are question numbers (1-100) and values are the answers.
-Example: {"1": "Ready to settle down", "2": "Mixed Asian-American", "3": "Software engineer", ...}`;
+Respond with a JSON object where keys are question numbers (1-91) and values are the answers.
+Example: {"1": "Life partner", "2": ["Life partner", "Long-term relationship"], "10": 70, "11": {"min": 60, "max": 78}, ...}`;
 
 // Format questions for the prompt
 function formatQuestionsForPrompt(): string {
@@ -250,8 +254,17 @@ function formatQuestionsForPrompt(): string {
     if (q.type === "multiple_choice" && q.options) {
       questionText += `\n   Options: ${q.options.join(", ")}`;
     }
+    if (q.type === "checklist" && q.options) {
+      questionText += `\n   Options (select multiple as JSON array): ${q.options.join(", ")}`;
+    }
     if (q.type === "scale") {
       questionText += `\n   Range: ${q.scaleMin ?? 1}-${q.scaleMax ?? 10}`;
+    }
+    if (q.type === "range") {
+      questionText += `\n   Range: ${q.scaleMin ?? 1}-${q.scaleMax ?? 100} (respond with {"min": X, "max": Y})`;
+    }
+    if (q.type === "interest_picker") {
+      questionText += `\n   Respond with JSON array of 10-20 specific interests`;
     }
     return questionText;
   }).join("\n\n");
@@ -298,18 +311,22 @@ export const seedTestUsers = action({
         .replace("{description}", persona.description)
         .replace("{questions}", questionsFormatted);
 
-      const answers = await extractStructuredData<Record<string, string>>(
+      const answers = await extractStructuredData<Record<string, unknown>>(
         prompt,
-        "Generate the answers now. Make sure to include ALL 100 questions in your response.",
-        { maxTokens: 8000 }
+        "Generate the answers now. Make sure to include ALL 91 questions in your response.",
+        { maxTokens: 10000 }
       );
 
       console.log(`Generated ${Object.keys(answers).length} answers`);
 
-      // Convert all values to strings (OpenAI may return numbers for scale questions)
+      // Convert values to strings - JSON stringify arrays/objects, string for primitives
       const stringAnswers: Record<string, string> = {};
       for (const [key, value] of Object.entries(answers)) {
-        stringAnswers[key] = String(value);
+        if (Array.isArray(value) || (typeof value === "object" && value !== null)) {
+          stringAnswers[key] = JSON.stringify(value);
+        } else {
+          stringAnswers[key] = String(value);
+        }
       }
 
       // Create the user and save answers
@@ -431,17 +448,21 @@ export const seedSingleUser = action({
       .replace("{description}", persona.description)
       .replace("{questions}", questionsFormatted);
 
-    const answers = await extractStructuredData<Record<string, string>>(
+    const answers = await extractStructuredData<Record<string, unknown>>(
       prompt,
-      "Generate the answers now. Make sure to include ALL 100 questions in your response.",
-      { maxTokens: 8000 }
+      "Generate the answers now. Make sure to include ALL 91 questions in your response.",
+      { maxTokens: 10000 }
     );
 
     console.log(`Generated ${Object.keys(answers).length} answers`);
 
     const stringAnswers: Record<string, string> = {};
     for (const [key, value] of Object.entries(answers)) {
-      stringAnswers[key] = String(value);
+      if (Array.isArray(value) || (typeof value === "object" && value !== null)) {
+        stringAnswers[key] = JSON.stringify(value);
+      } else {
+        stringAnswers[key] = String(value);
+      }
     }
 
     const userId = await ctx.runMutation(internal.seedTestUsers.createTestUser, {
@@ -563,18 +584,22 @@ export const seedMyAnswers = action({
       .replace("{description}", personaDescription)
       .replace("{questions}", questionsFormatted);
 
-    const answers = await extractStructuredData<Record<string, string>>(
+    const answers = await extractStructuredData<Record<string, unknown>>(
       prompt,
-      "Generate the answers now. Make sure to include ALL 100 questions in your response.",
-      { maxTokens: 8000 }
+      "Generate the answers now. Make sure to include ALL 91 questions in your response.",
+      { maxTokens: 10000 }
     );
 
     console.log(`Generated ${Object.keys(answers).length} answers`);
 
-    // Convert all values to strings
+    // Convert values to strings - JSON stringify arrays/objects, string for primitives
     const stringAnswers: Record<string, string> = {};
     for (const [key, value] of Object.entries(answers)) {
-      stringAnswers[key] = String(value);
+      if (Array.isArray(value) || (typeof value === "object" && value !== null)) {
+        stringAnswers[key] = JSON.stringify(value);
+      } else {
+        stringAnswers[key] = String(value);
+      }
     }
 
     // Replace answers for the user

@@ -43,14 +43,17 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
 
   questions: defineTable({
-    order: v.number(), // 1-89
+    order: v.number(), // 1-91, determines display sequence
+    questionKey: v.optional(v.string()), // Stable identifier (e.g., "relationship_goals_self")
     text: v.string(),
     type: v.union(
       v.literal("multiple_choice"),
       v.literal("text"),
       v.literal("essay"),
       v.literal("scale"),
-      v.literal("checklist") // Multi-select with "Open to any" option
+      v.literal("range"), // Double-ended slider for min/max values
+      v.literal("checklist"), // Multi-select with "Open to any" option
+      v.literal("interest_picker") // Interest selection from library
     ),
     options: v.optional(v.array(v.string())), // For multiple_choice and checklist
     category: v.optional(v.string()), // e.g., "The Basics", "Who You Are"
@@ -58,11 +61,13 @@ export default defineSchema({
     scaleMax: v.optional(v.number()), // For scale type, default 10
     scaleMinLabel: v.optional(v.string()), // e.g., "Not at all"
     scaleMaxLabel: v.optional(v.string()), // e.g., "Extremely"
-    // For checklist type: links to the question whose options to use
-    linkedQuestionOrder: v.optional(v.number()), // e.g., Q2 links to Q1's options
+    // For checklist type: links to the source question by key
+    linkedQuestionKey: v.optional(v.string()), // e.g., "relationship_goals_self"
+    linkedQuestionOrder: v.optional(v.number()), // DEPRECATED: kept for migration, use linkedQuestionKey
     // Whether this question can have a dealbreaker toggle (non-checklist questions)
     hasDealbreaker: v.optional(v.boolean()),
-  }).index("by_order", ["order"]),
+  }).index("by_order", ["order"])
+    .index("by_key", ["questionKey"]),
 
   answers: defineTable({
     userId: v.id("users"),
@@ -78,9 +83,79 @@ export default defineSchema({
   userProfiles: defineTable({
     userId: v.id("users"),
 
-    // Extracted from essays - stored as structured data
-    values: v.array(v.string()), // ["honesty", "family", "growth", "adventure"]
-    interests: v.array(v.string()), // ["hiking", "cooking", "reading", "travel"]
+    // User-selected interests from picker (IDs from interest library)
+    selectedInterests: v.optional(v.array(v.string())),
+
+    // Canonical values (AI-extracted from essays, matched to ~30 item library)
+    canonicalValues: v.optional(v.array(v.string())),
+
+    // Structured preferences from checklist questions (The Basics)
+    preferences: v.optional(v.object({
+      relationshipGoals: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      relationshipStyle: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      hasChildren: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      wantsChildren: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      ethnicity: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      religion: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      politics: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      education: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      alcohol: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      smoking: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      marijuana: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+      drugs: v.optional(v.object({
+        self: v.string(),
+        openTo: v.array(v.string()),
+        isDealbreaker: v.boolean(),
+      })),
+    })),
+
+    // Raw AI extractions (kept for display, NOT used for matching)
+    values: v.array(v.string()), // Raw values from essays
+    interests: v.array(v.string()), // Raw interests from essays (legacy)
     dealbreakers: v.array(v.string()), // ["smoking", "no kids", "long distance"]
 
     // Personality traits (1-10 scales derived from answers) - 11 dimensions

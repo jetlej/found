@@ -25,7 +25,7 @@ export const CATEGORIES: Category[] = [
     name: "The Basics",
     dbName: "The Basics",
     level: 1,
-    questionRange: [1, 32],
+    questionRange: [1, 33],
     unlockDescription: "Core matching & compatibility filters",
   },
   {
@@ -33,7 +33,7 @@ export const CATEGORIES: Category[] = [
     name: "Who You Are",
     dbName: "Who You Are",
     level: 2,
-    questionRange: [33, 45],
+    questionRange: [34, 46],
     unlockDescription: "Personality compatibility score",
   },
   {
@@ -41,7 +41,7 @@ export const CATEGORIES: Category[] = [
     name: "Relationship Style",
     dbName: "Relationship Style",
     level: 3,
-    questionRange: [46, 59],
+    questionRange: [47, 60],
     unlockDescription: "Relationship compatibility score",
   },
   {
@@ -49,7 +49,7 @@ export const CATEGORIES: Category[] = [
     name: "Lifestyle",
     dbName: "Lifestyle",
     level: 4,
-    questionRange: [60, 71],
+    questionRange: [61, 72],
     unlockDescription: "Lifestyle compatibility score",
   },
   {
@@ -57,7 +57,7 @@ export const CATEGORIES: Category[] = [
     name: "Life & Future",
     dbName: "Life & Future",
     level: 5,
-    questionRange: [72, 81],
+    questionRange: [73, 82],
     unlockDescription: "Life goals compatibility score",
   },
   {
@@ -65,7 +65,7 @@ export const CATEGORIES: Category[] = [
     name: "The Deeper Stuff",
     dbName: "The Deeper Stuff",
     level: 6,
-    questionRange: [82, 89],
+    questionRange: [83, 91],
     unlockDescription: "Full profile & max visibility",
   },
 ];

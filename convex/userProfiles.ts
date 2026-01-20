@@ -1,11 +1,36 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 
+// Preference object validator (reusable)
+const preferenceValidator = v.optional(v.object({
+  self: v.string(),
+  openTo: v.array(v.string()),
+  isDealbreaker: v.boolean(),
+}));
+
 // Internal mutation to upsert a user profile (called by parseProfile action)
 export const upsertProfile = internalMutation({
   args: {
     profile: v.object({
       userId: v.id("users"),
+      // New canonical matching fields
+      selectedInterests: v.optional(v.array(v.string())),
+      canonicalValues: v.optional(v.array(v.string())),
+      preferences: v.optional(v.object({
+        relationshipGoals: preferenceValidator,
+        relationshipStyle: preferenceValidator,
+        hasChildren: preferenceValidator,
+        wantsChildren: preferenceValidator,
+        ethnicity: preferenceValidator,
+        religion: preferenceValidator,
+        politics: preferenceValidator,
+        education: preferenceValidator,
+        alcohol: preferenceValidator,
+        smoking: preferenceValidator,
+        marijuana: preferenceValidator,
+        drugs: preferenceValidator,
+      })),
+      // Legacy raw values (for display)
       values: v.array(v.string()),
       interests: v.array(v.string()),
       dealbreakers: v.array(v.string()),
@@ -128,6 +153,9 @@ export const upsertProfile = internalMutation({
     if (existing) {
       // Update existing profile
       await ctx.db.patch(existing._id, {
+        selectedInterests: profile.selectedInterests,
+        canonicalValues: profile.canonicalValues,
+        preferences: profile.preferences,
         values: profile.values,
         interests: profile.interests,
         dealbreakers: profile.dealbreakers,

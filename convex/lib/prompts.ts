@@ -1,10 +1,40 @@
 // Prompt templates for AI profile extraction
 
+import { CANONICAL_VALUES, RELATIONSHIP_VALUES } from "./canonicalValues";
+
 export const SYSTEM_PROMPT_BASE = `You are an AI assistant helping to analyze dating profile answers to extract structured data for compatibility matching. 
 Be accurate, concise, and extract only what is clearly stated or strongly implied. 
 Always respond with valid JSON matching the requested schema.`;
 
-// Extract values, interests, and dealbreakers from open-ended answers
+// Canonical values list for the prompt
+const CANONICAL_VALUES_LIST = CANONICAL_VALUES.join(", ");
+const RELATIONSHIP_VALUES_LIST = RELATIONSHIP_VALUES.join(", ");
+
+// Extract ONLY canonical values from essays - used for matching
+export const CANONICAL_VALUES_PROMPT = `${SYSTEM_PROMPT_BASE}
+
+Analyze the following answers and extract values that this person holds.
+
+IMPORTANT: You MUST only return values from this exact list:
+${CANONICAL_VALUES_LIST}
+
+Map what they express to the closest matching canonical value. For example:
+- "I value being truthful" → "honesty"
+- "My family means everything to me" → "family"
+- "I'm always trying to improve myself" → "growth"
+- "I love exploring new places" → "adventure"
+
+Return 5-10 values that clearly match what they express. Do NOT include values that aren't in the list above.
+
+Also extract any values they mention that DON'T match the canonical list - these go in rawValues for display purposes only.
+
+Respond with JSON:
+{
+  "canonicalValues": ["value1", "value2", ...],
+  "rawValues": ["any", "other", "values", "mentioned"]
+}`;
+
+// Legacy prompt for backwards compatibility - extracts arbitrary values
 export const VALUES_INTERESTS_PROMPT = `${SYSTEM_PROMPT_BASE}
 
 Analyze the following answers and extract:

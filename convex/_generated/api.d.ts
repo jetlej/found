@@ -11,6 +11,8 @@
 import type * as actions_parseProfile from "../actions/parseProfile.js";
 import type * as actions_seedTestUsers from "../actions/seedTestUsers.js";
 import type * as answers from "../answers.js";
+import type * as lib_canonicalValues from "../lib/canonicalValues.js";
+import type * as lib_interests from "../lib/interests.js";
 import type * as lib_openai from "../lib/openai.js";
 import type * as lib_prompts from "../lib/prompts.js";
 import type * as matching from "../matching.js";
@@ -32,6 +34,8 @@ declare const fullApi: ApiFromModules<{
   "actions/parseProfile": typeof actions_parseProfile;
   "actions/seedTestUsers": typeof actions_seedTestUsers;
   answers: typeof answers;
+  "lib/canonicalValues": typeof lib_canonicalValues;
+  "lib/interests": typeof lib_interests;
   "lib/openai": typeof lib_openai;
   "lib/prompts": typeof lib_prompts;
   matching: typeof matching;

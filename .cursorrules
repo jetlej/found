@@ -4,9 +4,9 @@
 
 ## Project Overview
 
-Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 100 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
+Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 90 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
 
-**Current Status**: Beta - Gamified journey system with category-based leveling. Matching features coming soon.
+**Current Status**: Beta - Gamified journey system with 6 category levels. Matching features with dealbreakers and preference checklists implemented.
 
 ## Tech Stack
 
@@ -38,7 +38,7 @@ app/                    # Expo Router screens (file-based routing)
 │   ├── _layout.tsx    # Tab bar layout
 │   ├── index.tsx      # Home screen
 │   ├── journey.tsx    # Journey/Level progression screen
-│   └── matches.tsx    # Matches screen (placeholder)
+│   └── matches.tsx    # Matches screen
 └── profile.tsx        # Profile page (modal)
 
 convex/                # Convex backend
@@ -46,28 +46,32 @@ convex/                # Convex backend
 ├── users.ts           # User mutations/queries + onboarding completion
 ├── photos.ts          # Photo upload/management
 ├── questions.ts       # Question queries
-├── seedQuestions.ts   # 100 questions seed data + seed mutation
+├── seedQuestions.ts   # 90 questions seed data + seed mutation
 ├── answers.ts         # User answer storage + internal query for AI parsing
 ├── userProfiles.ts    # Structured profile data queries/mutations
-├── matching.ts        # Compatibility scoring algorithm
+├── matching.ts        # Legacy compatibility scoring
 ├── storage.ts         # File storage URL generation
 ├── lib/
 │   ├── openai.ts      # OpenAI client wrapper with retry logic
-│   └── prompts.ts     # AI extraction prompt templates
+│   ├── prompts.ts     # AI extraction prompt templates
+│   ├── interests.ts   # Interest library (1000+ items by category)
+│   └── canonicalValues.ts # Canonical values for AI extraction (~30 items)
 └── actions/
     └── parseProfile.ts # Background action to parse answers into structured data
 
 components/            # Reusable components
-├── AppHeader.tsx      # Shared header: Lvl X/12 | Found | Avatar (used on all tabs)
+├── AppHeader.tsx      # Shared header: Lvl X/6 | Found | Avatar (used on all tabs)
 ├── JourneyPath.tsx    # Category progression UI with animated completion/unlock
 ├── ProgressBar.tsx    # Simple progress bar for questions
-├── QuestionCard.tsx   # Renders different question types (multiple_choice, text, essay, scale)
+├── QuestionCard.tsx   # Renders question types (multiple_choice, text, essay, scale, checklist, interest_picker)
+├── InterestPicker.tsx # Autocomplete interest selection from library
 ├── AvatarPicker.tsx   # Avatar display + upload with cropping
 └── OfflineBanner.tsx  # Shows when device is offline
 
 lib/                   # Utilities
 ├── theme.ts           # Light theme colors + typography (fonts, fontSizes, spacing, colors)
-├── categories.ts      # 12 question categories with levels, question ranges, unlock descriptions
+├── categories.ts      # 6 question categories with levels, question ranges, unlock descriptions
+├── matching.ts        # NEW: 6-category compatibility scoring algorithm
 ├── onboarding-flow.ts # Configurable onboarding step order for A/B testing
 ├── ai-import.ts       # AI prompt generation and JSON response parsing
 ├── clerk.tsx          # Clerk auth provider
@@ -135,14 +139,25 @@ stores/                # Zustand stores
 
 ### Question Types
 
-The app supports 4 question types (defined in `components/QuestionCard.tsx`):
+The app supports 6 question types (defined in `components/QuestionCard.tsx`):
 - `multiple_choice`: Radio button selection from options array
 - `text`: Single-line text input
 - `essay`: Multi-line textarea for longer responses
-- `scale`: Slider from min to max with optional labels (uses `@react-native-community/slider`)
-  - Auto-populates default middle value so Next button is enabled immediately
-  - Shows `scaleMaxLabel`/`scaleMinLabel` when at max/min values
-  - Uses local state during drag to prevent glitchy snapping behavior
+- `scale`: Slider from min to max with optional labels
+- `checklist`: Multi-select with "Open to any" option + optional dealbreaker toggle
+- `interest_picker`: Autocomplete selection from 1000+ item interest library
+
+### Checklist Questions with Dealbreakers
+
+Checklist questions come in pairs (e.g., Q1 + Q2):
+- Q1: "What are you looking for?" (multiple_choice) - User's own answer
+- Q2: "What are you open to in a partner?" (checklist) - Partner preferences
+
+Checklist behavior:
+- "Open to any" checks all options and hides dealbreaker toggle
+- Specific selections show dealbreaker toggle
+- Unchecking "Open to any" clears all selections
+- Selecting all options auto-checks "Open to any"
 
 ### Photo Upload
 
@@ -167,8 +182,8 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - `heightInches`: number (optional)
 - `onboardingComplete`: boolean (optional)
 - `onboardingStep`: string (optional) - Current step for resume: "basics", "photos"
-- `level`: number (optional) - 1-12, derived from completed categories
-- `completedCategories`: string[] (optional) - ["basic_traits", "core_values", ...]
+- `level`: number (optional) - 1-6, derived from completed categories
+- `completedCategories`: string[] (optional) - ["the_basics", "who_you_are", ...]
 - `waitlistPosition`: number (optional)
 - `pushToken`: string (optional)
 - `notificationsEnabled`: boolean (optional)
@@ -183,220 +198,171 @@ The app supports 4 question types (defined in `components/QuestionCard.tsx`):
 - Index: `by_user`
 
 ### questions
-- `order`: number (1-100)
+- `order`: number (1-91) - Display sequence only
+- `questionKey`: string - Stable identifier (e.g., "relationship_goals_self") for referencing questions in code
 - `text`: string
-- `type`: "multiple_choice" | "text" | "essay" | "scale"
-- `options`: string[] (optional, for multiple_choice)
-- `category`: string (optional) - 12 categories total
-- `scaleMin`, `scaleMax`: number (optional, for scale)
+- `type`: "multiple_choice" | "text" | "essay" | "scale" | "range" | "checklist" | "interest_picker"
+- `options`: string[] (optional, for multiple_choice and checklist)
+- `category`: string (optional) - 6 categories total
+- `scaleMin`, `scaleMax`: number (optional, for scale and range)
 - `scaleMinLabel`, `scaleMaxLabel`: string (optional)
-- Index: `by_order`
+- `linkedQuestionKey`: string (optional) - For checklist type, links to source question by key
+- `hasDealbreaker`: boolean (optional) - Whether this question can have a dealbreaker toggle
+- Indexes: `by_order`, `by_key`
+
+**Important**: Always use `questionKey` (not `order`) when referencing specific questions in code. This allows inserting new questions without breaking existing logic.
 
 ### answers
 - `userId`: Id<"users">
 - `questionId`: Id<"questions">
-- `value`: string
+- `value`: string - JSON string for complex answers (checklist = JSON array), plain string for simple
 - `source`: "ai" | "manual" (optional) - Tracks whether answer came from AI import or manual entry
+- `isDealbreaker`: boolean (optional) - Whether user marked this preference as a dealbreaker
 - Indexes: `by_user`, `by_user_question`
 
 ### userProfiles (AI-extracted structured data)
 - `userId`: Id<"users"> (indexed by `by_user`)
-- `values`: string[] - Core values extracted from essays (e.g., ["honesty", "family", "growth"])
-- `interests`: string[] - Hobbies and interests (e.g., ["hiking", "cooking", "travel"])
-- `dealbreakers`: string[] - Non-negotiables (e.g., ["smoking", "no kids"])
-- `traits`: object (11 personality dimensions, 1-10 scale)
-  - `introversion`: number (1=extrovert, 10=introvert)
-  - `adventurousness`: number (1=routine-lover, 10=thrill-seeker)
-  - `ambition`: number (1=content, 10=driven)
-  - `emotionalOpenness`: number (1=private, 10=open book)
-  - `traditionalValues`: number (1=progressive, 10=traditional)
-  - `independenceNeed`: number (1=togetherness, 10=space needed)
-  - `romanticStyle`: number (1=practical, 10=deeply romantic)
-  - `socialEnergy`: number (1=homebody, 10=social butterfly)
-  - `communicationStyle`: number (1=reserved, 10=expressive)
-  - `attachmentStyle`: number (1=avoidant, 10=anxious)
-  - `planningStyle`: number (1=spontaneous, 10=structured)
-- `relationshipStyle`: object
-  - `loveLanguage`: string (from Q64)
-  - `conflictStyle`: string (from Q53)
-  - `communicationFrequency`: string (from Q57)
-  - `financialApproach`: string (from Q67)
-  - `aloneTimeNeed`: number (from Q63)
-- `familyPlans`: object
-  - `wantsKids`: string ("yes", "no", "maybe", "already_has", "open")
-  - `kidsTimeline`: string (optional)
-  - `familyCloseness`: number (from Q71)
-  - `parentingStyle`: string (optional)
-- `lifestyle`: object
-  - `sleepSchedule`: string (from Q32)
-  - `exerciseLevel`: string (from Q24)
-  - `dietType`: string (optional)
-  - `alcoholUse`: string (from Q29)
-  - `drugUse`: string (from Q31)
-  - `petPreference`: string
-  - `locationPreference`: string ("city", "suburb", "rural", "flexible")
-- `lifeStory`: object (optional)
-  - `proudestAchievement`, `definingHardship`, `biggestRisk`: string (optional)
-  - `dreams`, `fears`, `formativeExperiences`: string[]
-  - `favoriteStory`: string (optional)
-- `socialProfile`: object (optional)
-  - `socialStyle`: string
-  - `weekendStyle`, `idealFridayNight`, `socialCircleVision`: string (optional)
-  - `goOutFrequency`, `friendApprovalImportance`: number
-- `intimacyProfile`: object (optional)
-  - `physicalIntimacyImportance`, `physicalAttractionImportance`: number
-  - `pdaComfort`: string
-  - `emotionalIntimacyApproach`, `healthyIntimacyVision`: string (optional)
-  - `connectionTriggers`: string[]
-- `lovePhilosophy`: object (optional)
-  - `believesInSoulmates`: boolean
-  - `loveDefinition`, `healthyRelationshipVision`, `bestAdviceReceived`: string (optional)
-  - `loveRecognition`, `romanticGestures`: string[]
-- `partnerPreferences`: object (optional)
-  - `mustHaves`, `niceToHaves`, `redFlags`, `importantQualities`, `dealbreakersInPartner`: string[]
-- `bioElements`: object (optional)
-  - `conversationStarters`, `interestingFacts`, `uniqueQuirks`, `passions`: string[]
-  - `whatTheySek`: string (optional)
-- `demographics`: object (optional)
-  - `ethnicity`, `religion`, `politicalLeaning`: string (optional)
-  - `religiosity`, `politicalIntensity`: number
-  - `hasKids`: boolean
-- `health`: object (optional)
-  - `physicalHealthRating`, `mentalHealthRating`: number
-  - `healthNotes`: string (optional)
-  - `smokingStatus`, `drinkingFrequency`, `drugUse`: string
+
+**NEW: Matching-specific fields:**
+- `selectedInterests`: string[] (optional) - Interest IDs from picker (used for matching)
+- `canonicalValues`: string[] (optional) - AI-extracted values from ~30 item canonical list
+- `preferences`: object (optional) - Structured preferences from checklist pairs:
+  - `relationshipGoals`, `relationshipStyle`, `hasChildren`, `wantsChildren`, `ethnicity`, `religion`, `politics`, `education`, `alcohol`, `smoking`, `marijuana`, `drugs`
+  - Each contains: `{ self: string, openTo: string[], isDealbreaker: boolean }`
+
+**Legacy display fields (not used for matching):**
+- `values`: string[] - Raw values from essays
+- `interests`: string[] - Raw interests from essays
+- `dealbreakers`: string[] - Non-negotiables
+
+**Personality traits (11 dimensions, 1-10 scale):**
+- `traits.introversion`, `adventurousness`, `ambition`, `emotionalOpenness`, `traditionalValues`, `independenceNeed`, `romanticStyle`, `socialEnergy`, `communicationStyle`, `attachmentStyle`, `planningStyle`
+
+**Relationship style:**
+- `relationshipStyle.loveLanguage`, `conflictStyle`, `communicationFrequency`, `financialApproach`, `aloneTimeNeed`
+
+**Family plans:**
+- `familyPlans.wantsKids`, `kidsTimeline`, `familyCloseness`, `parentingStyle`
+
+**Lifestyle:**
+- `lifestyle.sleepSchedule`, `exerciseLevel`, `dietType`, `alcoholUse`, `drugUse`, `petPreference`, `locationPreference`
+
+**Optional narrative sections:**
+- `lifeStory`, `socialProfile`, `intimacyProfile`, `lovePhilosophy`, `partnerPreferences`, `bioElements`, `demographics`, `health`
+
+**Generated content:**
 - `generatedBio`: string (optional) - Full paragraph bio (150-200 words)
-- `shortBio`: string (optional) - One-sentence bio for match cards (starts with "A/An...")
-- `keywords`: string[] - Combined searchable keywords (15-25)
+- `shortBio`: string (optional) - One-sentence bio for match cards
+- `keywords`: string[] - Searchable keywords (15-25)
 - `processedAt`: number (timestamp)
-- `openaiModel`: string (e.g., "gpt-5-mini-2025-08-07")
-- `confidence`: number (0-1 confidence score)
+- `openaiModel`: string
+- `confidence`: number (0-1)
 
 ---
 
-## Question Categories (12 total, 100 questions)
+## Question Categories (6 total, 90 questions)
 
-1. **Basic Traits** (Q1-12): Commitment level, ethnicity, career, kids, politics, religion
-2. **Core Values** (Q13-20): Values, integrity, self-improvement, honesty
-3. **Lifestyle & Health** (Q21-35): Pets, exercise, diet, alcohol, drugs, sleep, health
-4. **Your Life Story** (Q36-45): Location preferences, dreams, fears, hardships, formative experiences
-5. **Social Life** (Q46-52): Social style, weekends, friend dynamics
-6. **Communication Style** (Q53-60): Conflict handling, affection, texting, apologies
-7. **Relationship Expectations** (Q61-70): Goals, ideal relationship, love language, finances, dealbreakers
-8. **Family & Kids** (Q71-78): Family closeness, parenting style, traditions
-9. **Intimacy** (Q79-84): Physical intimacy importance, PDA, emotional connection
-10. **Love Philosophy** (Q85-90): Soulmates, love definition, relationship advice
-11. **Leisure & Quirks** (Q91-95): Hobbies, music, media, quirks
-12. **Final Thoughts** (Q96-100): Non-negotiables, passions, motivations
+| Level | Category | Questions | What it Scores |
+|-------|----------|-----------|----------------|
+| 1 | **The Basics** | Q1-33 | Preference checklists + dealbreakers (goals, kids, ethnicity, religion, politics, substances) |
+| 2 | **Who You Are** | Q34-46 | Personality scales + canonical values from essays |
+| 3 | **Relationship Style** | Q47-60 | Communication, attachment, intimacy, finances |
+| 4 | **Lifestyle** | Q61-72 | Sleep schedule, exercise, social life, health |
+| 5 | **Life & Future** | Q73-82 | Family closeness, location flexibility, career ambitions |
+| 6 | **The Deeper Stuff** | Q83-91 | Shared interests (from picker, rarity-weighted) + philosophy |
+
+---
+
+## Compatibility Scoring Algorithm (`lib/matching.ts`)
+
+### 6 Category Scores (aligned with question categories)
+
+| Category | Weight | Data Sources |
+|----------|--------|--------------|
+| **The Basics** | 25% | Checklist preferences + dealbreakers |
+| **Who You Are** | 20% | Personality traits + canonical values |
+| **Relationship Style** | 20% | Love language, conflict, communication, finances |
+| **Lifestyle** | 15% | Sleep, exercise, social, substances |
+| **Life & Future** | 10% | Family closeness, kids, religion/politics (weighted by importance) |
+| **The Deeper Stuff** | 10% | Shared interests (rarity-weighted) + philosophy |
+
+### Dealbreaker System
+
+Dealbreakers are extracted from checklist preferences:
+- If user selects specific options (not "Open to any") and marks as dealbreaker
+- Bidirectional check: both users' dealbreakers matter
+- Triggered dealbreakers can filter out matches or show warnings
+
+### Interest Matching (Rarity-Weighted)
+
+```typescript
+// Niche shared interests count more than common ones
+function scoreTheDeeperStuff(p1, p2) {
+  const shared = p1.selectedInterests.filter(i => p2.selectedInterests.includes(i));
+  // Rarer interests (specific movies, artists) = higher weight
+  // Common interests (genres like "Rock") = lower weight
+}
+```
+
+### Canonical Values Library (`convex/lib/canonicalValues.ts`)
+
+~30 core values for reliable AI extraction:
+```
+honesty, loyalty, family, growth, adventure, independence, security, creativity,
+ambition, kindness, humor, faith, authenticity, empathy, respect, integrity,
+balance, passion, curiosity, optimism, resilience, patience, generosity,
+compassion, courage, wisdom, freedom, tradition, equality, justice
+```
+
+### Interest Library (`convex/lib/interests.ts`)
+
+1000+ interests organized by category:
+- Movies & TV (genres, franchises, shows, directors)
+- Music (genres, artists, activities)
+- Books & Reading (genres, authors, series)
+- Gaming (types, genres, games, platforms)
+- Sports & Fitness (watching, playing, fitness)
+- Outdoors & Nature
+- Food & Drink
+- Travel
+- Arts & Creativity
+- Technology
+- Lifestyle
+- Animals & Pets
+- Learning & Education
+- Entertainment
+- Collecting & Hobbies
+- Social Causes
 
 ---
 
 ## AI Profile Parsing System
 
 ### Overview
-After a user completes all 100 questions, a background Convex action parses their answers using OpenAI to extract structured data for efficient compatibility matching.
+After a user completes all 90 questions, a background Convex action parses their answers using OpenAI to extract structured data for efficient compatibility matching.
 
 ### Architecture Flow
 1. User completes onboarding → `completeOnboarding` mutation runs
 2. Mutation schedules `parseUserProfile` action via `ctx.scheduler.runAfter(0, ...)`
 3. Action fetches all answers with question details
-4. Action runs 14 parallel OpenAI extractions in 3 batches:
-   - **Batch 1**: Values/Interests, Personality (11 traits), Family, Lifestyle, Keywords
-   - **Batch 2**: Life Story, Social Profile, Intimacy, Love Philosophy, Partner Prefs, Bio Elements
-   - **Batch 3**: Confidence, Full Bio, Short Bio
-5. Results combined with structured answers (multiple_choice, scale) from database
-6. Complete profile saved to `userProfiles` table
+4. Action extracts:
+   - **Preferences** from checklist question pairs (no AI needed)
+   - **Selected interests** from interest picker (no AI needed)
+   - **Canonical values** from essays (AI maps to ~30 item list)
+   - **Personality traits** from scale questions + AI analysis
+5. Results saved to `userProfiles` table
 
 ### OpenAI Integration (`convex/lib/openai.ts`)
-- Lazy-initialized client using `OPENAI_API_KEY` environment variable
 - Default model: `gpt-5-mini-2025-08-07` (~$0.01 per user full parse)
 - Retry logic with exponential backoff (3 retries)
 - JSON response format enforced
 - Token usage and cost tracking logged to console
-- Error handling for rate limits, auth errors, parsing failures
 
-### Prompt Templates (`convex/lib/prompts.ts`)
-- `VALUES_INTERESTS_PROMPT`: Extracts values (max 10), interests (max 15), dealbreakers (max 5)
+### Key Prompts (`convex/lib/prompts.ts`)
+- `CANONICAL_VALUES_PROMPT`: Extracts only values from the canonical ~30 item list
+- `VALUES_INTERESTS_PROMPT`: Legacy extraction for raw values/interests (display only)
 - `PERSONALITY_TRAITS_PROMPT`: Rates 11 personality dimensions on 1-10 scale
-- `FAMILY_PLANS_PROMPT`: Extracts kids preference, timeline, parenting style
-- `LIFESTYLE_PROMPT`: Extracts diet, pet preference, location preference
-- `LIFE_STORY_PROMPT`: Extracts achievements, hardships, dreams, fears
-- `SOCIAL_PROFILE_PROMPT`: Extracts social style, going out frequency
-- `INTIMACY_PROFILE_PROMPT`: Extracts intimacy preferences, PDA comfort
-- `LOVE_PHILOSOPHY_PROMPT`: Extracts soulmate beliefs, romantic gestures
-- `PARTNER_PREFERENCES_PROMPT`: Extracts must-haves, red flags, dealbreakers
-- `BIO_ELEMENTS_PROMPT`: Extracts quirks, conversation starters, passions
-- `KEYWORDS_PROMPT`: Generates 15-25 searchable keywords
-- `CONFIDENCE_PROMPT`: Rates extraction confidence (0-1)
-- `getBioGenerationPrompt(gender)`: Generates full paragraph bio with correct pronouns
-- `getShortBioPrompt()`: Generates one-sentence bio starting with "A/An [profession]..."
-
-### Flexible Section Regeneration
-To regenerate specific sections without re-running the full parse:
-
-```bash
-bunx convex run actions/parseProfile:regenerateSections '{"userId": "...", "sections": ["shortBio", "bio"]}'
-```
-
-**Available sections:**
-- `values` - Values, interests, dealbreakers
-- `personality` - All 11 personality traits
-- `lifestyle` - Diet, pets, location preferences
-- `family` - Kids, family plans
-- `keywords` - Searchable keywords
-- `lifeStory` - Dreams, fears, achievements
-- `social` - Social style, going out frequency
-- `intimacy` - Intimacy preferences
-- `lovePhilosophy` - Soulmates, romantic gestures
-- `partnerPrefs` - Must-haves, red flags, dealbreakers
-- `bioElements` - Quirks, conversation starters
-- `confidence` - Extraction confidence score
-- `bio` - Full paragraph bio (uses gender for pronouns)
-- `shortBio` - One-sentence bio (starts with "A/An...")
-
----
-
-## Compatibility Scoring Algorithm (`app/(tabs)/matches.tsx`)
-
-### Weighted Scoring (11 categories, total = 100%)
-| Category | Weight | Data Sources |
-|----------|--------|--------------|
-| Values | 15% | `values[]` Jaccard similarity |
-| Personality | 15% | All 11 traits similarity |
-| Lifestyle | 12% | Sleep, exercise, location, pets |
-| Relationship Style | 12% | Love language, conflict, communication, finances |
-| Family Plans | 12% | Kids preference matrix, family closeness |
-| Social | 10% | `goOutFrequency`, `socialStyle` similarity |
-| Intimacy | 8% | `physicalIntimacyImportance`, `pdaComfort` |
-| Love Philosophy | 6% | `believesInSoulmates`, `romanticGestures` overlap |
-| Interests | 5% | `interests[]` Jaccard similarity |
-| Attachment | 3% | Research-based pairing (secure+secure=100%, avoidant+anxious=35%) |
-| Demographics | 2% | Religion/politics weighted by how much each person cares |
-
-### Scoring Functions
-- `calculateArrayOverlap()`: Jaccard similarity for string arrays
-- `calculateNumericSimilarity()`: Normalized difference for 1-10 scales
-- `calculateCompatibility()`: Returns 0-100 score with detailed breakdown
-- `checkMustHaves()`: Evaluates if profile meets must-have requirements
-- `checkDealbreakers()`: Detects dealbreaker triggers with severity levels
-- `getFrictionPoints()`: Identifies potential compatibility concerns
-
-### Must-Haves & Dealbreakers Matching
-The matches page shows bidirectional must-have/dealbreaker checks:
-- **Must-Haves**: Cross-references `partnerPreferences.mustHaves[]` against profile traits/values
-- **Dealbreakers**: Checks substances, kids, religion, politics, personality extremes
-- **Severity levels**: clear (✓), warning (⚠), triggered (✗)
-- **Watch Out For**: Auto-detected friction points from low-scoring areas
-
-### Kids Compatibility Matrix
-```typescript
-// yes + yes = 1.0, yes + no = 0.1, maybe + maybe = 0.8, etc.
-kidsCompatibility = {
-  yes: { yes: 1, maybe: 0.7, open: 0.8, no: 0.1, already_has: 0.8, unknown: 0.5 },
-  no: { no: 1, maybe: 0.4, open: 0.5, yes: 0.1, already_has: 0.2, unknown: 0.5 },
-  // ... etc
-}
-```
+- Bio generation prompts for paragraph and one-sentence bios
 
 ---
 
@@ -413,18 +379,17 @@ kidsCompatibility = {
 ### Photos Screen (`app/(onboarding)/photos.tsx`)
 - 6-slot grid, first 2 marked "Required"
 - Uses `react-native-image-crop-picker` with 1:1 aspect ratio
-- On continue: calls `completeCategory("basic_traits")` and navigates to Journey tab
+- On continue: calls `completeCategory("the_basics")` and navigates to Journey tab
 
 ### Questions Screen (`app/(onboarding)/questions.tsx`)
 - Opens as modal from Journey screen with `categoryId` param
 - Shows category name centered with X button to close
 - Progress bar + "X/Y" count for current category only
 - One question per page, auto-saves answers on change
-- Scale questions auto-populate default value so Next button is enabled
-- Opens to first unanswered question (or last question if all answered)
+- Supports all 6 question types including checklist and interest_picker
+- Dealbreaker toggle shows for checklist questions with specific selections
 - Completing last question triggers `completeCategory` mutation
 - Navigates back to Journey with `completed` param to trigger animation
-- Back button on first question returns to Journey (modal dismiss animation)
 
 ---
 
@@ -484,11 +449,11 @@ bun start
 
 ### Journey/Level System (IMPLEMENTED)
 
-**Purpose**: Gamify the 100 questions by breaking them into 12 categories. Users progress through levels by completing categories, with each level unlocking a new compatibility score.
+**Purpose**: Gamify the 90 questions by breaking them into 6 categories. Users progress through levels by completing categories, with each level unlocking a new compatibility score.
 
 **User Flow**:
-1. After photos, user completes Level 1 (Basic Traits) and enters the Journey
-2. Journey screen shows linear path of 12 categories with icons
+1. After photos, user completes Level 1 (The Basics) and enters the Journey
+2. Journey screen shows linear path of 6 categories with icons
 3. Categories must be completed in order
 4. Tapping a category opens the questions modal
 5. Completing all questions in a category triggers completion animation
@@ -498,41 +463,16 @@ bun start
 **Category Progression** (`lib/categories.ts`):
 | Level | Category | Questions | Unlock |
 |-------|----------|-----------|--------|
-| 1 | Basic Traits | Q1-12 | Waitlist entry & basic matching |
-| 2 | Core Values | Q13-20 | Core Values compatibility score |
-| 3 | Lifestyle & Health | Q21-35 | Lifestyle compatibility score |
-| 4 | Your Life Story | Q36-45 | Life Story compatibility score |
-| 5 | Social Life | Q46-52 | Social compatibility score |
-| 6 | Communication Style | Q53-60 | Communication compatibility score |
-| 7 | Relationship Expectations | Q61-70 | Relationship compatibility score |
-| 8 | Family & Kids | Q71-78 | Family compatibility score |
-| 9 | Intimacy | Q79-84 | Intimacy compatibility score |
-| 10 | Love Philosophy | Q85-90 | Philosophy compatibility score |
-| 11 | Leisure & Quirks | Q91-95 | Quirks compatibility score |
-| 12 | Final Thoughts | Q96-100 | Full profile & max visibility |
+| 1 | The Basics | Q1-33 | Essential compatibility filters |
+| 2 | Who You Are | Q34-46 | Personality compatibility score |
+| 3 | Relationship Style | Q47-60 | Relationship compatibility score |
+| 4 | Lifestyle | Q61-72 | Lifestyle compatibility score |
+| 5 | Life & Future | Q73-82 | Life goals compatibility score |
+| 6 | The Deeper Stuff | Q83-91 | Full profile & max visibility |
 
 **UI Components**:
-- `AppHeader`: Shows "Lvl X/12" on left, "Found" center, avatar right. Tapping level navigates to Journey tab.
-- `JourneyPath`: Scrollable list of category nodes with state-based styling:
-  - **Completed**: Green border/text, checkmark, pencil icon for editing
-  - **Current**: Black border, progress bar, unlock preview
-  - **Locked**: Gray border/text, lock icon
-  - **Animating**: Animated transition from current to completed
-  - **Unlocking**: Animated transition from locked to current
-
-**Completion Animation Sequence** (using `react-native-reanimated`):
-1. **0-450ms**: Content collapses (height + opacity animate to 0)
-2. **450-750ms**: Border, icon, text turn green + checkmark bounces in + pencil fades in
-3. **850-1150ms**: Next category's lock fades, border changes to black
-4. **1150-2100ms**: Next category's content expands, progress bar fades in, then unlock preview
-5. Auto-scrolls to center the animating category on screen
-
-**Technical Implementation**:
-- `justCompletedCategoryId` param triggers animation when returning from questions
-- `getNodeState()` determines node appearance based on completedCategories and animation state
-- Content height measured via `onLayout` for smooth animations (no hardcoded heights)
-- Progress bar fill animates from 0% to actual progress
-- DEV-only: Tap "Found" title on Journey screen to reset progress for testing
+- `AppHeader`: Shows "Lvl X/6" on left, "Found" center, avatar right
+- `JourneyPath`: Scrollable list of category nodes with state-based styling
 
 **Convex Mutations**:
 - `completeCategory`: Adds category to completedCategories, increments level
@@ -541,65 +481,62 @@ bun start
 
 ---
 
-### ChatGPT/Claude Question Import Flow (IMPLEMENTED)
+### Dealbreaker & Preference System (IMPLEMENTED)
 
-**Purpose**: Let users skip manually answering questions that ChatGPT/Claude already knows about them from their conversation history.
+**Purpose**: Allow users to specify both what they are and what they're open to in a partner, with optional dealbreaker flags.
 
-**User Flow**:
-1. After photos, user sees choice screen (`ai-import.tsx`):
-   - "Use AI to help answer" - copies prompt, goes to paste screen
-   - "Answer manually" - goes directly to questions
-2. AI paste screen (`ai-paste.tsx`):
-   - "Copy Prompt" button copies detailed prompt with all 100 questions
-   - Prompt instructs AI to give verbose answers (2-4 sentences for text/essay)
-   - User pastes JSON response into fixed-height scrollable text area
-   - "Import Answers" parses JSON and saves to database with `source: "ai"`
-3. Success screen shows count: "X of 100 questions answered!"
-4. Questions screen shows only unanswered questions
-5. After all questions answered, modal asks: "Review AI answers?"
-   - Yes: review each AI answer one by one, can edit
-   - No: skip to completion
-6. Back on first question shows confirmation: "Clear AI answers and go back?"
+**Question Structure**:
+Each preference area has a pair of questions:
+1. Self-description (multiple_choice): "Do you have kids?"
+2. Partner preference (checklist): "Are you open to partners who have kids?"
 
-**Technical Implementation**:
-- `lib/ai-import.ts`: `generateAIPrompt()` and `parseAIResponse()` functions
-- Answers stored with `source: "ai"` or `source: "manual"` field
-- Session AI answers tracked in MMKV for current session review flow
-- Database `source` field persists across app restarts
-- `clearAiAnswers` mutation deletes all AI-sourced answers for user
+**Checklist Features**:
+- "Open to any" option that auto-selects all
+- Dealbreaker toggle appears when specific options selected
+- Stored in `answers` table with `isDealbreaker` flag
+- Extracted to `userProfiles.preferences` for matching
+
+**Categories with Preferences**:
+- Relationship Goals (Q1-2)
+- Relationship Style (Q3-4)
+- Has Children (Q5-6)
+- Wants Children (Q7-8)
+- Ethnicity (Q14-15)
+- Religion (Q16-17)
+- Politics (Q19-20)
+- Education (Q22-23)
+- Alcohol (Q25-26)
+- Smoking (Q27-28)
+- Marijuana (Q29-30)
+- Drugs (Q31-32)
 
 ---
 
-### Matches Page (IMPLEMENTED)
+### Interest Picker (IMPLEMENTED)
 
-**Purpose**: Display compatibility scores between the current user and potential matches, with detailed breakdowns of why they're compatible or not.
+**Purpose**: Let users select interests from a large curated library for better matching on niche shared interests.
 
-**UI Structure** (`app/(tabs)/matches.tsx`):
-1. **Your Profile Card** (expandable):
-   - Shows your photo, name, and short bio when collapsed
-   - Tap to expand and see full profile details
-   
-2. **Match Cards** (sorted by compatibility score):
-   - Photo, name, location, compatibility % badge
-   - **Short bio** displayed when collapsed (one-sentence, starts with "A/An...")
-   - Tap to expand for full details
+**Features**:
+- 1000+ interests organized by 16 categories
+- Autocomplete search as you type
+- Category tabs for browsing
+- Selected interests shown as removable tags
+- Soft limit of 25 selections
+- Rarity-weighted matching (niche interests count more)
 
-**Expanded Match View**:
-1. **Compatibility Breakdown** - All 11 category scores with progress bars
-2. **Shared Values** - Green tags showing overlapping values
-3. **Shared Interests** - Green tags showing overlapping interests
-4. **Must-Haves Check**:
-   - "Does [Name] meet yours?" with ✓/✗ for each must-have
-   - "Do you meet [Name]'s?" (bidirectional)
-5. **Dealbreakers Check**:
-   - "Your dealbreakers" with ✓ (clear) / ⚠ (warning) / ✗ (triggered)
-   - "[Name]'s dealbreakers" (bidirectional)
-6. **Watch Out For** - Auto-detected friction points (different sleep schedules, conflict styles, etc.)
-7. **Full Profile** - All parsed profile data (traits, life story, etc.)
+**Question**: Q90 "What are your interests?" with type `interest_picker`
 
-**Personality Trait Display Convention**:
-- Sliders always show conservative/structured on LEFT, liberal/spontaneous on RIGHT
-- Inverted traits (where DB value is backwards): introversion, traditionalValues, planningStyle
+---
+
+### Canonical Values System (IMPLEMENTED)
+
+**Purpose**: Extract values from essays that match a canonical list for reliable matching.
+
+**How it works**:
+- AI extracts only from ~30 predefined values
+- Maps arbitrary essay text to closest canonical value
+- Non-matching values stored as `rawValues` (for display only)
+- `canonicalValues` used for Jaccard similarity matching
 
 ---
 
@@ -607,120 +544,12 @@ bun start
 
 These features are planned but not yet implemented.
 
----
-
-### Match Preview Motivation System
-
-**Purpose**: Keep users engaged through 100 questions by showing them potential matches as they progress. The previews get better as more questions are answered.
-
-**User Flow**:
-1. Every 10 questions (at Q10, Q20, Q30... Q90), pause the question flow
-2. Show a "match preview" interstitial screen:
-   - Display a real user profile (photo + basic info)
-   - Ask: "Is this the type of person you're into?"
-   - Yes / No buttons
-3. User's feedback is captured (helps train the matching algorithm)
-4. Show encouraging message: "Great! As you answer more questions, we'll find even better matches for you"
-5. Continue to next question
-
-**Key Details**:
-- Previews should genuinely improve over time (not random)
-- Early previews (Q10-Q30) are broader matches
-- Later previews (Q70-Q90) should be more targeted based on answers so far
-- This creates a tangible reward loop - user sees the value of answering more questions
-- The yes/no feedback becomes training data for the matching algorithm
-
-**Technical Notes**:
-- Need real-time or near-real-time matching calculation
-- Could use a simpler/faster algorithm for previews vs final matching
-- Track preview feedback in database for algorithm training
-
----
-
 ### AI Matchmaker Chat Interface
-
-**Purpose**: After completing 100 questions, users interact with an AI matchmaker through a chat UI (similar to ChatGPT/Claude interfaces). The AI presents matches conversationally.
-
-**Core Experience**:
-- Chat interface that looks like modern AI chat apps
-- AI matchmaker has a personality - warm, thoughtful, invested in finding you the right person
-- NOT a swipe interface - this is intentionally slower and more thoughtful
-
-**Daily Match Flow**:
-1. User gets 3 matches per day (delivered via the chat)
-2. AI presents ONE match at a time with:
-   - Their photos (carousel or grid)
-   - AI-written description/summary of the person
-   - **Compatibility breakdown**:
-     - Reasons why you're compatible (parsed from both users' answers)
-     - Potential concerns or differences (honest about mismatches)
-   - This is NOT just "you both like hiking" - it's deeper compatibility insights
-3. User has two options:
-   - "I want to meet them" (Yes)
-   - "Ask more questions" (dig deeper before deciding)
-
-**Ask More Questions Feature**:
-- User can ask the AI anything about the match
-- AI answers based on the match's 100 question answers
-- Examples: "What are their views on having kids?", "How important is religion to them?", "What's their relationship with their family like?"
-- AI can also answer subjective questions: "Do you think we'd get along?", "What might we argue about?"
-- This is very open-ended - AI uses its judgment
-- Eventually user must decide Yes or No
-
-**Technical Notes**:
-- Chat history persists
-- Need to handle "no more matches today" state gracefully
-- AI needs access to both users' full answer sets
-- Consider rate limiting questions to prevent endless deliberation
-
----
+- Chat UI for match presentation
+- AI presents ONE match at a time with compatibility breakdown
+- "Ask more questions" feature to dig deeper before deciding
 
 ### Double Opt-In & Automated Date Booking
-
-**Purpose**: Remove the friction of "matching then chatting then planning a date." If both people want to meet, the AI handles everything.
-
-**Matching Flow**:
-1. User A says "I want to meet them" on User B's profile
-2. User B does NOT immediately know
-3. Next day (or next session), AI tells User B: "[User A's name] wants to meet you!"
-4. Shows User B the same profile view (photos, compatibility, etc.)
-5. User B decides Yes or No
-6. If No: User A is never notified (no rejection notification)
-7. If Yes: It's a mutual match!
-
-**Date Booking Flow** (after mutual match):
-1. AI congratulates both users on the match
-2. AI asks each user for their availability:
-   - Calendar picker UI
-   - "When are you free this week for a date?"
-   - Each user submits 3-5 time slots
-3. AI finds overlapping availability
-4. AI knows both users' locations (from basic info)
-5. AI selects a restaurant from a **pre-curated list**:
-   - Restaurants vetted for good date vibes
-   - Located conveniently between both users
-   - Appropriate price point
-6. AI books reservation via **Resi API**
-7. AI confirms with both users:
-   - "You're meeting [Name] at [Restaurant] on [Date] at [Time]!"
-   - Add to calendar button
-
-**Pre-Date Chat**:
-- Chat between the two users opens **2 hours before the date**
-- NOT before - this is intentional
-- Prevents endless texting that kills momentum
-- Chat is just for logistics: "I'm running 5 min late", "I'm wearing a blue jacket"
-- After the date, chat remains open
-
-**Restaurant List**:
-- Curated by city/neighborhood
-- Criteria: good for conversation (not too loud), romantic but not over-the-top, mid-to-upscale price point
-- Need admin interface to manage restaurant list
-- Resi API integration for reservations
-
-**Technical Notes**:
-- Resi API integration needed
-- Calendar/scheduling logic to find overlaps
-- Location-based restaurant selection
-- Push notifications for match alerts and date reminders
-- Handle edge cases: restaurant fully booked, user cancels, etc.
+- Mutual match system (User A likes B, B likes A = match)
+- AI handles date scheduling and restaurant booking via Resi API
+- Chat opens 2 hours before date (logistics only)

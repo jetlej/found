@@ -149,7 +149,9 @@ export const getAnswersWithQuestions = internalQuery({
         questionText: question?.text || "",
         questionType: question?.type || "text",
         questionOrder: question?.order || 0,
+        questionKey: question?.questionKey || "",
         questionCategory: question?.category || "",
+        isDealbreaker: answer.isDealbreaker || false,
       };
     });
   },

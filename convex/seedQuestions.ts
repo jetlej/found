@@ -1,17 +1,19 @@
 import { mutation } from "./_generated/server";
 
-// ~89 Questions for Found - organized by 6 categories
+// ~91 Questions for Found - organized by 6 categories
+// Each question has a stable questionKey for reliable referencing
 // Restructured with Hinge-style filters front-loaded and checklist type for partner preferences
 
 export const QUESTIONS = [
   // ============================================
-  // CATEGORY 1: The Basics (Questions 1-32)
+  // CATEGORY 1: The Basics (Questions 1-33)
   // Hinge-style filters + demographic compatibility + substances
   // ============================================
   
   // Relationship Goals
   {
     order: 1,
+    questionKey: "relationship_goals_self",
     text: "What are you looking for?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -24,10 +26,11 @@ export const QUESTIONS = [
   },
   {
     order: 2,
+    questionKey: "relationship_goals_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 1,
+    linkedQuestionKey: "relationship_goals_self",
     options: [
       "Open to any",
       "Life partner",
@@ -40,6 +43,7 @@ export const QUESTIONS = [
   // Relationship Style
   {
     order: 3,
+    questionKey: "relationship_style_self",
     text: "What's your relationship style?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -52,10 +56,11 @@ export const QUESTIONS = [
   },
   {
     order: 4,
+    questionKey: "relationship_style_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 3,
+    linkedQuestionKey: "relationship_style_self",
     options: [
       "Open to any",
       "Monogamy",
@@ -68,6 +73,7 @@ export const QUESTIONS = [
   // Children - Has
   {
     order: 5,
+    questionKey: "has_children_self",
     text: "Do you have children?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -75,16 +81,18 @@ export const QUESTIONS = [
   },
   {
     order: 6,
+    questionKey: "has_children_pref",
     text: "Are you open to partners with children?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 5,
+    linkedQuestionKey: "has_children_self",
     options: ["Open to any", "Yes", "No"],
   },
   
   // Children - Wants
   {
     order: 7,
+    questionKey: "wants_children_self",
     text: "Do you want children?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -98,10 +106,11 @@ export const QUESTIONS = [
   },
   {
     order: 8,
+    questionKey: "wants_children_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 7,
+    linkedQuestionKey: "wants_children_self",
     options: [
       "Open to any",
       "Want children",
@@ -113,6 +122,7 @@ export const QUESTIONS = [
   },
   {
     order: 9,
+    questionKey: "kids_timeline",
     text: "What's your ideal timeline for kids?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -130,6 +140,7 @@ export const QUESTIONS = [
   // Height
   {
     order: 10,
+    questionKey: "height_self",
     text: "How tall are you?",
     type: "scale" as const,
     category: "The Basics",
@@ -140,21 +151,40 @@ export const QUESTIONS = [
   },
   {
     order: 11,
-    text: "What height range are you attracted to?",
-    type: "text" as const, // Will be range slider in UI, stored as "60-72"
+    questionKey: "height_pref",
+    text: "What is your ideal height range for a partner?",
+    type: "range" as const,
     category: "The Basics",
+    scaleMin: 48, // 4'0"
+    scaleMax: 84, // 7'0"
+    scaleMinLabel: "4'0\"",
+    scaleMaxLabel: "7'0\"",
     hasDealbreaker: true,
   },
   
-  // Location
+  // Location & Age
   {
     order: 12,
-    text: "Where do you live?",
-    type: "text" as const, // Location auto-detect
+    questionKey: "hometown",
+    text: "Where did you grow up?",
+    type: "text" as const,
     category: "The Basics",
   },
   {
     order: 13,
+    questionKey: "age_range_pref",
+    text: "What is your ideal age range for a partner?",
+    type: "range" as const,
+    category: "The Basics",
+    scaleMin: 18,
+    scaleMax: 80,
+    scaleMinLabel: "18",
+    scaleMaxLabel: "80",
+    hasDealbreaker: true,
+  },
+  {
+    order: 14,
+    questionKey: "distance_pref",
     text: "How far are you willing to travel for a match?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -171,9 +201,10 @@ export const QUESTIONS = [
   
   // Ethnicity
   {
-    order: 14,
+    order: 15,
+    questionKey: "ethnicity_self",
     text: "What's your ethnicity?",
-    type: "multiple_choice" as const, // In UI will be multi-select
+    type: "checklist" as const,
     category: "The Basics",
     options: [
       "Asian",
@@ -184,17 +215,17 @@ export const QUESTIONS = [
       "Pacific Islander",
       "South Asian",
       "White / Caucasian",
-      "Mixed / Multiracial",
       "Other",
       "Prefer not to say",
     ],
   },
   {
-    order: 15,
-    text: "What ethnicities are you open to?",
+    order: 16,
+    questionKey: "ethnicity_pref",
+    text: "What ethnicities are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 14,
+    linkedQuestionKey: "ethnicity_self",
     options: [
       "Open to any",
       "Asian",
@@ -205,14 +236,14 @@ export const QUESTIONS = [
       "Pacific Islander",
       "South Asian",
       "White / Caucasian",
-      "Mixed / Multiracial",
       "Other",
     ],
   },
   
   // Religion
   {
-    order: 16,
+    order: 17,
+    questionKey: "religion_self",
     text: "What religion do you practice?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -231,11 +262,12 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 17,
+    order: 18,
+    questionKey: "religion_pref",
     text: "What religions are you open to?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 16,
+    linkedQuestionKey: "religion_self",
     options: [
       "Open to any",
       "Christian",
@@ -252,7 +284,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 18,
+    order: 19,
+    questionKey: "religion_importance",
     text: "How important is religion in your life?",
     type: "scale" as const,
     category: "The Basics",
@@ -264,7 +297,8 @@ export const QUESTIONS = [
   
   // Politics
   {
-    order: 19,
+    order: 20,
+    questionKey: "politics_self",
     text: "What's your political leaning?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -279,11 +313,12 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 20,
+    order: 21,
+    questionKey: "politics_pref",
     text: "What political views are you open to?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 19,
+    linkedQuestionKey: "politics_self",
     options: [
       "Open to any",
       "Very liberal",
@@ -296,7 +331,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 21,
+    order: 22,
+    questionKey: "politics_importance",
     text: "How important is politics in your life?",
     type: "scale" as const,
     category: "The Basics",
@@ -308,7 +344,8 @@ export const QUESTIONS = [
   
   // Education
   {
-    order: 22,
+    order: 23,
+    questionKey: "education_self",
     text: "What's your highest education level?",
     type: "multiple_choice" as const,
     category: "The Basics",
@@ -322,11 +359,12 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 23,
+    order: 24,
+    questionKey: "education_pref",
     text: "What education levels are you open to?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 22,
+    linkedQuestionKey: "education_self",
     options: [
       "Open to any",
       "High school",
@@ -338,7 +376,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 24,
+    order: 25,
+    questionKey: "basics_extra",
     text: "Anything else we should know to find your match?",
     type: "essay" as const,
     category: "The Basics",
@@ -346,72 +385,81 @@ export const QUESTIONS = [
   
   // Substances
   {
-    order: 25,
+    order: 26,
+    questionKey: "alcohol_self",
     text: "How often do you drink alcohol?",
     type: "multiple_choice" as const,
     category: "The Basics",
     options: ["Never", "Rarely", "Socially", "Regularly", "Daily"],
   },
   {
-    order: 26,
+    order: 27,
+    questionKey: "alcohol_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 25,
+    linkedQuestionKey: "alcohol_self",
     options: ["Open to any", "Never", "Rarely", "Socially", "Regularly", "Daily"],
   },
   {
-    order: 27,
+    order: 28,
+    questionKey: "smoking_self",
     text: "Do you smoke cigarettes or vape?",
     type: "multiple_choice" as const,
     category: "The Basics",
     options: ["Never", "Socially", "Regularly", "Daily"],
   },
   {
-    order: 28,
+    order: 29,
+    questionKey: "smoking_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 27,
+    linkedQuestionKey: "smoking_self",
     options: ["Open to any", "Never", "Socially", "Regularly", "Daily"],
   },
   {
-    order: 29,
+    order: 30,
+    questionKey: "marijuana_self",
     text: "Do you use marijuana?",
     type: "multiple_choice" as const,
     category: "The Basics",
     options: ["Never", "Rarely", "Sometimes", "Regularly"],
   },
   {
-    order: 30,
+    order: 31,
+    questionKey: "marijuana_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 29,
+    linkedQuestionKey: "marijuana_self",
     options: ["Open to any", "Never", "Rarely", "Sometimes", "Regularly"],
   },
   {
-    order: 31,
+    order: 32,
+    questionKey: "drugs_self",
     text: "Do you use other recreational drugs?",
     type: "multiple_choice" as const,
     category: "The Basics",
     options: ["Never", "Very rarely", "Occasionally", "Regularly"],
   },
   {
-    order: 32,
+    order: 33,
+    questionKey: "drugs_pref",
     text: "What are you open to in a partner?",
     type: "checklist" as const,
     category: "The Basics",
-    linkedQuestionOrder: 31,
+    linkedQuestionKey: "drugs_self",
     options: ["Open to any", "Never", "Very rarely", "Occasionally", "Regularly"],
   },
 
   // ============================================
-  // CATEGORY 2: Who You Are (Questions 33-45)
+  // CATEGORY 2: Who You Are (Questions 34-46)
   // Personality, values, openness
   // ============================================
   {
-    order: 33,
+    order: 34,
+    questionKey: "social_description",
     text: "How would you describe yourself socially?",
     type: "multiple_choice" as const,
     category: "Who You Are",
@@ -424,7 +472,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 34,
+    order: 35,
+    questionKey: "openness_new_experiences",
     text: "How open are you to new experiences?",
     type: "scale" as const,
     category: "Who You Are",
@@ -434,7 +483,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Always seeking novelty",
   },
   {
-    order: 35,
+    order: 36,
+    questionKey: "handle_change",
     text: "How do you handle change?",
     type: "multiple_choice" as const,
     category: "Who You Are",
@@ -446,7 +496,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 36,
+    order: 37,
+    questionKey: "ambition_level",
     text: "How would you describe your ambition?",
     type: "scale" as const,
     category: "Who You Are",
@@ -456,7 +507,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Highly driven",
   },
   {
-    order: 37,
+    order: 38,
+    questionKey: "emotional_expressiveness",
     text: "How emotionally expressive are you?",
     type: "scale" as const,
     category: "Who You Are",
@@ -466,7 +518,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Open book",
   },
   {
-    order: 38,
+    order: 39,
+    questionKey: "personal_growth_importance",
     text: "How important is personal growth to you?",
     type: "scale" as const,
     category: "Who You Are",
@@ -476,7 +529,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Top priority",
   },
   {
-    order: 39,
+    order: 40,
+    questionKey: "communication_style",
     text: "How would you describe your communication style?",
     type: "multiple_choice" as const,
     category: "Who You Are",
@@ -488,7 +542,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 40,
+    order: 41,
+    questionKey: "competitiveness",
     text: "How competitive are you?",
     type: "scale" as const,
     category: "Who You Are",
@@ -498,7 +553,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very competitive",
   },
   {
-    order: 41,
+    order: 42,
+    questionKey: "spontaneity",
     text: "How spontaneous vs. planned are you?",
     type: "scale" as const,
     category: "Who You Are",
@@ -508,7 +564,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very structured",
   },
   {
-    order: 42,
+    order: 43,
+    questionKey: "alone_time_need",
     text: "How important is alone time to you?",
     type: "scale" as const,
     category: "Who You Are",
@@ -518,7 +575,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Essential daily",
   },
   {
-    order: 43,
+    order: 44,
+    questionKey: "life_priority",
     text: "What's most important to you in life right now?",
     type: "multiple_choice" as const,
     category: "Who You Are",
@@ -533,24 +591,27 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 44,
+    order: 45,
+    questionKey: "core_values",
     text: "What are your core values?",
     type: "essay" as const,
     category: "Who You Are",
   },
   {
-    order: 45,
+    order: 46,
+    questionKey: "never_compromise",
     text: "What's something you'd never compromise on?",
     type: "essay" as const,
     category: "Who You Are",
   },
 
   // ============================================
-  // CATEGORY 3: Relationship Style (Questions 46-59)
+  // CATEGORY 3: Relationship Style (Questions 47-60)
   // Communication, attachment, expectations
   // ============================================
   {
-    order: 46,
+    order: 47,
+    questionKey: "conflict_handling",
     text: "How do you prefer to handle conflict?",
     type: "multiple_choice" as const,
     category: "Relationship Style",
@@ -563,7 +624,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 47,
+    order: 48,
+    questionKey: "attachment_style",
     text: "What's your attachment style?",
     type: "multiple_choice" as const,
     category: "Relationship Style",
@@ -576,7 +638,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 48,
+    order: 49,
+    questionKey: "together_time_need",
     text: "How much together time do you need in a relationship?",
     type: "scale" as const,
     category: "Relationship Style",
@@ -586,7 +649,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Constant togetherness",
   },
   {
-    order: 49,
+    order: 50,
+    questionKey: "love_language",
     text: "What's your love language?",
     type: "multiple_choice" as const,
     category: "Relationship Style",
@@ -599,7 +663,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 50,
+    order: 51,
+    questionKey: "texting_style",
     text: "What's your texting style in a relationship?",
     type: "multiple_choice" as const,
     category: "Relationship Style",
@@ -612,7 +677,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 51,
+    order: 52,
+    questionKey: "discuss_emotions",
     text: "How comfortable are you discussing difficult emotions?",
     type: "scale" as const,
     category: "Relationship Style",
@@ -622,7 +688,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very comfortable",
   },
   {
-    order: 52,
+    order: 53,
+    questionKey: "jealousy_level",
     text: "How jealous do you tend to be?",
     type: "scale" as const,
     category: "Relationship Style",
@@ -632,7 +699,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very jealous",
   },
   {
-    order: 53,
+    order: 54,
+    questionKey: "physical_intimacy_importance",
     text: "How important is physical intimacy to you?",
     type: "scale" as const,
     category: "Relationship Style",
@@ -642,7 +710,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very important",
   },
   {
-    order: 54,
+    order: 55,
+    questionKey: "physical_attraction_importance",
     text: "How important is physical attraction to you?",
     type: "scale" as const,
     category: "Relationship Style",
@@ -652,7 +721,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very important",
   },
   {
-    order: 55,
+    order: 56,
+    questionKey: "pda_comfort",
     text: "How do you feel about PDA?",
     type: "multiple_choice" as const,
     category: "Relationship Style",
@@ -664,7 +734,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 56,
+    order: 57,
+    questionKey: "finances_handling",
     text: "How do you handle finances in a relationship?",
     type: "multiple_choice" as const,
     category: "Relationship Style",
@@ -678,7 +749,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 57,
+    order: 58,
+    questionKey: "financial_status_importance",
     text: "How important is similar income/financial status?",
     type: "scale" as const,
     category: "Relationship Style",
@@ -688,24 +760,27 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very important",
   },
   {
-    order: 58,
+    order: 59,
+    questionKey: "healthy_relationship",
     text: "What does a healthy relationship look like to you?",
     type: "essay" as const,
     category: "Relationship Style",
   },
   {
-    order: 59,
+    order: 60,
+    questionKey: "relationship_dealbreaker",
     text: "What's your biggest relationship dealbreaker?",
     type: "essay" as const,
     category: "Relationship Style",
   },
 
   // ============================================
-  // CATEGORY 4: Lifestyle (Questions 60-71)
+  // CATEGORY 4: Lifestyle (Questions 61-72)
   // Daily life, health, social patterns
   // ============================================
   {
-    order: 60,
+    order: 61,
+    questionKey: "morning_night",
     text: "Are you a morning person or night owl?",
     type: "multiple_choice" as const,
     category: "Lifestyle",
@@ -718,7 +793,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 61,
+    order: 62,
+    questionKey: "exercise_frequency",
     text: "How often do you exercise?",
     type: "multiple_choice" as const,
     category: "Lifestyle",
@@ -731,7 +807,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 62,
+    order: 63,
+    questionKey: "diet_strictness",
     text: "How strict is your diet?",
     type: "scale" as const,
     category: "Lifestyle",
@@ -741,7 +818,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very strict",
   },
   {
-    order: 63,
+    order: 64,
+    questionKey: "physical_health",
     text: "How would you rate your physical health?",
     type: "scale" as const,
     category: "Lifestyle",
@@ -751,7 +829,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Excellent",
   },
   {
-    order: 64,
+    order: 65,
+    questionKey: "mental_health",
     text: "How would you rate your mental health?",
     type: "scale" as const,
     category: "Lifestyle",
@@ -761,7 +840,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Thriving",
   },
   {
-    order: 65,
+    order: 66,
+    questionKey: "pets_have",
     text: "Do you have pets?",
     type: "multiple_choice" as const,
     category: "Lifestyle",
@@ -774,7 +854,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 66,
+    order: 67,
+    questionKey: "pets_feel",
     text: "How do you feel about pets?",
     type: "multiple_choice" as const,
     category: "Lifestyle",
@@ -787,7 +868,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 67,
+    order: 68,
+    questionKey: "out_vs_in",
     text: "How often do you go out vs. stay in?",
     type: "scale" as const,
     category: "Lifestyle",
@@ -797,7 +879,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Always out",
   },
   {
-    order: 68,
+    order: 69,
+    questionKey: "social_life_description",
     text: "How would you describe your social life?",
     type: "multiple_choice" as const,
     category: "Lifestyle",
@@ -810,7 +893,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 69,
+    order: 70,
+    questionKey: "friends_compatibility_importance",
     text: "How important is it that your partner gets along with your friends?",
     type: "scale" as const,
     category: "Lifestyle",
@@ -820,24 +904,27 @@ export const QUESTIONS = [
     scaleMaxLabel: "Essential",
   },
   {
-    order: 70,
+    order: 71,
+    questionKey: "weekend_activity",
     text: "How do you typically spend weekends?",
     type: "essay" as const,
     category: "Lifestyle",
   },
   {
-    order: 71,
+    order: 72,
+    questionKey: "health_lifestyle_notes",
     text: "Is there anything about your health or lifestyle a partner should know?",
     type: "essay" as const,
     category: "Lifestyle",
   },
 
   // ============================================
-  // CATEGORY 5: Life & Future (Questions 72-81)
+  // CATEGORY 5: Life & Future (Questions 73-82)
   // Goals, family, where you're headed
   // ============================================
   {
-    order: 72,
+    order: 73,
+    questionKey: "family_closeness",
     text: "How close are you with your family?",
     type: "scale" as const,
     category: "Life & Future",
@@ -847,7 +934,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very close",
   },
   {
-    order: 73,
+    order: 74,
+    questionKey: "family_contact_frequency",
     text: "How often do you see or talk to family?",
     type: "multiple_choice" as const,
     category: "Life & Future",
@@ -860,7 +948,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 74,
+    order: 75,
+    questionKey: "family_compatibility_importance",
     text: "How important is it that your partner gets along with your family?",
     type: "scale" as const,
     category: "Life & Future",
@@ -870,7 +959,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Essential",
   },
   {
-    order: 75,
+    order: 76,
+    questionKey: "settle_location",
     text: "Where do you see yourself settling down?",
     type: "multiple_choice" as const,
     category: "Life & Future",
@@ -884,7 +974,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 76,
+    order: 77,
+    questionKey: "location_flexibility",
     text: "How flexible are you about where you live?",
     type: "scale" as const,
     category: "Life & Future",
@@ -895,7 +986,8 @@ export const QUESTIONS = [
     scaleMaxLabel: "Very flexible",
   },
   {
-    order: 77,
+    order: 78,
+    questionKey: "career_ambitions",
     text: "What are your career ambitions?",
     type: "multiple_choice" as const,
     category: "Life & Future",
@@ -907,7 +999,8 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 78,
+    order: 79,
+    questionKey: "work_life_balance",
     text: "What's your ideal work-life balance?",
     type: "scale" as const,
     category: "Life & Future",
@@ -917,30 +1010,34 @@ export const QUESTIONS = [
     scaleMaxLabel: "Life-focused",
   },
   {
-    order: 79,
+    order: 80,
+    questionKey: "parents_relationship",
     text: "Describe your relationship with your parents.",
     type: "essay" as const,
     category: "Life & Future",
   },
   {
-    order: 80,
+    order: 81,
+    questionKey: "parenting_style",
     text: "What kind of parent do you want to be?",
     type: "essay" as const,
     category: "Life & Future",
   },
   {
-    order: 81,
+    order: 82,
+    questionKey: "hopes_dreams",
     text: "What are your hopes and dreams?",
     type: "essay" as const,
     category: "Life & Future",
   },
 
   // ============================================
-  // CATEGORY 6: The Deeper Stuff (Questions 82-89)
+  // CATEGORY 6: The Deeper Stuff (Questions 83-91)
   // Philosophy, stories, what makes you you
   // ============================================
   {
-    order: 82,
+    order: 83,
+    questionKey: "soulmates_belief",
     text: "Do you believe in soulmates?",
     type: "multiple_choice" as const,
     category: "The Deeper Stuff",
@@ -952,45 +1049,59 @@ export const QUESTIONS = [
     ],
   },
   {
-    order: 83,
+    order: 84,
+    questionKey: "love_meaning",
     text: "What does love mean to you?",
     type: "essay" as const,
     category: "The Deeper Stuff",
   },
   {
-    order: 84,
+    order: 85,
+    questionKey: "biggest_risk",
     text: "What's the biggest risk you've ever taken?",
     type: "essay" as const,
     category: "The Deeper Stuff",
   },
   {
-    order: 85,
+    order: 86,
+    questionKey: "what_shaped_you",
     text: "What shaped who you are today?",
     type: "essay" as const,
     category: "The Deeper Stuff",
   },
   {
-    order: 86,
+    order: 87,
+    questionKey: "main_hobbies",
     text: "What are your main hobbies?",
     type: "text" as const,
     category: "The Deeper Stuff",
   },
   {
-    order: 87,
+    order: 88,
+    questionKey: "partner_quirk",
     text: "What's a quirk a partner should know about?",
     type: "text" as const,
     category: "The Deeper Stuff",
   },
   {
-    order: 88,
+    order: 89,
+    questionKey: "why_on_app",
     text: "Why are you on this app?",
     type: "essay" as const,
     category: "The Deeper Stuff",
   },
   {
-    order: 89,
+    order: 90,
+    questionKey: "anything_else",
     text: "Anything else a match should know about you?",
     type: "essay" as const,
+    category: "The Deeper Stuff",
+  },
+  {
+    order: 91,
+    questionKey: "interests",
+    text: "What are your interests?",
+    type: "interest_picker" as const,
     category: "The Deeper Stuff",
   },
 ];

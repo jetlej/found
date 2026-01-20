@@ -1,540 +1,29 @@
 import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
+import {
+  calculateCompatibility,
+  CATEGORY_NAMES,
+  CATEGORY_WEIGHTS,
+  type CategoryScores
+} from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Types for compatibility calculation
 type UserProfile = Doc<"userProfiles">;
-
-// Weights for different compatibility factors (11 categories)
-const WEIGHTS = {
-  values: 0.15,
-  personality: 0.15,
-  lifestyle: 0.12,
-  relationshipStyle: 0.12,
-  familyPlans: 0.12,
-  social: 0.10,
-  intimacy: 0.08,
-  lovePhilosophy: 0.06,
-  interests: 0.05,
-  attachment: 0.03,
-  demographics: 0.02,
-};
-
-// Calculate overlap between two arrays (Jaccard similarity)
-function calculateArrayOverlap(arr1: string[], arr2: string[]): number {
-  if (arr1.length === 0 && arr2.length === 0) return 1;
-  if (arr1.length === 0 || arr2.length === 0) return 0;
-
-  const set1 = new Set(arr1.map((s) => s.toLowerCase()));
-  const set2 = new Set(arr2.map((s) => s.toLowerCase()));
-
-  const intersection = new Set([...set1].filter((x) => set2.has(x)));
-  const union = new Set([...set1, ...set2]);
-
-  return intersection.size / union.size;
-}
-
-// Calculate similarity between two numeric values
-function calculateNumericSimilarity(
-  val1: number,
-  val2: number,
-  max: number = 10
-): number {
-  const diff = Math.abs(val1 - val2);
-  return 1 - diff / max;
-}
-
-// Calculate values compatibility
-function calculateValuesScore(p1: UserProfile, p2: UserProfile): number {
-  return calculateArrayOverlap(p1.values, p2.values);
-}
-
-// Calculate lifestyle compatibility
-function calculateLifestyleScore(p1: UserProfile, p2: UserProfile): number {
-  let score = 0;
-  let factors = 0;
-
-  // Sleep schedule
-  if (p1.lifestyle.sleepSchedule === p2.lifestyle.sleepSchedule) {
-    score += 1;
-  } else {
-    score += 0.5;
-  }
-  factors++;
-
-  // Exercise level
-  if (p1.lifestyle.exerciseLevel === p2.lifestyle.exerciseLevel) {
-    score += 1;
-  } else {
-    score += 0.5;
-  }
-  factors++;
-
-  // Alcohol use
-  if (p1.lifestyle.alcoholUse === p2.lifestyle.alcoholUse) {
-    score += 1;
-  } else if (
-    p1.lifestyle.alcoholUse === "Never" ||
-    p2.lifestyle.alcoholUse === "Never"
-  ) {
-    score += 0.4;
-  } else {
-    score += 0.7;
-  }
-  factors++;
-
-  // Drug use
-  if (p1.lifestyle.drugUse === p2.lifestyle.drugUse) {
-    score += 1;
-  } else if (
-    p1.lifestyle.drugUse === "Never" ||
-    p2.lifestyle.drugUse === "Never"
-  ) {
-    score += 0.3;
-  } else {
-    score += 0.6;
-  }
-  factors++;
-
-  // Location preference
-  if (p1.lifestyle.locationPreference === p2.lifestyle.locationPreference) {
-    score += 1;
-  } else if (
-    p1.lifestyle.locationPreference === "flexible" ||
-    p2.lifestyle.locationPreference === "flexible"
-  ) {
-    score += 0.8;
-  } else {
-    score += 0.4;
-  }
-  factors++;
-
-  return score / factors;
-}
-
-// Calculate relationship style compatibility
-function calculateRelationshipStyleScore(
-  p1: UserProfile,
-  p2: UserProfile
-): number {
-  let score = 0;
-  let factors = 0;
-
-  // Love language
-  if (p1.relationshipStyle.loveLanguage === p2.relationshipStyle.loveLanguage) {
-    score += 1;
-  } else {
-    score += 0.6;
-  }
-  factors++;
-
-  // Communication frequency
-  if (
-    p1.relationshipStyle.communicationFrequency ===
-    p2.relationshipStyle.communicationFrequency
-  ) {
-    score += 1;
-  } else {
-    score += 0.5;
-  }
-  factors++;
-
-  // Conflict style
-  if (p1.relationshipStyle.conflictStyle === p2.relationshipStyle.conflictStyle) {
-    score += 1;
-  } else {
-    score += 0.6;
-  }
-  factors++;
-
-  // Financial approach
-  if (
-    p1.relationshipStyle.financialApproach ===
-    p2.relationshipStyle.financialApproach
-  ) {
-    score += 1;
-  } else {
-    score += 0.5;
-  }
-  factors++;
-
-  // Alone time need
-  score += calculateNumericSimilarity(
-    p1.relationshipStyle.aloneTimeNeed,
-    p2.relationshipStyle.aloneTimeNeed
-  );
-  factors++;
-
-  return score / factors;
-}
-
-// Calculate family plans compatibility
-function calculateFamilyPlansScore(p1: UserProfile, p2: UserProfile): number {
-  let score = 0;
-  let factors = 0;
-
-  // Kids preference
-  const kidsCompatibility: Record<string, Record<string, number>> = {
-    yes: {
-      yes: 1,
-      maybe: 0.7,
-      open: 0.8,
-      no: 0.1,
-      already_has: 0.8,
-      unknown: 0.5,
-    },
-    no: {
-      no: 1,
-      maybe: 0.4,
-      open: 0.5,
-      yes: 0.1,
-      already_has: 0.2,
-      unknown: 0.5,
-    },
-    maybe: {
-      maybe: 0.8,
-      yes: 0.7,
-      no: 0.4,
-      open: 0.8,
-      already_has: 0.6,
-      unknown: 0.6,
-    },
-    open: {
-      open: 0.9,
-      yes: 0.8,
-      no: 0.5,
-      maybe: 0.8,
-      already_has: 0.7,
-      unknown: 0.7,
-    },
-    already_has: {
-      already_has: 0.9,
-      yes: 0.8,
-      open: 0.7,
-      maybe: 0.6,
-      no: 0.2,
-      unknown: 0.5,
-    },
-    unknown: {
-      unknown: 0.5,
-      yes: 0.5,
-      no: 0.5,
-      maybe: 0.6,
-      open: 0.7,
-      already_has: 0.5,
-    },
-  };
-
-  const kids1 = p1.familyPlans.wantsKids.toLowerCase().replace(" ", "_");
-  const kids2 = p2.familyPlans.wantsKids.toLowerCase().replace(" ", "_");
-  score += kidsCompatibility[kids1]?.[kids2] ?? 0.5;
-  factors++;
-
-  // Family closeness
-  score += calculateNumericSimilarity(
-    p1.familyPlans.familyCloseness,
-    p2.familyPlans.familyCloseness
-  );
-  factors++;
-
-  return score / factors;
-}
-
-// Calculate interests overlap
-function calculateInterestsScore(p1: UserProfile, p2: UserProfile): number {
-  return calculateArrayOverlap(p1.interests, p2.interests);
-}
-
-// NEW: Calculate social compatibility
-function calculateSocialScore(p1: UserProfile, p2: UserProfile): number {
-  if (!p1.socialProfile || !p2.socialProfile) return 0.5; // neutral if no data
-
-  let score = 0;
-  let factors = 0;
-
-  // Go out frequency similarity (most important)
-  score += calculateNumericSimilarity(
-    p1.socialProfile.goOutFrequency,
-    p2.socialProfile.goOutFrequency
-  ) * 1.5; // weighted higher
-  factors += 1.5;
-
-  // Social style match
-  if (p1.socialProfile.socialStyle === p2.socialProfile.socialStyle) {
-    score += 1;
-  } else if (
-    (p1.socialProfile.socialStyle === "balanced") ||
-    (p2.socialProfile.socialStyle === "balanced")
-  ) {
-    score += 0.7; // balanced people adapt
-  } else {
-    score += 0.3; // introvert vs very active = low
-  }
-  factors++;
-
-  // Friend approval importance similarity
-  score += calculateNumericSimilarity(
-    p1.socialProfile.friendApprovalImportance,
-    p2.socialProfile.friendApprovalImportance
-  );
-  factors++;
-
-  return score / factors;
-}
-
-// NEW: Calculate intimacy alignment
-function calculateIntimacyScore(p1: UserProfile, p2: UserProfile): number {
-  if (!p1.intimacyProfile || !p2.intimacyProfile) return 0.5;
-
-  let score = 0;
-  let factors = 0;
-
-  // Physical intimacy importance alignment
-  score += calculateNumericSimilarity(
-    p1.intimacyProfile.physicalIntimacyImportance,
-    p2.intimacyProfile.physicalIntimacyImportance
-  );
-  factors++;
-
-  // Physical attraction importance
-  score += calculateNumericSimilarity(
-    p1.intimacyProfile.physicalAttractionImportance,
-    p2.intimacyProfile.physicalAttractionImportance
-  );
-  factors++;
-
-  // PDA comfort level
-  const pdaLevels: Record<string, number> = {
-    "none": 1, "minimal": 2, "moderate": 3, "comfortable": 4, "very comfortable": 5
-  };
-  const pda1 = pdaLevels[p1.intimacyProfile.pdaComfort.toLowerCase()] || 3;
-  const pda2 = pdaLevels[p2.intimacyProfile.pdaComfort.toLowerCase()] || 3;
-  score += calculateNumericSimilarity(pda1, pda2, 5);
-  factors++;
-
-  // Connection triggers overlap
-  if (p1.intimacyProfile.connectionTriggers.length > 0 && p2.intimacyProfile.connectionTriggers.length > 0) {
-    score += calculateArrayOverlap(p1.intimacyProfile.connectionTriggers, p2.intimacyProfile.connectionTriggers);
-    factors++;
-  }
-
-  return score / factors;
-}
-
-// NEW: Calculate love philosophy alignment
-function calculateLovePhilosophyScore(p1: UserProfile, p2: UserProfile): number {
-  if (!p1.lovePhilosophy || !p2.lovePhilosophy) return 0.5;
-
-  let score = 0;
-  let factors = 0;
-
-  // Soulmates belief alignment
-  if (p1.lovePhilosophy.believesInSoulmates === p2.lovePhilosophy.believesInSoulmates) {
-    score += 1;
-  } else {
-    score += 0.5; // different but not incompatible
-  }
-  factors++;
-
-  // Romantic gestures overlap - do they appreciate similar things?
-  if (p1.lovePhilosophy.romanticGestures.length > 0 && p2.lovePhilosophy.romanticGestures.length > 0) {
-    score += calculateArrayOverlap(p1.lovePhilosophy.romanticGestures, p2.lovePhilosophy.romanticGestures);
-    factors++;
-  }
-
-  // Love recognition signs overlap
-  if (p1.lovePhilosophy.loveRecognition.length > 0 && p2.lovePhilosophy.loveRecognition.length > 0) {
-    score += calculateArrayOverlap(p1.lovePhilosophy.loveRecognition, p2.lovePhilosophy.loveRecognition);
-    factors++;
-  }
-
-  return factors > 0 ? score / factors : 0.5;
-}
-
-// NEW: Calculate attachment style fit (research-based)
-function calculateAttachmentScore(p1: UserProfile, p2: UserProfile): number {
-  const a1 = p1.traits.attachmentStyle;
-  const a2 = p2.traits.attachmentStyle;
-  
-  if (a1 === undefined || a2 === undefined) return 0.5;
-
-  // Attachment style: 1 = avoidant, 5 = secure, 10 = anxious
-  // Research shows:
-  // - Secure (4-6) + Secure = best (1.0)
-  // - Secure + Anxious/Avoidant = okay (0.7)
-  // - Avoidant + Anxious = challenging (0.3)
-  // - Same extreme + same extreme = okay (0.6)
-  
-  const isSecure1 = a1 >= 4 && a1 <= 6;
-  const isSecure2 = a2 >= 4 && a2 <= 6;
-  const isAvoidant1 = a1 < 4;
-  const isAvoidant2 = a2 < 4;
-  const isAnxious1 = a1 > 6;
-  const isAnxious2 = a2 > 6;
-
-  if (isSecure1 && isSecure2) return 1.0; // Both secure
-  if (isSecure1 || isSecure2) return 0.75; // One secure can stabilize
-  if ((isAvoidant1 && isAnxious2) || (isAnxious1 && isAvoidant2)) return 0.35; // Classic problematic pairing
-  if ((isAvoidant1 && isAvoidant2) || (isAnxious1 && isAnxious2)) return 0.55; // Same style
-  
-  return 0.5; // Default
-}
-
-// NEW: Calculate demographics match (weighted by importance)
-function calculateDemographicsScore(p1: UserProfile, p2: UserProfile): number {
-  if (!p1.demographics || !p2.demographics) return 0.5;
-
-  let score = 0;
-  let weightSum = 0;
-
-  // Religion match - weighted by how much each person cares
-  const religionImportance = Math.max(p1.demographics.religiosity, p2.demographics.religiosity) / 10;
-  if (religionImportance > 0.2) { // Only count if someone cares
-    const religionMatch = p1.demographics.religion?.toLowerCase() === p2.demographics.religion?.toLowerCase() ? 1 : 0.3;
-    score += religionMatch * religionImportance;
-    weightSum += religionImportance;
-  }
-
-  // Politics match - weighted by intensity
-  const politicsImportance = Math.max(p1.demographics.politicalIntensity, p2.demographics.politicalIntensity) / 10;
-  if (politicsImportance > 0.2) { // Only count if someone cares
-    const politicsMatch = p1.demographics.politicalLeaning?.toLowerCase() === p2.demographics.politicalLeaning?.toLowerCase() ? 1 : 0.3;
-    score += politicsMatch * politicsImportance;
-    weightSum += politicsImportance;
-  }
-
-  // Kids status (already have kids vs don't)
-  if (p1.demographics.hasKids !== p2.demographics.hasKids) {
-    score += 0.5 * 0.3; // slight penalty
-    weightSum += 0.3;
-  } else {
-    score += 1 * 0.3;
-    weightSum += 0.3;
-  }
-
-  return weightSum > 0 ? score / weightSum : 0.5;
-}
-
-// Calculate personality complementarity
-function calculatePersonalityScore(p1: UserProfile, p2: UserProfile): number {
-  let score = 0;
-  let count = 0;
-
-  // Original 6 traits
-  score += calculateNumericSimilarity(p1.traits.introversion, p2.traits.introversion);
-  score += calculateNumericSimilarity(p1.traits.adventurousness, p2.traits.adventurousness);
-  score += calculateNumericSimilarity(p1.traits.ambition, p2.traits.ambition);
-  score += calculateNumericSimilarity(p1.traits.emotionalOpenness, p2.traits.emotionalOpenness);
-  score += calculateNumericSimilarity(p1.traits.traditionalValues, p2.traits.traditionalValues);
-  score += calculateNumericSimilarity(p1.traits.independenceNeed, p2.traits.independenceNeed);
-  count = 6;
-
-  // New traits (if available)
-  if (p1.traits.romanticStyle !== undefined && p2.traits.romanticStyle !== undefined) {
-    score += calculateNumericSimilarity(p1.traits.romanticStyle, p2.traits.romanticStyle);
-    count++;
-  }
-  if (p1.traits.socialEnergy !== undefined && p2.traits.socialEnergy !== undefined) {
-    score += calculateNumericSimilarity(p1.traits.socialEnergy, p2.traits.socialEnergy);
-    count++;
-  }
-  if (p1.traits.communicationStyle !== undefined && p2.traits.communicationStyle !== undefined) {
-    score += calculateNumericSimilarity(p1.traits.communicationStyle, p2.traits.communicationStyle);
-    count++;
-  }
-  if (p1.traits.attachmentStyle !== undefined && p2.traits.attachmentStyle !== undefined) {
-    score += calculateNumericSimilarity(p1.traits.attachmentStyle, p2.traits.attachmentStyle);
-    count++;
-  }
-  if (p1.traits.planningStyle !== undefined && p2.traits.planningStyle !== undefined) {
-    score += calculateNumericSimilarity(p1.traits.planningStyle, p2.traits.planningStyle);
-    count++;
-  }
-
-  return score / count;
-}
-
-// Breakdown type for all 11 categories
-type CompatibilityBreakdown = {
-  values: number;
-  personality: number;
-  lifestyle: number;
-  relationshipStyle: number;
-  familyPlans: number;
-  social: number;
-  intimacy: number;
-  lovePhilosophy: number;
-  interests: number;
-  attachment: number;
-  demographics: number;
-};
-
-// Main compatibility calculation
-function calculateCompatibility(
-  p1: UserProfile,
-  p2: UserProfile
-): {
-  score: number;
-  breakdown: CompatibilityBreakdown;
-} {
-  const rawBreakdown = {
-    values: calculateValuesScore(p1, p2),
-    personality: calculatePersonalityScore(p1, p2),
-    lifestyle: calculateLifestyleScore(p1, p2),
-    relationshipStyle: calculateRelationshipStyleScore(p1, p2),
-    familyPlans: calculateFamilyPlansScore(p1, p2),
-    social: calculateSocialScore(p1, p2),
-    intimacy: calculateIntimacyScore(p1, p2),
-    lovePhilosophy: calculateLovePhilosophyScore(p1, p2),
-    interests: calculateInterestsScore(p1, p2),
-    attachment: calculateAttachmentScore(p1, p2),
-    demographics: calculateDemographicsScore(p1, p2),
-  };
-
-  const score =
-    rawBreakdown.values * WEIGHTS.values +
-    rawBreakdown.personality * WEIGHTS.personality +
-    rawBreakdown.lifestyle * WEIGHTS.lifestyle +
-    rawBreakdown.relationshipStyle * WEIGHTS.relationshipStyle +
-    rawBreakdown.familyPlans * WEIGHTS.familyPlans +
-    rawBreakdown.social * WEIGHTS.social +
-    rawBreakdown.intimacy * WEIGHTS.intimacy +
-    rawBreakdown.lovePhilosophy * WEIGHTS.lovePhilosophy +
-    rawBreakdown.interests * WEIGHTS.interests +
-    rawBreakdown.attachment * WEIGHTS.attachment +
-    rawBreakdown.demographics * WEIGHTS.demographics;
-
-  return {
-    score: Math.round(score * 100),
-    breakdown: {
-      values: Math.round(rawBreakdown.values * 100),
-      personality: Math.round(rawBreakdown.personality * 100),
-      lifestyle: Math.round(rawBreakdown.lifestyle * 100),
-      relationshipStyle: Math.round(rawBreakdown.relationshipStyle * 100),
-      familyPlans: Math.round(rawBreakdown.familyPlans * 100),
-      social: Math.round(rawBreakdown.social * 100),
-      intimacy: Math.round(rawBreakdown.intimacy * 100),
-      lovePhilosophy: Math.round(rawBreakdown.lovePhilosophy * 100),
-      interests: Math.round(rawBreakdown.interests * 100),
-      attachment: Math.round(rawBreakdown.attachment * 100),
-      demographics: Math.round(rawBreakdown.demographics * 100),
-    },
-  };
-}
 
 // ===== MUST-HAVE AND DEALBREAKER MATCHING =====
 
@@ -754,60 +243,38 @@ function checkDealbreakers(
   });
 }
 
-// Get friction points (low-scoring areas)
+// Get friction points (low-scoring areas) - updated for 6-category system
 function getFrictionPoints(
   p1: UserProfile,
   p2: UserProfile,
-  breakdown: CompatibilityBreakdown
+  categoryScores: CategoryScores
 ): string[] {
   const frictions: string[] = [];
   
-  // Check for significant score differences in key areas
-  if (breakdown.social < 50) {
-    const goOut1 = p1.socialProfile?.goOutFrequency ?? 5;
-    const goOut2 = p2.socialProfile?.goOutFrequency ?? 5;
-    if (Math.abs(goOut1 - goOut2) >= 4) {
-      frictions.push(goOut1 > goOut2 
-        ? "You go out more than they prefer" 
-        : "They go out more than you prefer");
-    }
+  // Check for low scores in each category
+  if (categoryScores.theBasics < 60) {
+    frictions.push("Some preference mismatches in basics");
   }
   
-  if (breakdown.intimacy < 50) {
-    const intimacy1 = p1.intimacyProfile?.physicalIntimacyImportance ?? 5;
-    const intimacy2 = p2.intimacyProfile?.physicalIntimacyImportance ?? 5;
-    if (Math.abs(intimacy1 - intimacy2) >= 3) {
-      frictions.push("Different views on physical intimacy importance");
-    }
+  if (categoryScores.whoYouAre < 50) {
+    frictions.push("Different personality traits or values");
   }
   
-  if (breakdown.relationshipStyle < 60) {
+  if (categoryScores.relationshipStyle < 60) {
     if (p1.relationshipStyle.conflictStyle !== p2.relationshipStyle.conflictStyle) {
       frictions.push(`Different conflict styles (${p1.relationshipStyle.conflictStyle} vs ${p2.relationshipStyle.conflictStyle})`);
     }
   }
   
-  if (breakdown.familyPlans < 60) {
-    if (p1.familyPlans.wantsKids !== p2.familyPlans.wantsKids) {
-      frictions.push("Different views on having kids");
-    }
-  }
-  
-  if (breakdown.attachment < 50) {
-    const a1 = p1.traits.attachmentStyle ?? 5;
-    const a2 = p2.traits.attachmentStyle ?? 5;
-    const isAvoidant1 = a1 < 4;
-    const isAnxious2 = a2 > 6;
-    const isAnxious1 = a1 > 6;
-    const isAvoidant2 = a2 < 4;
-    if ((isAvoidant1 && isAnxious2) || (isAnxious1 && isAvoidant2)) {
-      frictions.push("Potentially challenging attachment style pairing");
-    }
-  }
-  
-  if (breakdown.lifestyle < 60) {
+  if (categoryScores.lifestyle < 60) {
     if (p1.lifestyle.sleepSchedule !== p2.lifestyle.sleepSchedule) {
       frictions.push(`Different sleep schedules (${p1.lifestyle.sleepSchedule} vs ${p2.lifestyle.sleepSchedule})`);
+    }
+  }
+  
+  if (categoryScores.lifeFuture < 60) {
+    if (p1.familyPlans.wantsKids !== p2.familyPlans.wantsKids) {
+      frictions.push("Different views on having kids");
     }
   }
   
@@ -1620,11 +1087,11 @@ export default function MatchesScreen() {
           user,
           profile,
           photoUrl: getFirstPhotoUrl(user._id),
-          ...compatibility,
+          compatibility,
         };
       })
       .filter(Boolean)
-      .sort((a, b) => (b?.score ?? 0) - (a?.score ?? 0));
+      .sort((a, b) => (b?.compatibility.overallScore ?? 0) - (a?.compatibility.overallScore ?? 0));
   })();
 
   if (!currentUser) {
@@ -1748,10 +1215,10 @@ export default function MatchesScreen() {
                 <View
                   style={[
                     styles.scoreBadge,
-                    { backgroundColor: getScoreColor(match.score) },
+                    { backgroundColor: getScoreColor(match.compatibility.overallScore) },
                   ]}
                 >
-                  <Text style={styles.scoreText}>{match.score}</Text>
+                  <Text style={styles.scoreText}>{match.compatibility.overallScore}</Text>
                 </View>
               </View>
 
@@ -1796,20 +1263,25 @@ export default function MatchesScreen() {
                   {/* Compatibility Tab */}
                   {(activeTab[match.user._id] || "compatibility") === "compatibility" && (
                     <View>
-                      {/* All 11 categories */}
+                      {/* Dealbreakers alert */}
+                      {match.compatibility.dealbreakers.triggered.length > 0 && (
+                        <View style={styles.dealbreakersAlert}>
+                          <Text style={styles.dealbreakersTitle}>⚠️ Dealbreakers Triggered</Text>
+                          {match.compatibility.dealbreakers.triggered.map((d, i) => (
+                            <Text key={i} style={styles.dealbreakersText}>• {d}</Text>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* All 6 categories */}
                       {[
-                        { key: "values", label: "Values" },
-                        { key: "personality", label: "Personality" },
-                        { key: "lifestyle", label: "Lifestyle" },
-                        { key: "relationshipStyle", label: "Relationship" },
-                        { key: "familyPlans", label: "Family" },
-                        { key: "social", label: "Social" },
-                        { key: "intimacy", label: "Intimacy" },
-                        { key: "lovePhilosophy", label: "Love Philosophy" },
-                        { key: "interests", label: "Interests" },
-                        { key: "attachment", label: "Attachment" },
-                        { key: "demographics", label: "Demographics" },
-                      ].map(({ key, label }) => (
+                        { key: "theBasics", label: CATEGORY_NAMES.theBasics, weight: CATEGORY_WEIGHTS.theBasics },
+                        { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre, weight: CATEGORY_WEIGHTS.whoYouAre },
+                        { key: "relationshipStyle", label: CATEGORY_NAMES.relationshipStyle, weight: CATEGORY_WEIGHTS.relationshipStyle },
+                        { key: "lifestyle", label: CATEGORY_NAMES.lifestyle, weight: CATEGORY_WEIGHTS.lifestyle },
+                        { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture, weight: CATEGORY_WEIGHTS.lifeFuture },
+                        { key: "theDeeperStuff", label: CATEGORY_NAMES.theDeeperStuff, weight: CATEGORY_WEIGHTS.theDeeperStuff },
+                      ].map(({ key, label, weight }) => (
                         <View key={key} style={styles.breakdownRow}>
                           <Text style={styles.breakdownLabel}>
                             {label}
@@ -1819,61 +1291,45 @@ export default function MatchesScreen() {
                               style={[
                                 styles.breakdownBarFill,
                                 {
-                                  width: `${match.breakdown[key as keyof typeof match.breakdown]}%`,
-                                  backgroundColor: getScoreColor(match.breakdown[key as keyof typeof match.breakdown]),
+                                  width: `${match.compatibility.categoryScores[key as keyof CategoryScores]}%`,
+                                  backgroundColor: getScoreColor(match.compatibility.categoryScores[key as keyof CategoryScores]),
                                 },
                               ]}
                             />
                           </View>
                           <Text style={styles.breakdownValue}>
-                            {match.breakdown[key as keyof typeof match.breakdown]}%
+                            {match.compatibility.categoryScores[key as keyof CategoryScores]}%
                           </Text>
                         </View>
                       ))}
 
                       {/* Shared values */}
-                      {(() => {
-                        const shared = myProfile.values.filter((v) =>
-                          match.profile.values
-                            .map((x) => x.toLowerCase())
-                            .includes(v.toLowerCase())
-                        );
-                        if (shared.length === 0) return null;
-                        return (
-                          <View style={styles.sharedSection}>
-                            <Text style={styles.sharedTitleBold}>Shared Values</Text>
-                            <View style={styles.tagsRow}>
-                              {shared.map((v, i) => (
-                                <View key={i} style={styles.tagShared}>
-                                  <Text style={styles.tagSharedText}>{v}</Text>
-                                </View>
-                              ))}
-                            </View>
+                      {match.compatibility.sharedValues.length > 0 && (
+                        <View style={styles.sharedSection}>
+                          <Text style={styles.sharedTitleBold}>Shared Values</Text>
+                          <View style={styles.tagsRow}>
+                            {match.compatibility.sharedValues.map((v, i) => (
+                              <View key={i} style={styles.tagShared}>
+                                <Text style={styles.tagSharedText}>{v}</Text>
+                              </View>
+                            ))}
                           </View>
-                        );
-                      })()}
+                        </View>
+                      )}
 
                       {/* Shared interests */}
-                      {(() => {
-                        const shared = myProfile.interests.filter((v) =>
-                          match.profile.interests
-                            .map((x) => x.toLowerCase())
-                            .includes(v.toLowerCase())
-                        );
-                        if (shared.length === 0) return null;
-                        return (
-                          <View style={styles.sharedSection}>
-                            <Text style={styles.sharedTitleBold}>Shared Interests</Text>
-                            <View style={styles.tagsRow}>
-                              {shared.map((v, i) => (
-                                <View key={i} style={styles.tagShared}>
-                                  <Text style={styles.tagSharedText}>{v}</Text>
-                                </View>
-                              ))}
-                            </View>
+                      {match.compatibility.sharedInterests.length > 0 && (
+                        <View style={styles.sharedSection}>
+                          <Text style={styles.sharedTitleBold}>Shared Interests</Text>
+                          <View style={styles.tagsRow}>
+                            {match.compatibility.sharedInterests.map((v, i) => (
+                              <View key={i} style={styles.tagShared}>
+                                <Text style={styles.tagSharedText}>{v}</Text>
+                              </View>
+                            ))}
                           </View>
-                        );
-                      })()}
+                        </View>
+                      )}
 
                       {/* TODO: Must-Haves and Dealbreakers sections are temporarily hidden.
                           These need to be refactored to use a predefined list of structured
@@ -1894,7 +1350,7 @@ export default function MatchesScreen() {
 
                       {/* Watch Out For */}
                       <WatchOutSection
-                        frictions={getFrictionPoints(myProfile, match.profile, match.breakdown)}
+                        frictions={getFrictionPoints(myProfile, match.profile, match.compatibility.categoryScores)}
                       />
                     </View>
                   )}
@@ -2181,6 +1637,23 @@ const styles = StyleSheet.create({
   tagSharedText: {
     fontSize: fontSizes.xs,
     color: "#166534",
+  },
+  // Dealbreakers alert
+  dealbreakersAlert: {
+    backgroundColor: "#fee2e2",
+    padding: spacing.md,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
+  dealbreakersTitle: {
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
+    color: "#991b1b",
+    marginBottom: spacing.xs,
+  },
+  dealbreakersText: {
+    fontSize: fontSizes.sm,
+    color: "#991b1b",
   },
   // Must-Haves & Dealbreakers styles
   checkSection: {

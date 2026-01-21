@@ -2,25 +2,57 @@ import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import {
-  calculateCompatibility,
-  CATEGORY_NAMES,
-  CATEGORY_WEIGHTS,
-  type CategoryScores
+    calculateCompatibility,
+    CATEGORY_NAMES,
+    type CategoryScores
 } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
+import {
+    IconBookFilled,
+    IconChevronRight,
+    IconDiamondFilled,
+    IconHeartFilled,
+    IconLockFilled,
+    IconSeedlingFilled,
+    IconStarFilled,
+    IconUserFilled,
+    IconX,
+} from "@tabler/icons-react-native";
 import { useQuery } from "convex/react";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// Category icons (filled versions)
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
+  the_basics: IconUserFilled,
+  who_you_are: IconDiamondFilled,
+  relationship_style: IconHeartFilled,
+  lifestyle: IconSeedlingFilled,
+  life_future: IconBookFilled,
+  deeper_stuff: IconStarFilled,
+};
+
+// Map category IDs (snake_case) to score keys (camelCase)
+const SCORE_KEY_TO_CATEGORY_ID: Record<keyof CategoryScores, string> = {
+  theBasics: "the_basics",
+  whoYouAre: "who_you_are",
+  relationshipStyle: "relationship_style",
+  lifestyle: "lifestyle",
+  lifeFuture: "life_future",
+  theDeeperStuff: "deeper_stuff",
+};
 
 // Types for compatibility calculation
 type UserProfile = Doc<"userProfiles">;
@@ -286,12 +318,16 @@ function getFrictionPoints(
   return frictions.slice(0, 4); // Limit to 4 friction points
 }
 
-// Score color based on value
+// Score color based on value (10% increments) - red to green gradient (saturated)
 function getScoreColor(score: number): string {
-  if (score >= 80) return "#22c55e";
-  if (score >= 60) return "#84cc16";
-  if (score >= 40) return "#eab308";
-  return "#ef4444";
+  if (score >= 90) return "#00D26A"; // Bright saturated green
+  if (score >= 80) return "#7ED321"; // Bright lime-green
+  if (score >= 70) return "#B8E986"; // Soft lime
+  if (score >= 60) return "#F8E71C"; // Bright yellow
+  if (score >= 50) return "#F5A623"; // Bright orange-yellow
+  if (score >= 40) return "#F97316"; // Orange
+  if (score >= 30) return "#E74C3C"; // Red-orange
+  return "#D0021B"; // Bright red
 }
 
 // Trait label helper
@@ -1034,6 +1070,7 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
 
 export default function MatchesScreen() {
   const { userId } = useAuth();
+  const router = useRouter();
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showMyProfile, setShowMyProfile] = useState(false);
   // Track which tab is active per user: "compatibility" (default) or "profile"
@@ -1263,45 +1300,71 @@ export default function MatchesScreen() {
                   {/* Compatibility Tab */}
                   {(activeTab[match.user._id] || "compatibility") === "compatibility" && (
                     <View>
-                      {/* Dealbreakers alert */}
-                      {match.compatibility.dealbreakers.triggered.length > 0 && (
-                        <View style={styles.dealbreakersAlert}>
-                          <Text style={styles.dealbreakersTitle}>⚠️ Dealbreakers Triggered</Text>
-                          {match.compatibility.dealbreakers.triggered.map((d, i) => (
-                            <Text key={i} style={styles.dealbreakersText}>• {d}</Text>
-                          ))}
-                        </View>
-                      )}
-
                       {/* All 6 categories */}
                       {[
-                        { key: "theBasics", label: CATEGORY_NAMES.theBasics, weight: CATEGORY_WEIGHTS.theBasics },
-                        { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre, weight: CATEGORY_WEIGHTS.whoYouAre },
-                        { key: "relationshipStyle", label: CATEGORY_NAMES.relationshipStyle, weight: CATEGORY_WEIGHTS.relationshipStyle },
-                        { key: "lifestyle", label: CATEGORY_NAMES.lifestyle, weight: CATEGORY_WEIGHTS.lifestyle },
-                        { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture, weight: CATEGORY_WEIGHTS.lifeFuture },
-                        { key: "theDeeperStuff", label: CATEGORY_NAMES.theDeeperStuff, weight: CATEGORY_WEIGHTS.theDeeperStuff },
-                      ].map(({ key, label, weight }) => (
-                        <View key={key} style={styles.breakdownRow}>
-                          <Text style={styles.breakdownLabel}>
-                            {label}
-                          </Text>
-                          <View style={styles.breakdownBar}>
-                            <View
-                              style={[
-                                styles.breakdownBarFill,
-                                {
-                                  width: `${match.compatibility.categoryScores[key as keyof CategoryScores]}%`,
-                                  backgroundColor: getScoreColor(match.compatibility.categoryScores[key as keyof CategoryScores]),
-                                },
-                              ]}
-                            />
+                        { key: "theBasics", label: CATEGORY_NAMES.theBasics },
+                        { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre },
+                        { key: "relationshipStyle", label: CATEGORY_NAMES.relationshipStyle },
+                        { key: "lifestyle", label: CATEGORY_NAMES.lifestyle },
+                        { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture },
+                        { key: "theDeeperStuff", label: CATEGORY_NAMES.theDeeperStuff },
+                      ].map(({ key, label }) => {
+                        const categoryId = SCORE_KEY_TO_CATEGORY_ID[key as keyof CategoryScores];
+                        const CategoryIcon = CATEGORY_ICONS[categoryId];
+                        // TEMP: Hardcode last two categories as locked for testing
+                        const lockedCategoryIds = ["life_future", "deeper_stuff"];
+                        const isLocked = lockedCategoryIds.includes(categoryId);
+                        const score = match.compatibility.categoryScores[key as keyof CategoryScores];
+                        
+                        if (isLocked) {
+                          return (
+                            <View key={key} style={styles.categoryBarLocked}>
+                              <View style={styles.categoryBarContentLocked}>
+                                <IconLockFilled size={20} color="#E8C547" />
+                                <Text style={styles.categoryBarLabelLocked}>{label}</Text>
+                                <Pressable
+                                  style={styles.unlockButton}
+                                  onPress={() => router.push(`/(onboarding)/questions?categoryId=${categoryId}`)}
+                                >
+                                  <Text style={styles.unlockButtonText}>Unlock</Text>
+                                  <IconChevronRight size={14} color={colors.text} />
+                                </Pressable>
+                              </View>
+                            </View>
+                          );
+                        }
+                        
+                        const scoreColor = getScoreColor(score);
+                        const isFull = score === 100;
+                        return (
+                          <View key={key} style={styles.categoryBar}>
+                            {/* Gradient fill: 30% opacity left -> 60% right, with 100% border if not full */}
+                            <View style={[
+                              styles.categoryBarFill, 
+                              { 
+                                width: `${score}%`,
+                                borderTopRightRadius: isFull ? 10 : 0,
+                                borderBottomRightRadius: isFull ? 10 : 0,
+                              }
+                            ]}>
+                              <LinearGradient
+                                colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.categoryBarGradient}
+                              />
+                              {!isFull && (
+                                <View style={[styles.categoryBarEdge, { backgroundColor: scoreColor }]} />
+                              )}
+                            </View>
+                            <View style={styles.categoryBarContent}>
+                              <CategoryIcon size={20} color={colors.text} />
+                              <Text style={styles.categoryBarLabel}>{label}</Text>
+                              <Text style={styles.categoryBarScore}>{score}%</Text>
+                            </View>
                           </View>
-                          <Text style={styles.breakdownValue}>
-                            {match.compatibility.categoryScores[key as keyof CategoryScores]}%
-                          </Text>
-                        </View>
-                      ))}
+                        );
+                      })}
 
                       {/* Shared values */}
                       {match.compatibility.sharedValues.length > 0 && (
@@ -1325,6 +1388,21 @@ export default function MatchesScreen() {
                             {match.compatibility.sharedInterests.map((v, i) => (
                               <View key={i} style={styles.tagShared}>
                                 <Text style={styles.tagSharedText}>{v}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Dealbreakers */}
+                      {match.compatibility.dealbreakers.triggered.length > 0 && (
+                        <View style={styles.sharedSection}>
+                          <Text style={styles.sharedTitleBold}>Dealbreakers</Text>
+                          <View style={styles.tagsRow}>
+                            {match.compatibility.dealbreakers.triggered.map((d, i) => (
+                              <View key={i} style={styles.tagDealbreaker}>
+                                <IconX size={12} color="#991b1b" />
+                                <Text style={styles.tagDealbreakerText}>{d}</Text>
                               </View>
                             ))}
                           </View>
@@ -1586,33 +1664,91 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
   },
-  breakdownRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  breakdownLabel: {
-    width: 120,
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
-  breakdownBar: {
-    flex: 1,
-    height: 8,
+  // Category bar styles (card-like progress bars)
+  categoryBar: {
+    height: 36,
     backgroundColor: colors.border,
-    borderRadius: 4,
-    marginHorizontal: spacing.sm,
+    borderRadius: 10,
+    marginBottom: spacing.sm,
+    overflow: "hidden",
+    position: "relative",
+  },
+  categoryBarLocked: {
+    height: 36,
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+  },
+  categoryBarFill: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    flexDirection: "row",
     overflow: "hidden",
   },
-  breakdownBarFill: {
+  categoryBarGradient: {
+    flex: 1,
     height: "100%",
-    borderRadius: 4,
   },
-  breakdownValue: {
-    width: 40,
-    fontSize: fontSizes.xs,
+  categoryBarEdge: {
+    width: 3,
+    height: "100%",
+  },
+  categoryBarContent: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    height: "100%",
+    paddingLeft: spacing.md,
+    paddingRight: spacing.md,
+    gap: spacing.sm,
+  },
+  categoryBarContentLocked: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    height: "100%",
+    paddingLeft: spacing.md,
+    paddingRight: 6,
+    gap: spacing.sm,
+  },
+  categoryBarLabel: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
     color: colors.text,
-    textAlign: "right",
+  },
+  categoryBarLabelLocked: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
+    color: "#5A5A5A", // Halfway between text (#1A1A1A) and textMuted (#999999)
+  },
+  categoryBarScore: {
+    fontSize: fontSizes.base,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  unlockButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E8C547",
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 2,
+  },
+  unlockButtonText: {
+    fontSize: fontSizes.xs,
+    fontWeight: "600",
+    color: colors.text,
   },
   sharedSection: {
     marginTop: spacing.md,
@@ -1795,6 +1931,9 @@ const styles = StyleSheet.create({
     color: "#92400e",
   },
   tagDealbreaker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     backgroundColor: "#fee2e2",

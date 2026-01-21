@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 90 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
+Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 91 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
 
 **Current Status**: Beta - Gamified journey system with 6 category levels. Matching features with dealbreakers and preference checklists implemented.
 
@@ -16,6 +16,7 @@ Found is an AI matchmaking dating app for people serious about finding real part
 - **Authentication**: Clerk (phone/SMS auth)
 - **AI**: OpenAI API (gpt-5-mini-2025-08-07 for profile parsing)
 - **Offline Storage**: MMKV v3 with Zustand persist middleware
+- **UI Components**: `@ptomasroos/react-native-multi-slider` for range sliders
 - **Language**: TypeScript
 - **Package Manager**: Bun
 
@@ -46,7 +47,7 @@ convex/                # Convex backend
 ├── users.ts           # User mutations/queries + onboarding completion
 ├── photos.ts          # Photo upload/management
 ├── questions.ts       # Question queries
-├── seedQuestions.ts   # 90 questions seed data + seed mutation
+├── seedQuestions.ts   # 91 questions seed data + seed mutation
 ├── answers.ts         # User answer storage + internal query for AI parsing
 ├── userProfiles.ts    # Structured profile data queries/mutations
 ├── matching.ts        # Legacy compatibility scoring
@@ -57,7 +58,8 @@ convex/                # Convex backend
 │   ├── interests.ts   # Interest library (1000+ items by category)
 │   └── canonicalValues.ts # Canonical values for AI extraction (~30 items)
 └── actions/
-    └── parseProfile.ts # Background action to parse answers into structured data
+    ├── parseProfile.ts # Background action to parse answers into structured data
+    └── seedTestUsers.ts # Seed test users with AI-generated answers and photos
 
 components/            # Reusable components
 ├── AppHeader.tsx      # Shared header: Lvl X/6 | Found | Avatar (used on all tabs)
@@ -139,11 +141,12 @@ stores/                # Zustand stores
 
 ### Question Types
 
-The app supports 6 question types (defined in `components/QuestionCard.tsx`):
+The app supports 7 question types (defined in `components/QuestionCard.tsx`):
 - `multiple_choice`: Radio button selection from options array
 - `text`: Single-line text input
 - `essay`: Multi-line textarea for longer responses
-- `scale`: Slider from min to max with optional labels
+- `scale`: Single slider from min to max with optional labels (e.g., personality traits)
+- `range`: Dual-thumb slider for selecting a range (e.g., height/age preferences)
 - `checklist`: Multi-select with "Open to any" option + optional dealbreaker toggle
 - `interest_picker`: Autocomplete selection from 1000+ item interest library
 
@@ -210,12 +213,21 @@ Checklist behavior:
 - `hasDealbreaker`: boolean (optional) - Whether this question can have a dealbreaker toggle
 - Indexes: `by_order`, `by_key`
 
-**Important**: Always use `questionKey` (not `order`) when referencing specific questions in code. This allows inserting new questions without breaking existing logic.
+**Important**: Always use `questionKey` (not `order`) when referencing specific questions in code. This allows inserting new questions without breaking existing logic. Examples:
+- `relationship_goals_self`, `relationship_goals_pref`
+- `height_range_pref`, `age_range_pref`
+- `ethnicity_self`, `ethnicity_pref`
+- `interests_self`
 
 ### answers
 - `userId`: Id<"users">
 - `questionId`: Id<"questions">
-- `value`: string - JSON string for complex answers (checklist = JSON array), plain string for simple
+- `value`: string - Format depends on question type:
+  - `multiple_choice`, `text`, `essay`: plain string
+  - `scale`: number as string (e.g., "7")
+  - `range`: JSON object `{"min": 60, "max": 72}` (e.g., for height in inches)
+  - `checklist`: JSON array `["Option1", "Option2"]`
+  - `interest_picker`: JSON array of interest IDs
 - `source`: "ai" | "manual" (optional) - Tracks whether answer came from AI import or manual entry
 - `isDealbreaker`: boolean (optional) - Whether user marked this preference as a dealbreaker
 - Indexes: `by_user`, `by_user_question`
@@ -260,7 +272,7 @@ Checklist behavior:
 
 ---
 
-## Question Categories (6 total, 90 questions)
+## Question Categories (6 total, 91 questions)
 
 | Level | Category | Questions | What it Scores |
 |-------|----------|-----------|----------------|
@@ -339,15 +351,15 @@ compassion, courage, wisdom, freedom, tradition, equality, justice
 ## AI Profile Parsing System
 
 ### Overview
-After a user completes all 90 questions, a background Convex action parses their answers using OpenAI to extract structured data for efficient compatibility matching.
+After a user completes all 91 questions, a background Convex action parses their answers using OpenAI to extract structured data for efficient compatibility matching.
 
 ### Architecture Flow
 1. User completes onboarding → `completeOnboarding` mutation runs
 2. Mutation schedules `parseUserProfile` action via `ctx.scheduler.runAfter(0, ...)`
-3. Action fetches all answers with question details
+3. Action fetches all answers with question details (uses `questionKey` for lookups)
 4. Action extracts:
-   - **Preferences** from checklist question pairs (no AI needed)
-   - **Selected interests** from interest picker (no AI needed)
+   - **Preferences** from checklist question pairs (no AI needed) - uses `linkedQuestionKey`
+   - **Selected interests** from interest picker (no AI needed) - key: `interests_self`
    - **Canonical values** from essays (AI maps to ~30 item list)
    - **Personality traits** from scale questions + AI analysis
 5. Results saved to `userProfiles` table
@@ -363,6 +375,7 @@ After a user completes all 90 questions, a background Convex action parses their
 - `VALUES_INTERESTS_PROMPT`: Legacy extraction for raw values/interests (display only)
 - `PERSONALITY_TRAITS_PROMPT`: Rates 11 personality dimensions on 1-10 scale
 - Bio generation prompts for paragraph and one-sentence bios
+- `EXTRACTION_QUESTION_GROUPS`: Maps extraction types to `questionKey` arrays (not order numbers)
 
 ---
 
@@ -423,6 +436,9 @@ bunx convex dev
 # Seed questions (run once)
 bunx convex run seedQuestions:seedQuestions
 
+# Seed test users for compatibility testing (optional, takes ~20-30 min)
+bunx convex run actions/seedTestUsers:seedTestUsers
+
 # Start Expo
 bun start
 
@@ -442,6 +458,8 @@ bun start
 - **Splash screen control**: Stays visible until routing is determined and first screen data is loaded
 - **Screen transitions**: First screen fades in smoothly using `useScreenReady` hook
 - **Onboarding resume**: Uses `onboardingStep` field in database to resume at correct step on app restart
+- **Test users**: Have `waitlistPosition: 999` to distinguish from real users
+- **Question keys**: Always reference questions by `questionKey`, never by `order` number
 
 ---
 
@@ -449,7 +467,7 @@ bun start
 
 ### Journey/Level System (IMPLEMENTED)
 
-**Purpose**: Gamify the 90 questions by breaking them into 6 categories. Users progress through levels by completing categories, with each level unlocking a new compatibility score.
+**Purpose**: Gamify the 91 questions by breaking them into 6 categories. Users progress through levels by completing categories, with each level unlocking a new compatibility score.
 
 **User Flow**:
 1. After photos, user completes Level 1 (The Basics) and enters the Journey
@@ -501,14 +519,16 @@ Each preference area has a pair of questions:
 - Relationship Style (Q3-4)
 - Has Children (Q5-6)
 - Wants Children (Q7-8)
-- Ethnicity (Q14-15)
-- Religion (Q16-17)
-- Politics (Q19-20)
-- Education (Q22-23)
-- Alcohol (Q25-26)
-- Smoking (Q27-28)
-- Marijuana (Q29-30)
-- Drugs (Q31-32)
+- Height Range Preference (Q11) - `range` type with dealbreaker
+- Age Range Preference (Q13) - `range` type with dealbreaker
+- Ethnicity (Q14-16) - Q14 is `checklist` for multi-select
+- Religion (Q17-18)
+- Politics (Q20-21)
+- Education (Q23-24)
+- Alcohol (Q26-27)
+- Smoking (Q28-29)
+- Marijuana (Q30-31)
+- Drugs (Q32-33)
 
 ---
 
@@ -524,7 +544,7 @@ Each preference area has a pair of questions:
 - Soft limit of 25 selections
 - Rarity-weighted matching (niche interests count more)
 
-**Question**: Q90 "What are your interests?" with type `interest_picker`
+**Question**: Q91 "What are your interests?" with type `interest_picker` (questionKey: `interests_self`)
 
 ---
 
@@ -537,6 +557,60 @@ Each preference area has a pair of questions:
 - Maps arbitrary essay text to closest canonical value
 - Non-matching values stored as `rawValues` (for display only)
 - `canonicalValues` used for Jaccard similarity matching
+
+---
+
+### Matches Screen (IMPLEMENTED)
+
+**Purpose**: Display potential matches with detailed compatibility breakdowns.
+
+**Location**: `app/(tabs)/matches.tsx`
+
+**Features**:
+- Uses `lib/matching.ts` for 6-category compatibility scoring
+- Displays overall score badge with color coding (green 80+, yellow 60+, red <40)
+- Expandable match cards with two tabs:
+  - **Compatibility**: 6 category scores with progress bars, shared values/interests, dealbreaker alerts
+  - **Full Profile**: Complete profile details
+- "Watch Out For" section highlights friction points
+- Your profile card at top (expandable)
+
+**Compatibility Display**:
+- 6 category bars: The Basics, Who You Are, Relationship Style, Lifestyle, Life & Future, The Deeper Stuff
+- Dealbreaker alerts shown in red when triggered
+- Shared values and shared interests displayed as tags
+
+---
+
+### Test User Seeding (IMPLEMENTED)
+
+**Purpose**: Generate realistic test users with AI-generated answers for testing compatibility scoring.
+
+**Location**: `convex/actions/seedTestUsers.ts`
+
+**10 Test Personas**:
+1. Jade Monroe - Indie rock singer, free-spirited
+2. Silas Crane - Brooding artist, emotionally complex
+3. Nina Vega - Festival producer, always busy
+4. Wyatt Callahan - Wyoming rancher, traditional
+5. Dex Park - Professional poker player
+6. Elena Frost - Climate scientist, anxious attachment
+7. Marcus Cole - Stand-up comedian
+8. Tara Reyes - CrossFit athlete, disciplined
+9. Velvet Divine - Drag performer
+10. Ezra Holbrook - Ex-tech homesteader
+
+**Commands**:
+```bash
+# Seed all test users (takes ~20-30 min)
+bunx convex run actions/seedTestUsers:seedTestUsers
+
+# Seed a single test user
+bunx convex run actions/seedTestUsers:seedSingleUser '{"personaName": "Jade Monroe"}'
+
+# Seed your own answers with custom persona
+bunx convex run actions/seedTestUsers:seedMyAnswers '{"userId": "...", "persona": "..."}'
+```
 
 ---
 

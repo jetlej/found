@@ -257,6 +257,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing["2xl"],
     alignItems: "center",
+    maxWidth: 220,
     width: "100%",
   },
   shareButtonText: {

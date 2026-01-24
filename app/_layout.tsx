@@ -33,6 +33,7 @@ import * as SystemUI from "expo-system-ui";
 import * as Updates from "expo-updates";
 import { useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     AppState,
     AppStateStatus,
     Pressable,
@@ -283,6 +284,8 @@ export default function RootLayout() {
     "Figtree-Medium": Figtree_500Medium,
     "Figtree-SemiBold": Figtree_600SemiBold,
     "Figtree-Bold": Figtree_700Bold,
+    "Avigea": require("../assets/fonts/Avigea.ttf"),
+    "Avigea-Italic": require("../assets/fonts/Avigea-Italic.ttf"),
   });
 
   useEffect(() => {
@@ -292,11 +295,11 @@ export default function RootLayout() {
   // Note: We don't hide splash screen here anymore.
   // AuthGate will hide it once routing is determined.
 
-  // Show custom splash while fonts load (uses system serif as fallback)
+  // Show custom splash while fonts load
   if (!loaded) {
     return (
       <View style={splashStyles.container}>
-        <Text style={splashStyles.titleFallback}>Found</Text>
+        <ActivityIndicator size="large" color="#000000" />
       </View>
     );
   }
@@ -316,12 +319,6 @@ const splashStyles = StyleSheet.create({
     backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
-  },
-  titleFallback: {
-    fontFamily: "Georgia", // System serif as fallback before custom fonts load
-    fontSize: 56,
-    color: colors.text,
-    fontStyle: "italic",
   },
 });
 

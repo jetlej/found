@@ -42,6 +42,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     [
+      "expo-image-picker",
+      {
+        photosPermission: "Found needs access to your photos to add them to your profile.",
+      },
+    ],
+    [
       "expo-location",
       {
         locationWhenInUsePermission:
@@ -52,6 +58,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-splash-screen",
       {
         backgroundColor: "#FAFAFA",
+        image: "./assets/images/icon-rounded.png",
+        imageWidth: 200,
       },
     ],
     [

@@ -3,10 +3,10 @@ import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
+import { IconChevronLeft, IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -48,6 +48,7 @@ const STEPS: Step[] = ["name", "gender", "interested", "location", "birthday", "
 export default function BasicsScreen() {
   const { userId } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ step?: string }>();
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
@@ -60,7 +61,9 @@ export default function BasicsScreen() {
     setScreenReady(true);
   }, []);
 
-  const [currentStep, setCurrentStep] = useState(0);
+  // Start at the step from params, or 0
+  const initialStep = params.step ? parseInt(params.step, 10) : 0;
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [firstName, setFirstName] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [interestedIn, setInterestedIn] = useState<string | null>(null);
@@ -70,6 +73,20 @@ export default function BasicsScreen() {
   const [heightInches, setHeightInches] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+
+  // Load saved data from database
+  useEffect(() => {
+    if (currentUser && !hasLoadedData) {
+      if (currentUser.name) setFirstName(currentUser.name);
+      if (currentUser.gender) setGender(currentUser.gender);
+      if (currentUser.sexuality) setInterestedIn(currentUser.sexuality);
+      if (currentUser.location) setLocation(currentUser.location);
+      if (currentUser.birthdate) setBirthdate(new Date(currentUser.birthdate));
+      if (currentUser.heightInches) setHeightInches(currentUser.heightInches);
+      setHasLoadedData(true);
+    }
+  }, [currentUser, hasLoadedData]);
 
   const step = STEPS[currentStep];
 
@@ -103,9 +120,12 @@ export default function BasicsScreen() {
   };
 
   const handleBack = () => {
+    setLoading(false);
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
       setError("");
+    } else {
+      router.canGoBack() ? router.back() : router.replace("/(onboarding)/referral");
     }
   };
 
@@ -347,8 +367,11 @@ export default function BasicsScreen() {
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
         <View style={styles.header}>
+          <Pressable style={styles.backArrow} onPress={handleBack}>
+            <IconChevronLeft size={28} color={colors.text} />
+          </Pressable>
           <View style={styles.progressContainer}>
-            {STEPS.map((_, index) => (
+            {Array.from({ length: 7 }).map((_, index) => (
               <View
                 key={index}
                 style={[
@@ -366,30 +389,22 @@ export default function BasicsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.buttonRow}>
-            {currentStep > 0 && (
-              <Pressable style={styles.backButton} onPress={handleBack}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </Pressable>
-            )}
-            <Pressable
-              style={[
-                styles.nextButton,
-                (!canProceed() || loading) && styles.buttonDisabled,
-                currentStep === 0 && styles.nextButtonFull,
-              ]}
-              onPress={handleNext}
-              disabled={!canProceed() || loading}
-            >
-              <Text style={styles.nextButtonText}>
-                {loading
-                  ? "Saving..."
-                  : currentStep === STEPS.length - 1
-                    ? "Continue"
-                    : "Next"}
-              </Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={[
+              styles.nextButton,
+              (!canProceed() || loading) && styles.buttonDisabled,
+            ]}
+            onPress={handleNext}
+            disabled={!canProceed() || loading}
+          >
+            <Text style={styles.nextButtonText}>
+              {loading
+                ? "Saving..."
+                : currentStep === STEPS.length - 1
+                  ? "Continue"
+                  : "Next"}
+            </Text>
+          </Pressable>
         </View>
       </Animated.View>
     </SafeAreaView>
@@ -405,14 +420,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
+  backArrow: {
+    padding: spacing.xs,
+    marginRight: spacing.md,
+  },
   progressContainer: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "center",
     gap: spacing.sm,
+    marginRight: 36,
   },
   progressDot: {
     width: 8,
@@ -569,33 +592,11 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
-  buttonRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  backButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  backButtonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.text,
-  },
   nextButton: {
-    flex: 2,
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
     alignItems: "center",
-  },
-  nextButtonFull: {
-    flex: 1,
   },
   nextButtonText: {
     fontSize: fontSizes.base,

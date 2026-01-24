@@ -97,7 +97,7 @@ export default function SignIn() {
         style={styles.content}
       >
         <View style={styles.header}>
-          <Text style={styles.logo}>Found</Text>
+          <Text style={styles.logo}>Found.</Text>
           <Text style={styles.subtitle}>Enter your phone number to continue</Text>
         </View>
 
@@ -149,10 +149,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing["3xl"],
   },
   logo: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.logo,
     fontSize: fontSizes["4xl"],
     color: colors.text,
-    letterSpacing: 2,
     marginBottom: spacing.sm,
   },
   subtitle: {

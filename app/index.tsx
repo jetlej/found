@@ -10,23 +10,44 @@ export default function LandingScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.logo}>Found</Text>
-          <Text style={styles.tagline}>100 Questions to Find Your Person</Text>
+          <Text style={styles.logo}>Found.</Text>
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.headline}>
-            This isn't another dating app.
-          </Text>
-          <Text style={styles.description}>
-            Found is an AI matchmaker built for people who are serious about finding a real partnership.
-          </Text>
-          <Text style={styles.description}>
-            To truly understand who you are and what you're looking for, we ask you to answer 100 thoughtful questions about yourself.
-          </Text>
-          <Text style={styles.emphasis}>
-            No swiping. No small talk. Just meaningful connections.
-          </Text>
+          <View style={styles.promiseSection}>
+            <Text style={styles.promiseLabel}>OUR PROMISE</Text>
+            <Text style={styles.promise}>
+              Answer just 10 questions with authentic answers, and we <Text style={styles.underline}>will</Text> introduce you to someone incredible.
+
+            </Text>
+          </View>
+
+          <View style={styles.bulletList}>
+            <View style={styles.bulletRow}>
+              <Text style={styles.bulletX}>✕</Text>
+              <Text style={styles.bulletTextMuted}>Endless swiping</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <Text style={styles.bulletX}>✕</Text>
+              <Text style={styles.bulletTextMuted}>Small talk</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <Text style={styles.bulletX}>✕</Text>
+              <Text style={styles.bulletTextMuted}>Bad matches</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <Text style={styles.bulletCheck}>✓</Text>
+              <Text style={styles.bulletText}>Butterflies on the first date</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <Text style={styles.bulletCheck}>✓</Text>
+              <Text style={styles.bulletText}>"Where have you been all my life?"</Text>
+            </View>
+            <View style={styles.bulletRow}>
+              <Text style={styles.bulletCheck}>✓</Text>
+              <Text style={styles.bulletText}>Your friends asking how you met</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -61,39 +82,63 @@ const styles = StyleSheet.create({
     paddingTop: spacing["2xl"],
   },
   logo: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.logo,
     fontSize: fontSizes["5xl"],
     color: colors.text,
-    letterSpacing: 2,
-  },
-  tagline: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
   },
   body: {
-    gap: spacing.lg,
+    flex: 1,
   },
-  headline: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
+  promiseSection: {
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: 60,
+    marginBottom: 50,
+  },
+  promiseLabel: {
+    fontFamily: fonts.logo,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    letterSpacing: 2,
+  },
+  promise: {
+    fontSize: 18,
     color: colors.text,
     textAlign: "center",
-    lineHeight: 38,
+    lineHeight: 26,
+    fontWeight: "600",
   },
-  description: {
+  bulletList: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  bulletX: {
+    fontSize: fontSizes.lg,
+    color: colors.error,
+    fontWeight: "600",
+  },
+  bulletCheck: {
+    fontSize: fontSizes.lg,
+    color: colors.success,
+    fontWeight: "600",
+  },
+  bulletText: {
+    fontSize: fontSizes.base,
+    color: colors.text,
+    fontWeight: "500",
+  },
+  bulletTextMuted: {
     fontSize: fontSizes.base,
     color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
+    fontWeight: "500",
   },
-  emphasis: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSizes.lg,
-    color: colors.text,
-    textAlign: "center",
-    marginTop: spacing.md,
+  underline: {
+    textDecorationLine: "underline",
   },
   footer: {
     gap: spacing.lg,
@@ -113,5 +158,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     color: colors.textMuted,
     textAlign: "center",
+    maxWidth: 240,
+    alignSelf: "center",
   },
 });

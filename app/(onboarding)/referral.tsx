@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
+import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -76,6 +77,9 @@ export default function ReferralScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Pressable style={styles.backArrow} onPress={() => router.canGoBack() ? router.back() : router.replace("/")}>
+        <IconChevronLeft size={28} color={colors.text} />
+      </Pressable>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.content}
@@ -83,13 +87,13 @@ export default function ReferralScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Have a referral code?</Text>
           <Text style={styles.subtitle}>
-            If someone invited you to Found, enter their code below.
+            If someone invited you to Found, enter their code below to help them skip the line.
           </Text>
         </View>
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, code.length > 0 && styles.inputWithText]}
             value={code}
             onChangeText={(text) => {
               setCode(text.toUpperCase());
@@ -117,7 +121,7 @@ export default function ReferralScreen() {
           disabled={loading || !!success || !code.trim()}
         >
           <Text style={styles.buttonText}>
-            {loading ? "Applying..." : "Apply Code"}
+            {loading ? "Submitting..." : "Submit"}
           </Text>
         </Pressable>
 
@@ -126,7 +130,7 @@ export default function ReferralScreen() {
           onPress={handleSkip}
           disabled={loading || !!success}
         >
-          <Text style={styles.skipText}>Skip for now</Text>
+          <Text style={styles.skipText}>I don't have a code</Text>
         </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -138,6 +142,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backArrow: {
+    position: "absolute",
+    left: spacing.lg,
+    top: spacing["3xl"],
+    zIndex: 1,
+    padding: spacing.xs,
+  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
@@ -147,7 +158,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing["2xl"],
   },
   title: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.logo,
     fontSize: fontSizes["3xl"],
     color: colors.text,
     textAlign: "center",
@@ -171,8 +182,10 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xl,
     color: colors.text,
     textAlign: "center",
-    letterSpacing: 4,
     fontWeight: "600",
+  },
+  inputWithText: {
+    letterSpacing: 4,
   },
   error: {
     color: colors.error,

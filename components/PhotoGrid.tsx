@@ -4,11 +4,13 @@ import { colors, fontSizes, spacing } from "@/lib/theme";
 import { IconCircleX, IconPlus } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as ExpoImagePicker from "expo-image-picker";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     Image,
+    Modal,
     Platform,
     Pressable,
     StyleSheet,
@@ -65,6 +67,7 @@ export function PhotoGrid({
     { id: "4", order: 4 },
     { id: "5", order: 5 },
   ]);
+  const [isPreparingCrop, setIsPreparingCrop] = useState(false);
 
   // Sync with existing photos from database
   useEffect(() => {
@@ -83,11 +86,9 @@ export function PhotoGrid({
             url: existingPhoto.url,
           };
         }
-        // Keep local state if we have it (uploading)
         if (item.localUri || item.uploading) {
           return item;
         }
-        // Clear if no longer in database
         if (!existingPhoto) {
           return { id: item.id, order: item.order };
         }
@@ -98,7 +99,6 @@ export function PhotoGrid({
 
   const filledCount = items.filter((s) => s.url || s.localUri).length;
 
-  // Notify parent of photo count changes
   useEffect(() => {
     onPhotoCountChange?.(filledCount);
   }, [filledCount, onPhotoCountChange]);
@@ -107,28 +107,42 @@ export function PhotoGrid({
     try {
       let uri: string;
 
+      const result = await ExpoImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+      const selectedUri = result.assets[0].uri;
+
+      setIsPreparingCrop(true);
+      await new Promise<void>((resolve) => setTimeout(resolve, 800));
+      setIsPreparingCrop(false);
+
       if (ImageCropper) {
-        const image = await ImageCropper.openPicker({
-          mediaType: "photo",
-          cropping: true,
+        const cropped = await ImageCropper.openCropper({
+          path: selectedUri,
           width: 800,
           height: 1000,
           cropperCircleOverlay: false,
           compressImageQuality: 0.8,
+          mediaType: "photo",
+          hideBottomControls: true,
+          enableRotationGesture: false,
         });
-        uri = image.path;
+        uri = cropped.path;
       } else {
-        const result = await ExpoImagePicker.launchImageLibraryAsync({
+        const editResult = await ExpoImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           allowsEditing: true,
           aspect: [4, 5],
           quality: 0.8,
         });
-        if (result.canceled || !result.assets?.[0]) return;
-        uri = result.assets[0].uri;
+        if (editResult.canceled || !editResult.assets?.[0]) return;
+        uri = editResult.assets[0].uri;
       }
 
-      // Set local preview immediately
       const fileUri = uri.startsWith("file://") ? uri : `file://${uri}`;
       setItems((prev) =>
         prev.map((s) =>
@@ -138,7 +152,6 @@ export function PhotoGrid({
         )
       );
 
-      // Upload to Convex
       const uploadUrl = await generateUploadUrl();
       const response = await fetch(fileUri);
       const blob = await response.blob();
@@ -152,12 +165,12 @@ export function PhotoGrid({
         body: blob,
       });
 
-      const result = await uploadResponse.json();
+      const uploadResult = await uploadResponse.json();
 
-      if (result.storageId) {
+      if (uploadResult.storageId) {
         await addPhoto({
           userId,
-          storageId: result.storageId,
+          storageId: uploadResult.storageId,
           order: slotOrder,
         });
 
@@ -194,93 +207,88 @@ export function PhotoGrid({
     );
   };
 
-  const handleSwap = async (fromIndex: number, toIndex: number) => {
-    // Swap items in local state
-    const newItems = [...items];
-    const temp = newItems[fromIndex];
-    newItems[fromIndex] = { ...newItems[toIndex], order: fromIndex, id: fromIndex.toString() };
-    newItems[toIndex] = { ...temp, order: toIndex, id: toIndex.toString() };
-    setItems(newItems);
+  const handleSwap = useCallback((fromIndex: number, toIndex: number) => {
+    setItems((prev) => {
+      const newItems = [...prev];
+      // Swap the items
+      const temp = newItems[fromIndex];
+      newItems[fromIndex] = { ...newItems[toIndex], order: fromIndex };
+      newItems[toIndex] = { ...temp, order: toIndex };
+      return newItems;
+    });
 
-    // Update database
-    const filledItems = newItems.filter((item) => item.photoId);
-    if (filledItems.length >= 1) {
-      const photoIds = newItems
-        .filter((item) => item.photoId)
-        .map((item) => item.photoId!);
-      if (photoIds.length > 0) {
-        await reorderPhotos({ userId, photoIds });
-      }
-    }
-  };
+    // Persist to database
+    setTimeout(() => {
+      setItems((currentItems) => {
+        const photoIds = currentItems
+          .filter((item) => item.photoId)
+          .map((item) => item.photoId!);
+        if (photoIds.length > 0) {
+          reorderPhotos({ userId, photoIds }).catch(console.error);
+        }
+        return currentItems;
+      });
+    }, 100);
+  }, [userId, reorderPhotos]);
 
   const renderSlot = (item: PhotoItem, index: number) => {
     const hasImage = item.url || item.localUri;
-    const isRequired = showRequired && index < 2;
+    const isRequired = showRequired && index < 4;
     const isFirst = index === 0;
-
-    if (hasImage) {
-      return (
-        <DraxView
-          key={item.id}
-          style={[styles.slot]}
-          draggingStyle={styles.slotDragging}
-          dragReleasedStyle={styles.slot}
-          hoverDraggingStyle={styles.slotHover}
-          dragPayload={index}
-          longPressDelay={150}
-          receivingStyle={styles.slotReceiving}
-          onReceiveDragDrop={({ dragged }) => {
-            const fromIndex = dragged.payload as number;
-            if (fromIndex !== index) {
-              handleSwap(fromIndex, index);
-            }
-          }}
-        >
-          <Image
-            source={{ uri: item.localUri || item.url }}
-            style={styles.image}
-          />
-          {item.uploading && (
-            <View style={styles.uploadingOverlay}>
-              <Text style={styles.uploadingText}>...</Text>
-            </View>
-          )}
-          <Pressable
-            style={styles.removeButton}
-            onPress={() => handleRemove(item)}
-          >
-            <IconCircleX size={24} color={colors.text} />
-          </Pressable>
-          {isFirst && (
-            <View style={styles.mainBadge}>
-              <Text style={styles.mainBadgeText}>Main</Text>
-            </View>
-          )}
-        </DraxView>
-      );
-    }
 
     return (
       <DraxView
         key={item.id}
-        style={[styles.slot, isRequired && styles.slotRequired]}
-        receivingStyle={styles.slotReceiving}
-        dragPayload={index}
+        style={[styles.slot, !hasImage && isRequired && styles.slotRequired]}
+        draggingStyle={styles.dragging}
+        dragReleasedStyle={styles.dragReleased}
+        receivingStyle={styles.receiving}
+        payload={index}
+        longPressDelay={200}
         onReceiveDragDrop={({ dragged }) => {
           const fromIndex = dragged.payload as number;
           if (fromIndex !== index) {
             handleSwap(fromIndex, index);
           }
         }}
+        onDragEnd={() => {
+          // Drag ended without drop
+        }}
       >
-        <Pressable style={styles.emptySlot} onPress={() => pickImage(index)}>
-          <IconPlus
-            size={32}
-            color={isRequired ? colors.text : colors.textMuted}
-          />
-          {isRequired && <Text style={styles.requiredLabel}>Required</Text>}
-        </Pressable>
+        {hasImage ? (
+          <>
+            <Pressable style={styles.slotContent} onPress={() => pickImage(item.order)}>
+              <Image
+                source={{ uri: item.localUri || item.url }}
+                style={styles.image}
+              />
+              {item.uploading && (
+                <View style={styles.uploadingOverlay}>
+                  <Text style={styles.uploadingText}>...</Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.removeButton}
+              onPress={() => handleRemove(item)}
+            >
+              <IconCircleX size={24} color={colors.text} />
+            </Pressable>
+            {isFirst && (
+              <View style={styles.mainBadge}>
+                <Text style={styles.mainBadgeText}>Main</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <Pressable style={styles.slotContent} onPress={() => pickImage(item.order)}>
+            <IconPlus
+              size={32}
+              color={isRequired ? colors.text : colors.textMuted}
+            />
+            {isRequired && <Text style={styles.requiredLabel}>Required</Text>}
+          </Pressable>
+        )}
       </DraxView>
     );
   };
@@ -290,18 +298,22 @@ export function PhotoGrid({
       <DraxProvider>
         <View style={styles.grid}>
           <View style={styles.row}>
-            {items.slice(0, 3).map((item, i) => renderSlot(item, i))}
+            {items.slice(0, 3).map((item, index) => renderSlot(item, index))}
           </View>
           <View style={styles.row}>
-            {items.slice(3, 6).map((item, i) => renderSlot(item, i + 3))}
+            {items.slice(3, 6).map((item, index) => renderSlot(item, index + 3))}
           </View>
         </View>
       </DraxProvider>
-      <Text style={styles.photoCount}>
-        {filledCount} of 6 photos
-        {showRequired && filledCount < 2 && " (2 required)"}
-      </Text>
-      <Text style={styles.dragHintText}>Hold and drag photos to reorder</Text>
+
+      <Modal visible={isPreparingCrop} transparent animationType="fade">
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Preparing photo...</Text>
+          </View>
+        </View>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -311,11 +323,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: GRID_PADDING,
   },
   grid: {
-    gap: GRID_GAP,
+    flexDirection: "column",
   },
   row: {
     flexDirection: "row",
     gap: GRID_GAP,
+    height: SLOT_HEIGHT,
+    marginBottom: GRID_GAP,
   },
   slot: {
     width: SLOT_WIDTH,
@@ -330,8 +344,8 @@ const styles = StyleSheet.create({
     borderColor: colors.text,
     borderStyle: "dashed",
   },
-  slotDragging: {
-    opacity: 0.8,
+  dragging: {
+    opacity: 0.9,
     transform: [{ scale: 1.05 }],
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
@@ -339,28 +353,27 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  slotHover: {
+  dragReleased: {
+    opacity: 1,
+    transform: [{ scale: 1 }],
+  },
+  receiving: {
     borderColor: colors.primary,
     borderWidth: 2,
   },
-  slotReceiving: {
-    borderColor: colors.success,
-    borderWidth: 2,
-    backgroundColor: colors.surface,
+  slotContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   image: {
     width: "100%",
     height: "100%",
   },
-  emptySlot: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
   requiredLabel: {
     fontSize: fontSizes.xs,
     color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   removeButton: {
     position: "absolute",
@@ -393,16 +406,21 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     fontWeight: "600",
   },
-  photoCount: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginTop: spacing.lg,
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  dragHintText: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginTop: spacing.sm,
+  loadingBox: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing["2xl"],
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: fontSizes.base,
+    color: colors.text,
   },
 });

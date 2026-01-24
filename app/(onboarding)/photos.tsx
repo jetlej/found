@@ -3,6 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
+import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -34,7 +35,7 @@ export default function PhotosScreen() {
 
   const [photoCount, setPhotoCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isValid = photoCount >= 2;
+  const isValid = photoCount >= 4;
 
   const handleContinue = async () => {
     if (!userId || isSubmitting) return;
@@ -55,14 +56,33 @@ export default function PhotosScreen() {
     return null;
   }
 
+  const TOTAL_STEPS = 7; // 6 basics steps + photos
+
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        <View style={styles.header}>
+          <Pressable style={styles.backArrow} onPress={() => router.replace({ pathname: "/(onboarding)/basics", params: { step: "5" } })}>
+            <IconChevronLeft size={28} color={colors.text} />
+          </Pressable>
+          <View style={styles.progressContainer}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.progressDot,
+                  index <= 6 && styles.progressDotActive,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
         <View style={styles.content}>
-          <View style={styles.header}>
+          <View style={styles.stepContent}>
             <Text style={styles.title}>Add your photos</Text>
             <Text style={styles.subtitle}>
-              Add at least 2 photos to continue. Hold and drag to reorder.
+              Add at least 4 photos to continue. Hold and drag to reorder.
             </Text>
           </View>
 
@@ -104,9 +124,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  backArrow: {
+    padding: spacing.xs,
+    marginRight: spacing.md,
+  },
+  progressContainer: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.sm,
+    marginRight: 36,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  progressDotActive: {
+    backgroundColor: colors.primary,
+  },
+  stepContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   title: {
     fontFamily: fonts.serif,

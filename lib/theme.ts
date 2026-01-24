@@ -38,6 +38,9 @@ export const fonts = {
   serif: 'Figtree-Medium',
   serifBold: 'Figtree-Bold',
   serifItalic: 'Figtree-Regular',
+  // Logo
+  logo: 'Avigea',
+  logoItalic: 'Avigea-Italic',
 } as const;
 
 export const fontSizes = {

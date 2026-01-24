@@ -28,7 +28,7 @@ export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps)
   const firstPhotoUrl = userPhotos
     ?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
-  const level = currentUser?.level ?? 1;
+  const level = Math.max(1, currentUser?.completedCategories?.length ?? 0);
 
   const handleLevelPress = () => {
     if (showLevelLink) {
@@ -96,10 +96,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   logo: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.logo,
     fontSize: fontSizes["2xl"],
     color: colors.text,
-    letterSpacing: -1,
   },
   levelBadge: {
     flexDirection: "row",

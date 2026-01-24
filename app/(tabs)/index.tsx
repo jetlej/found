@@ -9,9 +9,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { Pressable, Share, StyleSheet, Text, View } from "react-native";
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   title: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.logo,
     fontSize: fontSizes["3xl"],
     color: colors.text,
     textAlign: "center",
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   optionTitle: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.serifBold,
     fontSize: fontSizes.xl,
     color: colors.text,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     minWidth: 50,
   },
   countdownNumber: {
-    fontFamily: fonts.serifBold,
+    fontFamily: fonts.serif,
     fontSize: fontSizes["2xl"],
     color: colors.text,
   },

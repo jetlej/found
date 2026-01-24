@@ -13,6 +13,13 @@ export default function OnboardingLayout() {
           animation: "slide_from_right",
         }}
       />
+      <Stack.Screen 
+        name="voice-questions" 
+        options={{
+          presentation: "modal",
+          animation: "slide_from_right",
+        }}
+      />
     </Stack>
   );
 }

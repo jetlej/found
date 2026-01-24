@@ -9,7 +9,9 @@
  */
 
 import type * as actions_parseProfile from "../actions/parseProfile.js";
+import type * as actions_parseVoiceProfile from "../actions/parseVoiceProfile.js";
 import type * as actions_seedTestUsers from "../actions/seedTestUsers.js";
+import type * as actions_voiceQuestionDefinitions from "../actions/voiceQuestionDefinitions.js";
 import type * as answers from "../answers.js";
 import type * as lib_canonicalValues from "../lib/canonicalValues.js";
 import type * as lib_interests from "../lib/interests.js";
@@ -23,6 +25,7 @@ import type * as seedTestUsers from "../seedTestUsers.js";
 import type * as storage from "../storage.js";
 import type * as userProfiles from "../userProfiles.js";
 import type * as users from "../users.js";
+import type * as voiceRecordings from "../voiceRecordings.js";
 
 import type {
   ApiFromModules,
@@ -32,7 +35,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "actions/parseProfile": typeof actions_parseProfile;
+  "actions/parseVoiceProfile": typeof actions_parseVoiceProfile;
   "actions/seedTestUsers": typeof actions_seedTestUsers;
+  "actions/voiceQuestionDefinitions": typeof actions_voiceQuestionDefinitions;
   answers: typeof answers;
   "lib/canonicalValues": typeof lib_canonicalValues;
   "lib/interests": typeof lib_interests;
@@ -46,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   storage: typeof storage;
   userProfiles: typeof userProfiles;
   users: typeof users;
+  voiceRecordings: typeof voiceRecordings;
 }>;
 
 /**

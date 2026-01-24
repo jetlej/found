@@ -1,0 +1,101 @@
+// 10 broad voice questions designed to capture the same information as 91 text questions
+// Users record voice answers which are transcribed and parsed by AI
+
+export type VoiceQuestionIcon =
+  | "diamond"
+  | "heart"
+  | "book"
+  | "leaf"
+  | "users"
+  | "target"
+  | "message"
+  | "star"
+  | "seedling"
+  | "sparkles";
+
+export interface VoiceQuestion {
+  index: number;
+  category: string; // Short category name displayed on the card
+  icon: VoiceQuestionIcon;
+  text: string; // Full question shown in the recording modal
+  description: string; // What this question captures (for internal reference)
+}
+
+export const VOICE_QUESTIONS: VoiceQuestion[] = [
+  {
+    index: 0,
+    category: "Values & Identity",
+    icon: "diamond",
+    text: "Who are you? What do you care about? What gives your life meaning?",
+    description: "Values, identity, priorities",
+  },
+  {
+    index: 1,
+    category: "Love & Relationships",
+    icon: "heart",
+    text: "What does your ideal relationship look like? How do you love, and how do you want to be loved?",
+    description: "Love language, relationship style, attachment",
+  },
+  {
+    index: 2,
+    category: "Your Story",
+    icon: "book",
+    text: "Tell me your story. What experiences shaped who you are today?",
+    description: "Background, formative moments, life story",
+  },
+  {
+    index: 3,
+    category: "Daily Life",
+    icon: "leaf",
+    text: "Walk me through your life right now — your days, your work, how you spend your time.",
+    description: "Lifestyle, career, daily routine, social life",
+  },
+  {
+    index: 4,
+    category: "Family & Future",
+    icon: "users",
+    text: "What's your relationship with family like, and what do you envision for your own future?",
+    description: "Family closeness, kids, location, future plans",
+  },
+  {
+    index: 5,
+    category: "What You Want",
+    icon: "target",
+    text: "What are you looking for in a partner? What would make someone not right for you?",
+    description: "Partner preferences, dealbreakers",
+  },
+  {
+    index: 6,
+    category: "Communication",
+    icon: "message",
+    text: "How do you handle conflict? What do you need when things get hard?",
+    description: "Communication style, conflict resolution, emotional needs",
+  },
+  {
+    index: 7,
+    category: "Passions",
+    icon: "star",
+    text: "What are you passionate about? What could you talk about for hours?",
+    description: "Interests, hobbies, passions",
+  },
+  {
+    index: 8,
+    category: "Growth",
+    icon: "seedling",
+    text: "What are you working on in yourself? What's something you've struggled with?",
+    description: "Self-awareness, growth, vulnerabilities",
+  },
+  {
+    index: 9,
+    category: "The Real You",
+    icon: "sparkles",
+    text: "If your best friends were setting you up on a date, what would they say about you — the good, the weird, and what you wish they'd leave out?",
+    description: "Quirky - authentic self-description, quirks",
+  },
+];
+
+export const TOTAL_VOICE_QUESTIONS = VOICE_QUESTIONS.length;
+
+export function getVoiceQuestion(index: number): VoiceQuestion | undefined {
+  return VOICE_QUESTIONS.find((q) => q.index === index);
+}

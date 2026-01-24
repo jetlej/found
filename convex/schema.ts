@@ -30,6 +30,8 @@ export default defineSchema({
     referredBy: v.optional(v.id("users")), // who referred this user
     referralCount: v.optional(v.number()), // number of successful referrals
     waitlistEndsAt: v.optional(v.number()), // timestamp when 7-day wait ends
+    // A/B test: onboarding type
+    onboardingType: v.optional(v.union(v.literal("journey"), v.literal("voice"))),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_phone", ["phone"])
@@ -41,6 +43,18 @@ export default defineSchema({
     url: v.string(),
     order: v.number(), // 0-5, determines display order
   }).index("by_user", ["userId"]),
+
+  // Voice recordings for voice-based onboarding experiment
+  voiceRecordings: defineTable({
+    userId: v.id("users"),
+    questionIndex: v.number(), // 0-9 for the 10 voice questions
+    storageId: v.id("_storage"),
+    durationSeconds: v.number(),
+    transcription: v.optional(v.string()), // Populated after AI transcription
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_question", ["userId", "questionIndex"]),
 
   questions: defineTable({
     order: v.number(), // 1-91, determines display sequence

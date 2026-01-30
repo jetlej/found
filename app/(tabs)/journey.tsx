@@ -1,9 +1,9 @@
 import { AppHeader } from "@/components/AppHeader";
 import { JourneyPath } from "@/components/JourneyPath";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { CATEGORIES } from "@/lib/categories";
 import { colors, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -17,7 +17,7 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function JourneyScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
   const params = useLocalSearchParams<{ completed?: string }>();
   const [justCompletedCategoryId, setJustCompletedCategoryId] = useState<string | null>(null);

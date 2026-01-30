@@ -1,8 +1,8 @@
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
@@ -11,7 +11,7 @@ import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from "
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PhotosScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
 
   const currentUser = useQuery(

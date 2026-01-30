@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { generateAIPrompt, getAnswerCount, parseAIResponse } from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconArrowLeft, IconCheck, IconCircleCheck, IconClipboard, IconCopy } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import * as Clipboard from "expo-clipboard";
@@ -22,7 +22,7 @@ import { useMMKVObject } from "react-native-mmkv";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AIPasteScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
 
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");

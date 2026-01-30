@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { IconChevronLeft, IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
@@ -46,7 +46,7 @@ type Step = "name" | "gender" | "interested" | "location" | "birthday" | "height
 const STEPS: Step[] = ["name", "gender", "interested", "location", "birthday", "height"];
 
 export default function BasicsScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
   const params = useLocalSearchParams<{ step?: string }>();
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");

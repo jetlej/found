@@ -1,8 +1,8 @@
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { generateAIPrompt } from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconArrowLeft, IconEdit, IconSparkles } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as Clipboard from "expo-clipboard";
@@ -19,7 +19,7 @@ import { useMMKVObject } from "react-native-mmkv";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AIImportScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 

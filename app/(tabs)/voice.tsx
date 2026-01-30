@@ -1,12 +1,12 @@
 import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
   TOTAL_VOICE_QUESTIONS,
   VOICE_QUESTIONS,
   VoiceQuestionIcon,
 } from "@/lib/voice-questions";
-import { useAuth } from "@clerk/clerk-expo";
 import {
   IconBook,
   IconCheck,
@@ -55,7 +55,7 @@ const ICONS: Record<VoiceQuestionIcon, React.ComponentType<{ size: number; color
 };
 
 export default function VoiceScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
 
   const fadeOpacity = useSharedValue(0);

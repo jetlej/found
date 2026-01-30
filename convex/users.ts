@@ -436,3 +436,34 @@ export const resetJourney = mutation({
     return { level: 1, completedCategories: [] };
   },
 });
+
+// ============ Dev Admin Panel ============
+
+// Search users by name or phone (for dev admin)
+export const searchUsers = query({
+  args: { query: v.string() },
+  handler: async (ctx, args) => {
+    const allUsers = await ctx.db.query("users").collect();
+    const q = args.query.toLowerCase();
+    return allUsers
+      .filter(
+        (u) => u.name?.toLowerCase().includes(q) || u.phone?.includes(q)
+      )
+      .slice(0, 20);
+  },
+});
+
+// Create fresh test user for onboarding testing
+export const createDevTestUser = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const clerkId = `dev_test_${Date.now()}`;
+    await ctx.db.insert("users", {
+      clerkId,
+      phone: `+1555${Math.floor(Math.random() * 10000000)
+        .toString()
+        .padStart(7, "0")}`,
+    });
+    return clerkId;
+  },
+});

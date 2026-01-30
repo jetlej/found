@@ -1,9 +1,9 @@
 import { Question, QuestionCard } from "@/components/QuestionCard";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { CategoryId, getCategoryById } from "@/lib/categories";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconX } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function QuestionsScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
   const params = useLocalSearchParams<{ categoryId?: string }>();
   const categoryId = params.categoryId as CategoryId | undefined;

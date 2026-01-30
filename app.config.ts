@@ -15,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.found.app",
+    bundleIdentifier: "com.jetlej.found",
     appleTeamId: "34HCA7L7PV",
     backgroundColor: "#FAFAFA",
     infoPlist: {
@@ -71,7 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
   updates: {
-    url: "https://u.expo.dev/30dbc98f-9fdf-42d0-95c4-f3fadff375fa",
+    url: "https://u.expo.dev/c2c461c0-3a59-40e5-b741-06b86e198e9d",
     checkAutomatically: "ON_LOAD",
   },
   runtimeVersion: {
@@ -83,7 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     router: {},
     eas: {
-      projectId: "30dbc98f-9fdf-42d0-95c4-f3fadff375fa",
+      projectId: "c2c461c0-3a59-40e5-b741-06b86e198e9d",
     },
   },
   owner: "jetlej",

@@ -1,20 +1,27 @@
 import { api } from "@/convex/_generated/api";
-import { useScreenReady } from "@/hooks/useScreenReady";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from "@/lib/voice-questions";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconMicrophone, IconPlayerStop, IconTrash, IconX } from "@tabler/icons-react-native";
 import { Audio } from "expo-av";
+import * as Haptics from "expo-haptics";
+import * as SplashScreen from "expo-splash-screen";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  withRepeat,
+  withSequence,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 function formatDuration(seconds: number): string {
@@ -23,27 +30,49 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-// Sound wave visualization component
-const NUM_BARS = 5;
+// Sound wave visualization component using reanimated for smooth 60fps
+const NUM_BARS = 7;
 
-function SoundWave({ levels }: { levels: number[] }) {
-  return (
-    <View style={styles.soundWave}>
-      {levels.map((level, i) => (
-        <View
-          key={i}
-          style={[
-            styles.soundBar,
-            { height: Math.max(8, level * 60) },
-          ]}
-        />
-      ))}
-    </View>
-  );
+function SoundWave({ isRecording }: { isRecording: boolean }) {
+  const bars = Array(NUM_BARS).fill(0).map((_, i) => {
+    const height = useSharedValue(8);
+    
+    useEffect(() => {
+      if (isRecording) {
+        // Each bar animates with slightly different timing for organic feel
+        const delay = i * 50;
+        const duration = 150 + Math.random() * 100;
+        
+        height.value = withRepeat(
+          withSequence(
+            withTiming(20 + Math.random() * 40, { duration }),
+            withTiming(8 + Math.random() * 15, { duration })
+          ),
+          -1,
+          true
+        );
+      } else {
+        height.value = withTiming(8, { duration: 200 });
+      }
+    }, [isRecording]);
+    
+    const animatedStyle = useAnimatedStyle(() => ({
+      height: height.value,
+    }));
+    
+    return (
+      <Animated.View
+        key={i}
+        style={[styles.soundBar, animatedStyle]}
+      />
+    );
+  });
+  
+  return <View style={styles.soundWave}>{bars}</View>;
 }
 
 export default function VoiceQuestionsScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
   const params = useLocalSearchParams<{ startIndex?: string }>();
   const startIndex = parseInt(params.startIndex || "0", 10);
@@ -54,7 +83,7 @@ export default function VoiceQuestionsScreen() {
     currentUser?._id ? { userId: currentUser._id } : "skip"
   );
   const saveRecording = useMutation(api.voiceRecordings.saveRecording);
-  const deleteRecording = useMutation(api.voiceRecordings.deleteRecording);
+  const deleteRecordingMutation = useMutation(api.voiceRecordings.deleteRecording);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -62,15 +91,19 @@ export default function VoiceQuestionsScreen() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [audioLevels, setAudioLevels] = useState<number[]>(Array(NUM_BARS).fill(0));
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const meteringIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Reanimated values
+  const pulseScale = useSharedValue(1);
+  const screenOpacity = useSharedValue(0);
+  const [screenReady, setScreenReady] = useState(false);
+  const hasAnimated = useRef(false);
 
-  // Screen ready state for smooth fade-in
-  const { isReady: screenReady, setReady: setScreenReady, fadeAnim } = useScreenReady();
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: screenOpacity.value,
+  }));
 
   // Create a map of questionIndex -> recording for quick lookup
   const recordingMap = useMemo(() => {
@@ -93,26 +126,22 @@ export default function VoiceQuestionsScreen() {
   // Pulse animation while recording
   useEffect(() => {
     if (isRecording) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ])
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.1, { duration: 600 }),
+          withTiming(1, { duration: 600 })
+        ),
+        -1,
+        false
       );
-      pulse.start();
-      return () => pulse.stop();
     } else {
-      pulseAnim.setValue(1);
+      pulseScale.value = withTiming(1, { duration: 200 });
     }
   }, [isRecording]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
 
   // Mark screen as ready when data is loaded
   const dataReady = recordings !== undefined && initialized;
@@ -122,60 +151,62 @@ export default function VoiceQuestionsScreen() {
     }
   }, [dataReady, screenReady]);
 
-  const startRecording = async () => {
-    try {
-      // Request permissions
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) {
-        console.error("Audio permission not granted");
-        return;
-      }
+  // Fade in animation when screen is ready
+  useEffect(() => {
+    if (screenReady && !hasAnimated.current) {
+      hasAnimated.current = true;
+      SplashScreen.hideAsync();
+      screenOpacity.value = withTiming(1, { duration: 350 });
+    }
+  }, [screenReady]);
 
+  // Core recording function (separated for reuse after permission grant)
+  const beginRecording = async () => {
+    try {
       // Configure audio mode
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
 
-      // Start recording with metering enabled
+      // Start recording
       const { recording } = await Audio.Recording.createAsync(
-        {
-          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-          isMeteringEnabled: true,
-        }
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       recordingRef.current = recording;
       setIsRecording(true);
       setRecordingDuration(0);
-      setAudioLevels(Array(NUM_BARS).fill(0));
+
+      // Haptic feedback for start
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Start duration counter
       durationIntervalRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
+    } catch (err) {
+      console.error("Failed to begin recording:", err);
+    }
+  };
 
-      // Start metering for sound wave
-      meteringIntervalRef.current = setInterval(async () => {
-        if (recordingRef.current) {
-          try {
-            const status = await recordingRef.current.getStatusAsync();
-            if (status.isRecording && status.metering !== undefined) {
-              // Metering is in dB, typically -160 to 0
-              // Normalize to 0-1 range
-              const db = status.metering;
-              const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
-              
-              // Shift levels and add new one
-              setAudioLevels((prev) => {
-                const newLevels = [...prev.slice(1), normalized];
-                return newLevels;
-              });
-            }
-          } catch {
-            // Ignore errors during metering
-          }
+  const startRecording = async () => {
+    try {
+      // Check current permission status first
+      const { status: existingStatus } = await Audio.getPermissionsAsync();
+      
+      if (existingStatus === "granted") {
+        // Already have permission, start immediately
+        await beginRecording();
+      } else {
+        // Request permission
+        const { granted } = await Audio.requestPermissionsAsync();
+        if (granted) {
+          // Permission just granted, auto-start recording
+          await beginRecording();
+        } else {
+          console.error("Audio permission not granted");
         }
-      }, 100);
+      }
     } catch (err) {
       console.error("Failed to start recording:", err);
     }
@@ -184,6 +215,9 @@ export default function VoiceQuestionsScreen() {
   const stopRecording = async () => {
     if (!recordingRef.current) return;
 
+    // Haptic feedback for stop
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
       // Stop duration counter
       if (durationIntervalRef.current) {
@@ -191,15 +225,8 @@ export default function VoiceQuestionsScreen() {
         durationIntervalRef.current = null;
       }
 
-      // Stop metering
-      if (meteringIntervalRef.current) {
-        clearInterval(meteringIntervalRef.current);
-        meteringIntervalRef.current = null;
-      }
-
       setIsRecording(false);
       setSaving(true);
-      setAudioLevels(Array(NUM_BARS).fill(0));
 
       // Stop recording
       await recordingRef.current.stopAndUnloadAsync();
@@ -235,6 +262,9 @@ export default function VoiceQuestionsScreen() {
         durationSeconds: finalDuration,
       });
 
+      // Success haptic
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       setSaving(false);
     } catch (err) {
       console.error("Failed to stop recording:", err);
@@ -245,8 +275,11 @@ export default function VoiceQuestionsScreen() {
   const handleDelete = async () => {
     if (!currentUser?._id) return;
 
+    // Light haptic for delete
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     try {
-      await deleteRecording({
+      await deleteRecordingMutation({
         userId: currentUser._id,
         questionIndex: currentIndex,
       });
@@ -281,10 +314,6 @@ export default function VoiceQuestionsScreen() {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
       }
-      if (meteringIntervalRef.current) {
-        clearInterval(meteringIntervalRef.current);
-        meteringIntervalRef.current = null;
-      }
     }
     router.back();
   }, [isRecording, router]);
@@ -294,9 +323,6 @@ export default function VoiceQuestionsScreen() {
     return () => {
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
-      }
-      if (meteringIntervalRef.current) {
-        clearInterval(meteringIntervalRef.current);
       }
       if (recordingRef.current) {
         recordingRef.current.stopAndUnloadAsync();
@@ -314,7 +340,7 @@ export default function VoiceQuestionsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.flex, fadeStyle]}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.headerLeft} />
@@ -345,17 +371,12 @@ export default function VoiceQuestionsScreen() {
             {isRecording ? (
               // Recording in progress
               <View style={styles.recordingState}>
-                <Animated.View
-                  style={[
-                    styles.recordingPulse,
-                    { transform: [{ scale: pulseAnim }] },
-                  ]}
-                >
+                <Animated.View style={[styles.recordingPulse, pulseStyle]}>
                   <Pressable style={styles.stopButton} onPress={stopRecording}>
                     <IconPlayerStop size={32} color="#FFFFFF" />
                   </Pressable>
                 </Animated.View>
-                <SoundWave levels={audioLevels} />
+                <SoundWave isRecording={isRecording} />
                 <Text style={styles.recordingDuration}>
                   {formatDuration(recordingDuration)}
                 </Text>
@@ -526,7 +547,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
     height: 60,
     marginBottom: spacing.md,
   },
@@ -534,6 +555,7 @@ const styles = StyleSheet.create({
     width: 6,
     backgroundColor: colors.error,
     borderRadius: 3,
+    minHeight: 8,
   },
   recordingDuration: {
     fontSize: fontSizes["3xl"],

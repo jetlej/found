@@ -1,3 +1,4 @@
+import { DevTrigger } from "@/components/DevTrigger";
 import { api } from "@/convex/_generated/api";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -80,7 +81,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
-  const { isOnline } = useOfflineStore();
+  const { isOnline, devClerkId } = useOfflineStore();
 
   // Track if we're using cached auth for offline mode
   const [offlineAuthLoaded, setOfflineAuthLoaded] = useState(false);
@@ -128,11 +129,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [isLoaded, isSignedIn, userId]);
 
-  // Determine effective auth state (use cached when offline)
-  const effectiveIsSignedIn = isOnline
-    ? isSignedIn
-    : isSignedIn || !!cachedUserId;
-  const effectiveUserId = isOnline ? userId : userId || cachedUserId;
+  // Determine effective auth state (use cached when offline, or dev override)
+  const isDevImpersonating = __DEV__ && !!devClerkId;
+  const effectiveIsSignedIn = isDevImpersonating
+    ? true
+    : isOnline
+      ? isSignedIn
+      : isSignedIn || !!cachedUserId;
+  const effectiveUserId = isDevImpersonating
+    ? devClerkId
+    : isOnline
+      ? userId
+      : userId || cachedUserId;
 
   // Query current user from Convex (skip if offline and no network)
   const currentUser = useQuery(
@@ -167,8 +175,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Wait for auth and navigation to be ready
-    // When offline, we can proceed with cached auth
-    const authReady = isOnline ? isLoaded : isLoaded || offlineAuthLoaded;
+    // When offline or dev impersonating, we can proceed with cached/dev auth
+    const authReady = isDevImpersonating
+      ? true
+      : isOnline
+        ? isLoaded
+        : isLoaded || offlineAuthLoaded;
     if (!authReady || !navigationState?.key) return;
 
     const inAuthGroup = segments[0] === "(auth)";
@@ -232,6 +244,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     isOnline,
     offlineAuthLoaded,
     cachedUser,
+    isDevImpersonating,
   ]);
 
   // Note: We don't hide splash screen here anymore.
@@ -438,28 +451,30 @@ function RootLayoutNav() {
         <StatusBar style={updateReady ? "light" : "dark"} />
         <UpdateBanner visible={updateReady} onUpdate={applyUpdate} />
         <AuthGate>
-          <Stack
-            screenOptions={{
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="(onboarding)"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="profile"
-              options={{
-                headerShown: false,
-                presentation: "modal",
-                animation: "slide_from_bottom",
-                gestureEnabled: true,
+          <DevTrigger>
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: colors.background },
               }}
-            />
-          </Stack>
+            >
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="(onboarding)"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="profile"
+                options={{
+                  headerShown: false,
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                  gestureEnabled: true,
+                }}
+              />
+            </Stack>
+          </DevTrigger>
         </AuthGate>
       </ThemeProvider>
     </View>

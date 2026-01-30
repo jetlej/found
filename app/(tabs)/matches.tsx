@@ -1,18 +1,19 @@
 import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import {
     calculateCompatibility,
     CATEGORY_NAMES,
     type CategoryScores
 } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import {
     IconBookFilled,
     IconChevronRight,
     IconDiamondFilled,
     IconHeartFilled,
+    IconLock,
     IconLockFilled,
     IconSeedlingFilled,
     IconStarFilled,
@@ -1069,7 +1070,7 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
 }
 
 export default function MatchesScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showMyProfile, setShowMyProfile] = useState(false);
@@ -1146,10 +1147,12 @@ export default function MatchesScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <AppHeader />
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📊</Text>
-          <Text style={styles.emptyTitle}>Profile Not Ready</Text>
+          <View style={styles.emptyIconContainer}>
+            <IconLock size={48} color={colors.textMuted} />
+          </View>
+          <Text style={styles.emptyTitle}>Matches locked</Text>
           <Text style={styles.emptyText}>
-            Complete the 100 questions to see your compatibility scores.
+            Answer the 10 questions to see your matches.
           </Text>
         </View>
       </SafeAreaView>
@@ -1490,6 +1493,9 @@ const styles = StyleSheet.create({
   },
   emptyEmoji: {
     fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  emptyIconContainer: {
     marginBottom: spacing.lg,
   },
   emptyTitle: {

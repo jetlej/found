@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconBoltFilled } from "@tabler/icons-react-native";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
@@ -12,7 +12,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps) {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const router = useRouter();
 
   const currentUser = useQuery(

@@ -1,9 +1,9 @@
 import { AppHeader } from "@/components/AppHeader";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
-import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
 export default function HomeScreen() {
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
 
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));

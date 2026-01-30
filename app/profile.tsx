@@ -7,6 +7,7 @@ import {
     scheduleDailyReminder,
 } from "@/hooks/usePushNotifications";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { useOfflineStore } from "@/stores/offline";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { IconChevronRight, IconPencil } from "@tabler/icons-react-native";
@@ -31,9 +32,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
-  const { signOut, userId } = useAuth();
+  const { signOut, userId: clerkUserId } = useAuth();
   const { user } = useUser();
   const router = useRouter();
+  const { devClerkId } = useOfflineStore();
+
+  // Use dev clerkId when impersonating
+  const userId = (__DEV__ && devClerkId) ? devClerkId : clerkUserId;
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");

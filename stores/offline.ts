@@ -54,6 +54,10 @@ type OfflineState = {
   cachedUser: CachedUser | null;
   setCachedUser: (user: CachedUser | null) => void;
 
+  // Dev mode user impersonation (only used in __DEV__)
+  devClerkId: string | null;
+  setDevClerkId: (id: string | null) => void;
+
   // Clear all cached data (for logout)
   clearAllCache: () => void;
 };
@@ -69,10 +73,15 @@ export const useOfflineStore = create<OfflineState>()(
       cachedUser: null,
       setCachedUser: (user) => set({ cachedUser: user }),
 
+      // Dev mode user impersonation
+      devClerkId: null,
+      setDevClerkId: (id) => set({ devClerkId: id }),
+
       // Clear all cache
       clearAllCache: () =>
         set({
           cachedUser: null,
+          devClerkId: null,
         }),
     }),
     {

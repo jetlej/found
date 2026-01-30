@@ -1,5 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+
+const TOTAL_VOICE_QUESTIONS = 10;
 
 // Save a voice recording
 export const saveRecording = mutation({
@@ -33,6 +36,29 @@ export const saveRecording = mutation({
       durationSeconds: args.durationSeconds,
       createdAt: Date.now(),
     });
+
+    // Check if all 10 questions are now complete
+    const allRecordings = await ctx.db
+      .query("voiceRecordings")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (allRecordings.length === TOTAL_VOICE_QUESTIONS) {
+      // All 10 complete - schedule voice profile parsing
+      // This runs both on initial completion AND when updating any recording
+      await ctx.scheduler.runAfter(0, internal.actions.parseVoiceProfile.parseVoiceProfile, {
+        userId: args.userId,
+      });
+
+      // Update user's onboarding type to "voice"
+      const user = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("_id"), args.userId))
+        .first();
+      if (user && user.onboardingType !== "voice") {
+        await ctx.db.patch(user._id, { onboardingType: "voice" });
+      }
+    }
 
     return id;
   },

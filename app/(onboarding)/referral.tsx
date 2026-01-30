@@ -1,17 +1,19 @@
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
 import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
     StyleSheet,
     Text,
     TextInput,
+    TouchableWithoutFeedback,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,7 +25,7 @@ export default function ReferralScreen() {
   const [success, setSuccess] = useState("");
 
   const router = useRouter();
-  const { userId } = useAuth();
+  const userId = useEffectiveUserId();
   const applyReferralCode = useMutation(api.users.applyReferralCode);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 
@@ -68,7 +70,7 @@ export default function ReferralScreen() {
     if (userId) {
       await setOnboardingStep({ clerkId: userId, step: "basics" });
     }
-    router.replace("/(onboarding)/basics");
+    router.push("/(onboarding)/basics");
   };
 
   const handleSkip = () => {
@@ -77,61 +79,64 @@ export default function ReferralScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Pressable style={styles.backArrow} onPress={() => router.canGoBack() ? router.back() : router.replace("/")}>
+      <Pressable style={styles.backArrow} onPress={() => router.dismissAll()}>
         <IconChevronLeft size={28} color={colors.text} />
       </Pressable>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.content}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Have a referral code?</Text>
-          <Text style={styles.subtitle}>
-            If someone invited you to Found, enter their code below to help them skip the line.
-          </Text>
-        </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.inner}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Have a referral code?</Text>
+              <Text style={styles.subtitle}>
+                If someone invited you to Found, enter their code below to help them skip the line.
+              </Text>
+            </View>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, code.length > 0 && styles.inputWithText]}
-            value={code}
-            onChangeText={(text) => {
-              setCode(text.toUpperCase());
-              setError("");
-              setSuccess("");
-            }}
-            placeholder="Enter code"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={6}
-            editable={!loading && !success}
-          />
-        </View>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, code.length > 0 && styles.inputWithText]}
+                value={code}
+                onChangeText={(text) => {
+                  setCode(text.toUpperCase());
+                  setError("");
+                  setSuccess("");
+                }}
+                placeholder="Enter code"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={6}
+                editable={!loading && !success}
+              />
+            </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {success ? <Text style={styles.success}>{success}</Text> : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {success ? <Text style={styles.success}>{success}</Text> : null}
 
-        <Pressable
-          style={[
-            styles.button,
-            (loading || success || !code.trim()) && styles.buttonDisabled,
-          ]}
-          onPress={handleApply}
-          disabled={loading || !!success || !code.trim()}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? "Submitting..." : "Submit"}
-          </Text>
-        </Pressable>
+            <Pressable
+              style={styles.button}
+              onPress={handleApply}
+              disabled={loading || !!success || !code.trim()}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? "Submitting..." : "Submit"}
+              </Text>
+            </Pressable>
 
-        <Pressable
-          style={styles.skipButton}
-          onPress={handleSkip}
-          disabled={loading || !!success}
-        >
-          <Text style={styles.skipText}>I don't have a code</Text>
-        </Pressable>
+            <Text style={styles.orText}>or</Text>
+
+            <Pressable
+              style={styles.skipButton}
+              onPress={handleSkip}
+              disabled={loading || !!success}
+            >
+              <Text style={styles.skipText}>I don't have a code</Text>
+            </Pressable>
+          </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -150,6 +155,9 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   content: {
+    flex: 1,
+  },
+  inner: {
     flex: 1,
     paddingHorizontal: spacing.xl,
     justifyContent: "center",
@@ -205,21 +213,29 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: "center",
   },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
   buttonText: {
     fontSize: fontSizes.base,
     fontWeight: "600",
     color: colors.primaryText,
   },
+  buttonTextDisabled: {
+    opacity: 0.5,
+  },
+  orText: {
+    textAlign: "center",
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+    marginVertical: spacing.lg,
+  },
   skipButton: {
-    marginTop: spacing.xl,
     alignItems: "center",
+    padding: spacing.lg,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.textMuted,
   },
   skipText: {
     color: colors.textSecondary,
     fontSize: fontSizes.base,
-    textDecorationLine: "underline",
   },
 });

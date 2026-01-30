@@ -2,25 +2,25 @@ import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from "@/lib/voice-questions";
-import { IconMicrophone, IconPlayerStop, IconTrash, IconX } from "@tabler/icons-react-native";
+import {
+  IconMicrophone,
+  IconPlayerStop,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react-native";
+import { useMutation, useQuery } from "convex/react";
 import { Audio } from "expo-av";
 import * as Haptics from "expo-haptics";
-import * as SplashScreen from "expo-splash-screen";
-import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
   withRepeat,
   withSequence,
+  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -34,40 +34,37 @@ function formatDuration(seconds: number): string {
 const NUM_BARS = 7;
 
 function SoundWave({ isRecording }: { isRecording: boolean }) {
-  const bars = Array(NUM_BARS).fill(0).map((_, i) => {
-    const height = useSharedValue(8);
-    
-    useEffect(() => {
-      if (isRecording) {
-        // Each bar animates with slightly different timing for organic feel
-        const delay = i * 50;
-        const duration = 150 + Math.random() * 100;
-        
-        height.value = withRepeat(
-          withSequence(
-            withTiming(20 + Math.random() * 40, { duration }),
-            withTiming(8 + Math.random() * 15, { duration })
-          ),
-          -1,
-          true
-        );
-      } else {
-        height.value = withTiming(8, { duration: 200 });
-      }
-    }, [isRecording]);
-    
-    const animatedStyle = useAnimatedStyle(() => ({
-      height: height.value,
-    }));
-    
-    return (
-      <Animated.View
-        key={i}
-        style={[styles.soundBar, animatedStyle]}
-      />
-    );
-  });
-  
+  const bars = Array(NUM_BARS)
+    .fill(0)
+    .map((_, i) => {
+      const height = useSharedValue(8);
+
+      useEffect(() => {
+        if (isRecording) {
+          // Each bar animates with slightly different timing for organic feel
+          const delay = i * 50;
+          const duration = 150 + Math.random() * 100;
+
+          height.value = withRepeat(
+            withSequence(
+              withTiming(20 + Math.random() * 40, { duration }),
+              withTiming(8 + Math.random() * 15, { duration }),
+            ),
+            -1,
+            true,
+          );
+        } else {
+          height.value = withTiming(8, { duration: 200 });
+        }
+      }, [isRecording]);
+
+      const animatedStyle = useAnimatedStyle(() => ({
+        height: height.value,
+      }));
+
+      return <Animated.View key={i} style={[styles.soundBar, animatedStyle]} />;
+    });
+
   return <View style={styles.soundWave}>{bars}</View>;
 }
 
@@ -77,13 +74,18 @@ export default function VoiceQuestionsScreen() {
   const params = useLocalSearchParams<{ startIndex?: string }>();
   const startIndex = parseInt(params.startIndex || "0", 10);
 
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? { clerkId: userId } : "skip",
+  );
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
   const saveRecording = useMutation(api.voiceRecordings.saveRecording);
-  const deleteRecordingMutation = useMutation(api.voiceRecordings.deleteRecording);
+  const deleteRecordingMutation = useMutation(
+    api.voiceRecordings.deleteRecording,
+  );
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -94,7 +96,7 @@ export default function VoiceQuestionsScreen() {
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Reanimated values
   const pulseScale = useSharedValue(1);
   const screenOpacity = useSharedValue(0);
@@ -129,10 +131,10 @@ export default function VoiceQuestionsScreen() {
       pulseScale.value = withRepeat(
         withSequence(
           withTiming(1.1, { duration: 600 }),
-          withTiming(1, { duration: 600 })
+          withTiming(1, { duration: 600 }),
         ),
         -1,
-        false
+        false,
       );
     } else {
       pulseScale.value = withTiming(1, { duration: 200 });
@@ -171,7 +173,7 @@ export default function VoiceQuestionsScreen() {
 
       // Start recording
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
       );
       recordingRef.current = recording;
       setIsRecording(true);
@@ -193,7 +195,7 @@ export default function VoiceQuestionsScreen() {
     try {
       // Check current permission status first
       const { status: existingStatus } = await Audio.getPermissionsAsync();
-      
+
       if (existingStatus === "granted") {
         // Already have permission, start immediately
         await beginRecording();
@@ -354,7 +356,9 @@ export default function VoiceQuestionsScreen() {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${((currentIndex + 1) / TOTAL_VOICE_QUESTIONS) * 100}%` },
+                  {
+                    width: `${((currentIndex + 1) / TOTAL_VOICE_QUESTIONS) * 100}%`,
+                  },
                 ]}
               />
             </View>

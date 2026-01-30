@@ -10,9 +10,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -20,11 +20,13 @@ export default function JourneyScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const params = useLocalSearchParams<{ completed?: string }>();
-  const [justCompletedCategoryId, setJustCompletedCategoryId] = useState<string | null>(null);
+  const [justCompletedCategoryId, setJustCompletedCategoryId] = useState<
+    string | null
+  >(null);
 
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
-  
+
   useEffect(() => {
     SplashScreen.hideAsync();
     fadeOpacity.value = withTiming(1, { duration: 350 });
@@ -69,11 +71,13 @@ export default function JourneyScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   const level = currentUser?.level ?? 1;
-  const completedCategories = currentUser?.completedCategories ?? ["the_basics"];
+  const completedCategories = currentUser?.completedCategories ?? [
+    "the_basics",
+  ];
 
   // Find the current (next uncompleted) category
   const currentCategory = useMemo(() => {
@@ -89,19 +93,23 @@ export default function JourneyScreen() {
           questionOrderStart: currentCategory.questionRange[0],
           questionOrderEnd: currentCategory.questionRange[1],
         }
-      : "skip"
+      : "skip",
   );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
-        <AppHeader showLevelLink={false} onLogoPress={__DEV__ ? handleResetJourney : undefined} />
+        <AppHeader
+          showLevelLink={false}
+          onLogoPress={__DEV__ ? handleResetJourney : undefined}
+        />
         <View style={styles.description}>
           <Text style={styles.descriptionText}>
-            The more questions you answer, the higher your level, and the more compatibility scores you unlock.
+            The more questions you answer, the higher your level, and the more
+            compatibility scores you unlock.
           </Text>
         </View>
-        <JourneyPath 
+        <JourneyPath
           completedCategories={completedCategories}
           currentLevel={level}
           currentCategoryAnsweredCount={currentCategoryAnsweredCount ?? 0}

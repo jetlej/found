@@ -9,13 +9,13 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,11 +25,14 @@ export default function QuestionsScreen() {
   const params = useLocalSearchParams<{ categoryId?: string }>();
   const categoryId = params.categoryId as CategoryId | undefined;
 
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? { clerkId: userId } : "skip",
+  );
   const questions = useQuery(api.questions.getAll);
   const userAnswers = useQuery(
     api.answers.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
   const upsertAnswer = useMutation(api.answers.upsert);
   const completeCategory = useMutation(api.users.completeCategory);
@@ -41,7 +44,11 @@ export default function QuestionsScreen() {
   const [initialized, setInitialized] = useState(false);
 
   // Screen ready state for smooth fade-in from splash
-  const { isReady: screenReady, setReady: setScreenReady, fadeAnim } = useScreenReady();
+  const {
+    isReady: screenReady,
+    setReady: setScreenReady,
+    fadeAnim,
+  } = useScreenReady();
 
   // Get category info
   const category = categoryId ? getCategoryById(categoryId) : undefined;
@@ -68,10 +75,10 @@ export default function QuestionsScreen() {
       }
       setAnswers(existingAnswers);
       setDealbreakers(existingDealbreakers);
-      
+
       // Find first unanswered question in this category
       const firstUnansweredIndex = categoryQuestions.findIndex(
-        (q) => !existingAnswers[q._id]
+        (q) => !existingAnswers[q._id],
       );
       if (firstUnansweredIndex !== -1) {
         setCurrentIndex(firstUnansweredIndex);
@@ -79,14 +86,20 @@ export default function QuestionsScreen() {
         // If all answered, jump to the last question
         setCurrentIndex(categoryQuestions.length - 1);
       }
-      
+
       setInitialized(true);
     }
   }, [userAnswers, categoryQuestions, initialized]);
 
-  const currentQuestion = categoryQuestions[currentIndex] as Question | undefined;
-  const currentAnswer = currentQuestion ? answers[currentQuestion._id] || "" : "";
-  const currentDealbreaker = currentQuestion ? dealbreakers[currentQuestion._id] : undefined;
+  const currentQuestion = categoryQuestions[currentIndex] as
+    | Question
+    | undefined;
+  const currentAnswer = currentQuestion
+    ? answers[currentQuestion._id] || ""
+    : "";
+  const currentDealbreaker = currentQuestion
+    ? dealbreakers[currentQuestion._id]
+    : undefined;
   const totalQuestions = categoryQuestions.length;
   const isLastQuestion = currentIndex === totalQuestions - 1;
 
@@ -103,21 +116,27 @@ export default function QuestionsScreen() {
     }
   }, [currentQuestion?._id, currentQuestion?.type]);
 
-  const handleAnswerChange = useCallback((value: string) => {
-    if (!currentQuestion) return;
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion._id]: value,
-    }));
-  }, [currentQuestion]);
+  const handleAnswerChange = useCallback(
+    (value: string) => {
+      if (!currentQuestion) return;
+      setAnswers((prev) => ({
+        ...prev,
+        [currentQuestion._id]: value,
+      }));
+    },
+    [currentQuestion],
+  );
 
-  const handleDealbreakerChange = useCallback((isDealbreaker: boolean) => {
-    if (!currentQuestion) return;
-    setDealbreakers((prev) => ({
-      ...prev,
-      [currentQuestion._id]: isDealbreaker,
-    }));
-  }, [currentQuestion]);
+  const handleDealbreakerChange = useCallback(
+    (isDealbreaker: boolean) => {
+      if (!currentQuestion) return;
+      setDealbreakers((prev) => ({
+        ...prev,
+        [currentQuestion._id]: isDealbreaker,
+      }));
+    },
+    [currentQuestion],
+  );
 
   const saveCurrentAnswer = async () => {
     if (!currentUser?._id || !currentQuestion || !currentAnswer) return;
@@ -139,7 +158,7 @@ export default function QuestionsScreen() {
 
   const finishCategory = async () => {
     if (!userId || !categoryId) return;
-    
+
     try {
       await completeCategory({ clerkId: userId, categoryId });
       // Navigate back to journey tab with completed category for animation
@@ -175,7 +194,8 @@ export default function QuestionsScreen() {
   const canProceed = currentAnswer.trim().length > 0;
 
   // Mark screen as ready when data is loaded
-  const dataReady = questions && questions.length > 0 && initialized && category;
+  const dataReady =
+    questions && questions.length > 0 && initialized && category;
   useEffect(() => {
     if (dataReady && !screenReady) {
       setScreenReady(true);
@@ -216,9 +236,18 @@ export default function QuestionsScreen() {
             </View>
             <View style={styles.progressRow}>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${((currentIndex + 1) / totalQuestions) * 100}%` }]} />
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${((currentIndex + 1) / totalQuestions) * 100}%`,
+                    },
+                  ]}
+                />
               </View>
-              <Text style={styles.progressText}>{currentIndex + 1}/{totalQuestions}</Text>
+              <Text style={styles.progressText}>
+                {currentIndex + 1}/{totalQuestions}
+              </Text>
             </View>
           </View>
 
@@ -250,11 +279,7 @@ export default function QuestionsScreen() {
                 disabled={!canProceed || saving}
               >
                 <Text style={styles.nextButtonText}>
-                  {saving
-                    ? "Saving..."
-                    : isLastQuestion
-                      ? "Complete"
-                      : "Next"}
+                  {saving ? "Saving..." : isLastQuestion ? "Complete" : "Next"}
                 </Text>
               </Pressable>
             </View>

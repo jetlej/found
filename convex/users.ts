@@ -9,15 +9,30 @@ export const getOrCreate = mutation({
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
+    // First check by clerkId
+    const existingByClerk = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
-    if (existing) {
-      return existing._id;
+    if (existingByClerk) {
+      return existingByClerk._id;
     }
 
+    // Then check by phone - link existing user to new clerkId
+    // This handles the case where Clerk generates a different ID on a different device
+    const existingByPhone = await ctx.db
+      .query("users")
+      .withIndex("by_phone", (q) => q.eq("phone", args.phone))
+      .first();
+
+    if (existingByPhone) {
+      // Update the existing user with the new clerkId
+      await ctx.db.patch(existingByPhone._id, { clerkId: args.clerkId });
+      return existingByPhone._id;
+    }
+
+    // No existing user - create new
     return await ctx.db.insert("users", {
       clerkId: args.clerkId,
       phone: args.phone,
@@ -465,5 +480,61 @@ export const createDevTestUser = mutation({
         .padStart(7, "0")}`,
     });
     return clerkId;
+  },
+});
+
+// Delete user and all related data (for dev/testing)
+export const deleteUserByPhone = mutation({
+  args: { phone: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_phone", (q) => q.eq("phone", args.phone))
+      .first();
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Delete related photos
+    const photos = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const photo of photos) {
+      await ctx.db.delete(photo._id);
+    }
+
+    // Delete related voice recordings
+    const recordings = await ctx.db
+      .query("voiceRecordings")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const recording of recordings) {
+      await ctx.db.delete(recording._id);
+    }
+
+    // Delete related answers
+    const answers = await ctx.db
+      .query("answers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const answer of answers) {
+      await ctx.db.delete(answer._id);
+    }
+
+    // Delete user profile
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    if (profile) {
+      await ctx.db.delete(profile._id);
+    }
+
+    // Delete the user
+    await ctx.db.delete(user._id);
+
+    return { success: true, deletedUserId: user._id };
   },
 });

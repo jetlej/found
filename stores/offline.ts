@@ -34,7 +34,7 @@ try {
     },
   };
   console.warn(
-    "[Storage] MMKV not available, using in-memory storage (no persistence)"
+    "[Storage] MMKV not available, using in-memory storage (no persistence)",
   );
 }
 
@@ -87,6 +87,6 @@ export const useOfflineStore = create<OfflineState>()(
     {
       name: "app-offline",
       storage: createJSONStorage(() => mmkvStorage),
-    }
-  )
+    },
+  ),
 );

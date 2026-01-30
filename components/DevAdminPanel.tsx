@@ -27,13 +27,13 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
   // Search users
   const users = useQuery(
     api.users.searchUsers,
-    searchQuery.length > 0 ? { query: searchQuery } : "skip"
+    searchQuery.length > 0 ? { query: searchQuery } : "skip",
   );
 
   // Get current impersonated user details
   const impersonatedUser = useQuery(
     api.users.current,
-    devClerkId ? { clerkId: devClerkId } : "skip"
+    devClerkId ? { clerkId: devClerkId } : "skip",
   );
 
   const createDevTestUser = useMutation(api.users.createDevTestUser);
@@ -117,7 +117,10 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
                   {user.name || "Unnamed User"}
                 </Text>
                 <Text style={styles.userMeta}>
-                  {user.phone} · {user.onboardingComplete ? `Lvl ${user.level ?? 1}` : "Not started"}
+                  {user.phone} ·{" "}
+                  {user.onboardingComplete
+                    ? `Lvl ${user.level ?? 1}`
+                    : "Not started"}
                 </Text>
               </View>
               {user.clerkId === devClerkId && (

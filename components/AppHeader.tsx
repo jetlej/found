@@ -11,22 +11,25 @@ interface AppHeaderProps {
   onLogoPress?: () => void;
 }
 
-export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps) {
+export function AppHeader({
+  showLevelLink = true,
+  onLogoPress,
+}: AppHeaderProps) {
   const userId = useEffectiveUserId();
   const router = useRouter();
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
-  const firstPhotoUrl = userPhotos
-    ?.sort((a, b) => a.order - b.order)[0]?.url || null;
+  const firstPhotoUrl =
+    userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   const level = Math.max(1, currentUser?.completedCategories?.length ?? 0);
 

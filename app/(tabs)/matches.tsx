@@ -3,40 +3,43 @@ import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import {
-    calculateCompatibility,
-    CATEGORY_NAMES,
-    type CategoryScores
+  calculateCompatibility,
+  CATEGORY_NAMES,
+  type CategoryScores,
 } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
-    IconBookFilled,
-    IconChevronRight,
-    IconDiamondFilled,
-    IconHeartFilled,
-    IconLock,
-    IconLockFilled,
-    IconSeedlingFilled,
-    IconStarFilled,
-    IconUserFilled,
-    IconX,
+  IconBookFilled,
+  IconChevronRight,
+  IconDiamondFilled,
+  IconHeartFilled,
+  IconLock,
+  IconLockFilled,
+  IconSeedlingFilled,
+  IconStarFilled,
+  IconUserFilled,
+  IconX,
 } from "@tabler/icons-react-native";
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Category icons (filled versions)
-const CATEGORY_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
+const CATEGORY_ICONS: Record<
+  string,
+  React.ComponentType<{ size: number; color: string }>
+> = {
   the_basics: IconUserFilled,
   who_you_are: IconDiamondFilled,
   relationship_style: IconHeartFilled,
@@ -63,55 +66,76 @@ type UserProfile = Doc<"userProfiles">;
 // Keywords that map to profile traits/values
 const KEYWORD_MAPPINGS: Record<string, (profile: UserProfile) => boolean> = {
   // Family/Kids related
-  "wants kids": (p) => p.familyPlans.wantsKids === "yes" || p.familyPlans.wantsKids === "open",
+  "wants kids": (p) =>
+    p.familyPlans.wantsKids === "yes" || p.familyPlans.wantsKids === "open",
   "doesn't want kids": (p) => p.familyPlans.wantsKids === "no",
   "has kids": (p) => p.demographics?.hasKids === true,
   "no kids": (p) => p.demographics?.hasKids !== true,
   "family-oriented": (p) => p.familyPlans.familyCloseness >= 7,
-  
+
   // Personality traits
-  "ambitious": (p) => p.traits.ambition >= 7,
-  "driven": (p) => p.traits.ambition >= 7,
-  "adventurous": (p) => p.traits.adventurousness >= 7,
-  "spontaneous": (p) => (p.traits.planningStyle ?? 5) <= 4,
+  ambitious: (p) => p.traits.ambition >= 7,
+  driven: (p) => p.traits.ambition >= 7,
+  adventurous: (p) => p.traits.adventurousness >= 7,
+  spontaneous: (p) => (p.traits.planningStyle ?? 5) <= 4,
   "emotionally available": (p) => p.traits.emotionalOpenness >= 6,
   "emotionally open": (p) => p.traits.emotionalOpenness >= 6,
-  "independent": (p) => p.traits.independenceNeed >= 7,
-  "traditional": (p) => p.traits.traditionalValues >= 7,
-  "progressive": (p) => p.traits.traditionalValues <= 4,
-  "romantic": (p) => (p.traits.romanticStyle ?? 5) >= 7,
-  "introverted": (p) => p.traits.introversion >= 7,
-  "extroverted": (p) => p.traits.introversion <= 4,
-  "social": (p) => (p.traits.socialEnergy ?? 5) >= 6,
-  "homebody": (p) => (p.traits.socialEnergy ?? 5) <= 4,
-  "secure attachment": (p) => (p.traits.attachmentStyle ?? 5) >= 4 && (p.traits.attachmentStyle ?? 5) <= 6,
-  
+  independent: (p) => p.traits.independenceNeed >= 7,
+  traditional: (p) => p.traits.traditionalValues >= 7,
+  progressive: (p) => p.traits.traditionalValues <= 4,
+  romantic: (p) => (p.traits.romanticStyle ?? 5) >= 7,
+  introverted: (p) => p.traits.introversion >= 7,
+  extroverted: (p) => p.traits.introversion <= 4,
+  social: (p) => (p.traits.socialEnergy ?? 5) >= 6,
+  homebody: (p) => (p.traits.socialEnergy ?? 5) <= 4,
+  "secure attachment": (p) =>
+    (p.traits.attachmentStyle ?? 5) >= 4 &&
+    (p.traits.attachmentStyle ?? 5) <= 6,
+
   // Lifestyle
-  "active": (p) => p.lifestyle.exerciseLevel.toLowerCase().includes("daily") || p.lifestyle.exerciseLevel.toLowerCase().includes("5+"),
-  "fit": (p) => p.lifestyle.exerciseLevel.toLowerCase().includes("daily") || p.lifestyle.exerciseLevel.toLowerCase().includes("5+"),
-  "healthy": (p) => (p.health?.physicalHealthRating ?? 5) >= 7,
-  "non-smoker": (p) => p.health?.smokingStatus?.toLowerCase() === "never" || p.health?.smokingStatus?.toLowerCase() === "no",
-  "doesn't smoke": (p) => p.health?.smokingStatus?.toLowerCase() === "never" || p.health?.smokingStatus?.toLowerCase() === "no",
+  active: (p) =>
+    p.lifestyle.exerciseLevel.toLowerCase().includes("daily") ||
+    p.lifestyle.exerciseLevel.toLowerCase().includes("5+"),
+  fit: (p) =>
+    p.lifestyle.exerciseLevel.toLowerCase().includes("daily") ||
+    p.lifestyle.exerciseLevel.toLowerCase().includes("5+"),
+  healthy: (p) => (p.health?.physicalHealthRating ?? 5) >= 7,
+  "non-smoker": (p) =>
+    p.health?.smokingStatus?.toLowerCase() === "never" ||
+    p.health?.smokingStatus?.toLowerCase() === "no",
+  "doesn't smoke": (p) =>
+    p.health?.smokingStatus?.toLowerCase() === "never" ||
+    p.health?.smokingStatus?.toLowerCase() === "no",
   "doesn't drink": (p) => p.lifestyle.alcoholUse.toLowerCase() === "never",
-  "drinks socially": (p) => p.lifestyle.alcoholUse.toLowerCase().includes("social") || p.lifestyle.alcoholUse.toLowerCase().includes("occasionally"),
+  "drinks socially": (p) =>
+    p.lifestyle.alcoholUse.toLowerCase().includes("social") ||
+    p.lifestyle.alcoholUse.toLowerCase().includes("occasionally"),
   "no drugs": (p) => p.lifestyle.drugUse.toLowerCase() === "never",
-  "early bird": (p) => p.lifestyle.sleepSchedule.toLowerCase().includes("early"),
-  "night owl": (p) => p.lifestyle.sleepSchedule.toLowerCase().includes("late") || p.lifestyle.sleepSchedule.toLowerCase().includes("night"),
+  "early bird": (p) =>
+    p.lifestyle.sleepSchedule.toLowerCase().includes("early"),
+  "night owl": (p) =>
+    p.lifestyle.sleepSchedule.toLowerCase().includes("late") ||
+    p.lifestyle.sleepSchedule.toLowerCase().includes("night"),
   "dog person": (p) => p.lifestyle.petPreference.toLowerCase().includes("dog"),
   "cat person": (p) => p.lifestyle.petPreference.toLowerCase().includes("cat"),
-  "pet-friendly": (p) => !p.lifestyle.petPreference.toLowerCase().includes("no pet"),
-  
+  "pet-friendly": (p) =>
+    !p.lifestyle.petPreference.toLowerCase().includes("no pet"),
+
   // Relationship style
   "good communicator": (p) => (p.traits.communicationStyle ?? 5) >= 6,
-  "quality time": (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("quality time"),
-  "physical touch": (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("physical"),
-  "words of affirmation": (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("words"),
-  "acts of service": (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("acts"),
-  "gifts": (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("gift"),
-  
+  "quality time": (p) =>
+    p.relationshipStyle.loveLanguage.toLowerCase().includes("quality time"),
+  "physical touch": (p) =>
+    p.relationshipStyle.loveLanguage.toLowerCase().includes("physical"),
+  "words of affirmation": (p) =>
+    p.relationshipStyle.loveLanguage.toLowerCase().includes("words"),
+  "acts of service": (p) =>
+    p.relationshipStyle.loveLanguage.toLowerCase().includes("acts"),
+  gifts: (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("gift"),
+
   // Demographics
-  "religious": (p) => (p.demographics?.religiosity ?? 0) >= 6,
-  "spiritual": (p) => (p.demographics?.religiosity ?? 0) >= 4,
+  religious: (p) => (p.demographics?.religiosity ?? 0) >= 6,
+  spiritual: (p) => (p.demographics?.religiosity ?? 0) >= 4,
   "not religious": (p) => (p.demographics?.religiosity ?? 0) <= 3,
   "politically active": (p) => (p.demographics?.politicalIntensity ?? 0) >= 6,
 };
@@ -125,43 +149,53 @@ type MustHaveResult = {
 
 function checkMustHaves(
   mustHaves: string[],
-  targetProfile: UserProfile
+  targetProfile: UserProfile,
 ): MustHaveResult[] {
   return mustHaves.map((mustHave) => {
     const lowerMustHave = mustHave.toLowerCase();
-    
+
     // Check direct keyword mappings
     for (const [keyword, checker] of Object.entries(KEYWORD_MAPPINGS)) {
       if (lowerMustHave.includes(keyword)) {
         const met = checker(targetProfile);
-        return { mustHave, met, reason: met ? "Profile matches" : "Profile doesn't match" };
+        return {
+          mustHave,
+          met,
+          reason: met ? "Profile matches" : "Profile doesn't match",
+        };
       }
     }
-    
+
     // Check against values array
-    const matchesValue = targetProfile.values.some(v => 
-      v.toLowerCase().includes(lowerMustHave) || lowerMustHave.includes(v.toLowerCase())
+    const matchesValue = targetProfile.values.some(
+      (v) =>
+        v.toLowerCase().includes(lowerMustHave) ||
+        lowerMustHave.includes(v.toLowerCase()),
     );
     if (matchesValue) {
       return { mustHave, met: true, reason: "Matches their values" };
     }
-    
+
     // Check against interests array
-    const matchesInterest = targetProfile.interests.some(i => 
-      i.toLowerCase().includes(lowerMustHave) || lowerMustHave.includes(i.toLowerCase())
+    const matchesInterest = targetProfile.interests.some(
+      (i) =>
+        i.toLowerCase().includes(lowerMustHave) ||
+        lowerMustHave.includes(i.toLowerCase()),
     );
     if (matchesInterest) {
       return { mustHave, met: true, reason: "Matches their interests" };
     }
-    
+
     // Check against keywords
-    const matchesKeyword = targetProfile.keywords.some(k => 
-      k.toLowerCase().includes(lowerMustHave) || lowerMustHave.includes(k.toLowerCase())
+    const matchesKeyword = targetProfile.keywords.some(
+      (k) =>
+        k.toLowerCase().includes(lowerMustHave) ||
+        lowerMustHave.includes(k.toLowerCase()),
     );
     if (matchesKeyword) {
       return { mustHave, met: true, reason: "Found in profile" };
     }
-    
+
     // Can't determine - mark as unknown (neutral)
     return { mustHave, met: true, reason: "Unable to verify" };
   });
@@ -176,77 +210,155 @@ type DealbreakeResult = {
 };
 
 // Specific dealbreaker checks
-const DEALBREAKER_CHECKS: Record<string, (profile: UserProfile) => { triggered: boolean; severity: "clear" | "warning" | "triggered"; reason: string }> = {
+const DEALBREAKER_CHECKS: Record<
+  string,
+  (profile: UserProfile) => {
+    triggered: boolean;
+    severity: "clear" | "warning" | "triggered";
+    reason: string;
+  }
+> = {
   // Substance-related
-  "smoking": (p) => {
+  smoking: (p) => {
     const status = p.health?.smokingStatus?.toLowerCase() || "";
-    if (status === "never" || status === "no") return { triggered: false, severity: "clear", reason: "They don't smoke" };
-    if (status.includes("quit") || status.includes("former")) return { triggered: false, severity: "warning", reason: "Former smoker" };
+    if (status === "never" || status === "no")
+      return {
+        triggered: false,
+        severity: "clear",
+        reason: "They don't smoke",
+      };
+    if (status.includes("quit") || status.includes("former"))
+      return { triggered: false, severity: "warning", reason: "Former smoker" };
     return { triggered: true, severity: "triggered", reason: "They smoke" };
   },
-  "drugs": (p) => {
+  drugs: (p) => {
     const usage = p.lifestyle.drugUse.toLowerCase();
-    if (usage === "never") return { triggered: false, severity: "clear", reason: "No drug use" };
-    if (usage.includes("rarely") || usage.includes("occasionally")) return { triggered: false, severity: "warning", reason: "Occasional use" };
+    if (usage === "never")
+      return { triggered: false, severity: "clear", reason: "No drug use" };
+    if (usage.includes("rarely") || usage.includes("occasionally"))
+      return {
+        triggered: false,
+        severity: "warning",
+        reason: "Occasional use",
+      };
     return { triggered: true, severity: "triggered", reason: "Uses drugs" };
   },
   "heavy drinking": (p) => {
     const usage = p.lifestyle.alcoholUse.toLowerCase();
-    if (usage === "never" || usage.includes("rarely") || usage.includes("social")) return { triggered: false, severity: "clear", reason: "Light/no drinking" };
-    if (usage.includes("weekly") || usage.includes("moderate")) return { triggered: false, severity: "warning", reason: "Moderate drinking" };
+    if (
+      usage === "never" ||
+      usage.includes("rarely") ||
+      usage.includes("social")
+    )
+      return {
+        triggered: false,
+        severity: "clear",
+        reason: "Light/no drinking",
+      };
+    if (usage.includes("weekly") || usage.includes("moderate"))
+      return {
+        triggered: false,
+        severity: "warning",
+        reason: "Moderate drinking",
+      };
     return { triggered: true, severity: "triggered", reason: "Heavy drinker" };
   },
-  "alcohol": (p) => {
+  alcohol: (p) => {
     const usage = p.lifestyle.alcoholUse.toLowerCase();
-    if (usage === "never") return { triggered: false, severity: "clear", reason: "Doesn't drink" };
+    if (usage === "never")
+      return { triggered: false, severity: "clear", reason: "Doesn't drink" };
     return { triggered: true, severity: "triggered", reason: "Drinks alcohol" };
   },
-  
+
   // Family
   "wants kids": (p) => {
-    if (p.familyPlans.wantsKids === "no") return { triggered: false, severity: "clear", reason: "Doesn't want kids" };
-    if (p.familyPlans.wantsKids === "maybe" || p.familyPlans.wantsKids === "open") return { triggered: false, severity: "warning", reason: "Open to kids" };
+    if (p.familyPlans.wantsKids === "no")
+      return {
+        triggered: false,
+        severity: "clear",
+        reason: "Doesn't want kids",
+      };
+    if (
+      p.familyPlans.wantsKids === "maybe" ||
+      p.familyPlans.wantsKids === "open"
+    )
+      return { triggered: false, severity: "warning", reason: "Open to kids" };
     return { triggered: true, severity: "triggered", reason: "Wants kids" };
   },
   "doesn't want kids": (p) => {
-    if (p.familyPlans.wantsKids === "yes") return { triggered: false, severity: "clear", reason: "Wants kids" };
-    if (p.familyPlans.wantsKids === "maybe" || p.familyPlans.wantsKids === "open") return { triggered: false, severity: "warning", reason: "Undecided" };
-    return { triggered: true, severity: "triggered", reason: "Doesn't want kids" };
+    if (p.familyPlans.wantsKids === "yes")
+      return { triggered: false, severity: "clear", reason: "Wants kids" };
+    if (
+      p.familyPlans.wantsKids === "maybe" ||
+      p.familyPlans.wantsKids === "open"
+    )
+      return { triggered: false, severity: "warning", reason: "Undecided" };
+    return {
+      triggered: true,
+      severity: "triggered",
+      reason: "Doesn't want kids",
+    };
   },
   "has kids": (p) => {
-    if (!p.demographics?.hasKids) return { triggered: false, severity: "clear", reason: "No kids" };
+    if (!p.demographics?.hasKids)
+      return { triggered: false, severity: "clear", reason: "No kids" };
     return { triggered: true, severity: "triggered", reason: "Has kids" };
   },
-  
+
   // Religion/Politics
-  "religious": (p) => {
-    if ((p.demographics?.religiosity ?? 0) <= 3) return { triggered: false, severity: "clear", reason: "Not religious" };
-    if ((p.demographics?.religiosity ?? 0) <= 5) return { triggered: false, severity: "warning", reason: "Somewhat spiritual" };
+  religious: (p) => {
+    if ((p.demographics?.religiosity ?? 0) <= 3)
+      return { triggered: false, severity: "clear", reason: "Not religious" };
+    if ((p.demographics?.religiosity ?? 0) <= 5)
+      return {
+        triggered: false,
+        severity: "warning",
+        reason: "Somewhat spiritual",
+      };
     return { triggered: true, severity: "triggered", reason: "Religious" };
   },
   "not religious": (p) => {
-    if ((p.demographics?.religiosity ?? 0) >= 6) return { triggered: false, severity: "clear", reason: "Religious" };
+    if ((p.demographics?.religiosity ?? 0) >= 6)
+      return { triggered: false, severity: "clear", reason: "Religious" };
     return { triggered: true, severity: "triggered", reason: "Not religious" };
   },
-  
+
   // Personality extremes
   "too introverted": (p) => {
-    if (p.traits.introversion <= 7) return { triggered: false, severity: "clear", reason: "Balanced social style" };
-    return { triggered: true, severity: "triggered", reason: "Very introverted" };
+    if (p.traits.introversion <= 7)
+      return {
+        triggered: false,
+        severity: "clear",
+        reason: "Balanced social style",
+      };
+    return {
+      triggered: true,
+      severity: "triggered",
+      reason: "Very introverted",
+    };
   },
   "too extroverted": (p) => {
-    if (p.traits.introversion >= 3) return { triggered: false, severity: "clear", reason: "Balanced social style" };
-    return { triggered: true, severity: "triggered", reason: "Very extroverted" };
+    if (p.traits.introversion >= 3)
+      return {
+        triggered: false,
+        severity: "clear",
+        reason: "Balanced social style",
+      };
+    return {
+      triggered: true,
+      severity: "triggered",
+      reason: "Very extroverted",
+    };
   },
 };
 
 function checkDealbreakers(
   dealbreakers: string[],
-  targetProfile: UserProfile
+  targetProfile: UserProfile,
 ): DealbreakeResult[] {
   return dealbreakers.map((dealbreaker) => {
     const lowerDealbreaker = dealbreaker.toLowerCase();
-    
+
     // Check specific dealbreaker handlers
     for (const [keyword, checker] of Object.entries(DEALBREAKER_CHECKS)) {
       if (lowerDealbreaker.includes(keyword)) {
@@ -254,25 +366,40 @@ function checkDealbreakers(
         return { dealbreaker, ...result };
       }
     }
-    
+
     // Check if dealbreaker appears in their dealbreakers (compatible if different)
-    const theyHaveToo = targetProfile.dealbreakers.some(d => 
-      d.toLowerCase().includes(lowerDealbreaker)
+    const theyHaveToo = targetProfile.dealbreakers.some((d) =>
+      d.toLowerCase().includes(lowerDealbreaker),
     );
     if (theyHaveToo) {
-      return { dealbreaker, triggered: false, severity: "clear" as const, reason: "They share this dealbreaker" };
+      return {
+        dealbreaker,
+        triggered: false,
+        severity: "clear" as const,
+        reason: "They share this dealbreaker",
+      };
     }
-    
+
     // Check against their values/interests (if matches, it's a problem)
-    const inTheirValues = targetProfile.values.some(v => 
-      lowerDealbreaker.includes(v.toLowerCase())
+    const inTheirValues = targetProfile.values.some((v) =>
+      lowerDealbreaker.includes(v.toLowerCase()),
     );
     if (inTheirValues) {
-      return { dealbreaker, triggered: true, severity: "triggered" as const, reason: "Part of their core values" };
+      return {
+        dealbreaker,
+        triggered: true,
+        severity: "triggered" as const,
+        reason: "Part of their core values",
+      };
     }
-    
+
     // Default to clear if we can't determine
-    return { dealbreaker, triggered: false, severity: "clear" as const, reason: "No conflict detected" };
+    return {
+      dealbreaker,
+      triggered: false,
+      severity: "clear" as const,
+      reason: "No conflict detected",
+    };
   });
 }
 
@@ -280,42 +407,48 @@ function checkDealbreakers(
 function getFrictionPoints(
   p1: UserProfile,
   p2: UserProfile,
-  categoryScores: CategoryScores
+  categoryScores: CategoryScores,
 ): string[] {
   const frictions: string[] = [];
-  
+
   // Check for low scores in each category
   if (categoryScores.theBasics < 60) {
     frictions.push("Some preference mismatches in basics");
   }
-  
+
   if (categoryScores.whoYouAre < 50) {
     frictions.push("Different personality traits or values");
   }
-  
+
   if (categoryScores.relationshipStyle < 60) {
-    if (p1.relationshipStyle.conflictStyle !== p2.relationshipStyle.conflictStyle) {
-      frictions.push(`Different conflict styles (${p1.relationshipStyle.conflictStyle} vs ${p2.relationshipStyle.conflictStyle})`);
+    if (
+      p1.relationshipStyle.conflictStyle !== p2.relationshipStyle.conflictStyle
+    ) {
+      frictions.push(
+        `Different conflict styles (${p1.relationshipStyle.conflictStyle} vs ${p2.relationshipStyle.conflictStyle})`,
+      );
     }
   }
-  
+
   if (categoryScores.lifestyle < 60) {
     if (p1.lifestyle.sleepSchedule !== p2.lifestyle.sleepSchedule) {
-      frictions.push(`Different sleep schedules (${p1.lifestyle.sleepSchedule} vs ${p2.lifestyle.sleepSchedule})`);
+      frictions.push(
+        `Different sleep schedules (${p1.lifestyle.sleepSchedule} vs ${p2.lifestyle.sleepSchedule})`,
+      );
     }
   }
-  
+
   if (categoryScores.lifeFuture < 60) {
     if (p1.familyPlans.wantsKids !== p2.familyPlans.wantsKids) {
       frictions.push("Different views on having kids");
     }
   }
-  
+
   // Independence mismatch
   if (Math.abs(p1.traits.independenceNeed - p2.traits.independenceNeed) >= 4) {
     frictions.push("Different needs for independence/togetherness");
   }
-  
+
   return frictions.slice(0, 4); // Limit to 4 friction points
 }
 
@@ -334,28 +467,81 @@ function getScoreColor(score: number): string {
 // Trait label helper
 // Convention: LEFT = conservative/structured/reserved, RIGHT = liberal/open/spontaneous
 // "inverted" means the database value is backwards from our display convention
-function getTraitLabel(trait: string): { name: string; low: string; high: string; inverted?: boolean } {
-  const labels: Record<string, { name: string; low: string; high: string; inverted?: boolean }> = {
+function getTraitLabel(trait: string): {
+  name: string;
+  low: string;
+  high: string;
+  inverted?: boolean;
+} {
+  const labels: Record<
+    string,
+    { name: string; low: string; high: string; inverted?: boolean }
+  > = {
     // Inverted: DB has 1=extrovert, 10=introvert, but we want introvert on LEFT
-    introversion: { name: "Social Style", low: "Introvert", high: "Extrovert", inverted: true },
-    adventurousness: { name: "Adventure", low: "Routine-lover", high: "Thrill-seeker" },
+    introversion: {
+      name: "Social Style",
+      low: "Introvert",
+      high: "Extrovert",
+      inverted: true,
+    },
+    adventurousness: {
+      name: "Adventure",
+      low: "Routine-lover",
+      high: "Thrill-seeker",
+    },
     ambition: { name: "Ambition", low: "Content", high: "Driven" },
-    emotionalOpenness: { name: "Emotional Openness", low: "Private", high: "Open book" },
+    emotionalOpenness: {
+      name: "Emotional Openness",
+      low: "Private",
+      high: "Open book",
+    },
     // Inverted: DB has 1=progressive, 10=traditional, but we want traditional on LEFT
-    traditionalValues: { name: "Values", low: "Traditional", high: "Progressive", inverted: true },
-    independenceNeed: { name: "Independence", low: "Together", high: "Space needed" },
-    romanticStyle: { name: "Romance Style", low: "Practical", high: "Deeply romantic" },
-    socialEnergy: { name: "Social Energy", low: "Homebody", high: "Social butterfly" },
-    communicationStyle: { name: "Communication", low: "Reserved", high: "Expressive" },
+    traditionalValues: {
+      name: "Values",
+      low: "Traditional",
+      high: "Progressive",
+      inverted: true,
+    },
+    independenceNeed: {
+      name: "Independence",
+      low: "Together",
+      high: "Space needed",
+    },
+    romanticStyle: {
+      name: "Romance Style",
+      low: "Practical",
+      high: "Deeply romantic",
+    },
+    socialEnergy: {
+      name: "Social Energy",
+      low: "Homebody",
+      high: "Social butterfly",
+    },
+    communicationStyle: {
+      name: "Communication",
+      low: "Reserved",
+      high: "Expressive",
+    },
     attachmentStyle: { name: "Attachment", low: "Avoidant", high: "Anxious" },
     // Inverted: DB has 1=spontaneous, 10=structured, but we want structured on LEFT
-    planningStyle: { name: "Planning", low: "Structured", high: "Spontaneous", inverted: true },
+    planningStyle: {
+      name: "Planning",
+      low: "Structured",
+      high: "Spontaneous",
+      inverted: true,
+    },
   };
   return labels[trait] || { name: trait, low: "Low", high: "High" };
 }
 
 // Profile detail section component
-function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
+function ProfileSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.profileSection}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -365,34 +551,34 @@ function ProfileSection({ title, children }: { title: string; children: React.Re
 }
 
 // Must-Haves Section Component
-function MustHavesSection({ 
-  myProfile, 
-  theirProfile, 
-  myName, 
-  theirName 
-}: { 
-  myProfile: UserProfile; 
-  theirProfile: UserProfile; 
-  myName: string; 
+function MustHavesSection({
+  myProfile,
+  theirProfile,
+  myName,
+  theirName,
+}: {
+  myProfile: UserProfile;
+  theirProfile: UserProfile;
+  myName: string;
   theirName: string;
 }) {
   const myMustHaves = myProfile.partnerPreferences?.mustHaves || [];
   const theirMustHaves = theirProfile.partnerPreferences?.mustHaves || [];
-  
+
   const theyMeetMine = checkMustHaves(myMustHaves, theirProfile);
   const iMeetTheirs = checkMustHaves(theirMustHaves, myProfile);
-  
-  const myMetCount = theyMeetMine.filter(r => r.met).length;
-  const theirMetCount = iMeetTheirs.filter(r => r.met).length;
-  
+
+  const myMetCount = theyMeetMine.filter((r) => r.met).length;
+  const theirMetCount = iMeetTheirs.filter((r) => r.met).length;
+
   if (myMustHaves.length === 0 && theirMustHaves.length === 0) {
     return null;
   }
-  
+
   return (
     <View style={styles.checkSection}>
       <Text style={styles.checkSectionTitle}>✓ Must-Haves Check</Text>
-      
+
       {myMustHaves.length > 0 && (
         <View style={styles.checkGroup}>
           <Text style={styles.checkGroupTitle}>
@@ -401,10 +587,20 @@ function MustHavesSection({
           <View style={styles.checkItems}>
             {theyMeetMine.map((result, i) => (
               <View key={i} style={styles.checkItem}>
-                <Text style={[styles.checkIcon, result.met ? styles.checkMet : styles.checkMissed]}>
+                <Text
+                  style={[
+                    styles.checkIcon,
+                    result.met ? styles.checkMet : styles.checkMissed,
+                  ]}
+                >
                   {result.met ? "✓" : "✗"}
                 </Text>
-                <Text style={[styles.checkText, !result.met && styles.checkTextMissed]}>
+                <Text
+                  style={[
+                    styles.checkText,
+                    !result.met && styles.checkTextMissed,
+                  ]}
+                >
                   {result.mustHave}
                 </Text>
               </View>
@@ -412,7 +608,7 @@ function MustHavesSection({
           </View>
         </View>
       )}
-      
+
       {theirMustHaves.length > 0 && (
         <View style={styles.checkGroup}>
           <Text style={styles.checkGroupTitle}>
@@ -421,10 +617,20 @@ function MustHavesSection({
           <View style={styles.checkItems}>
             {iMeetTheirs.map((result, i) => (
               <View key={i} style={styles.checkItem}>
-                <Text style={[styles.checkIcon, result.met ? styles.checkMet : styles.checkMissed]}>
+                <Text
+                  style={[
+                    styles.checkIcon,
+                    result.met ? styles.checkMet : styles.checkMissed,
+                  ]}
+                >
                   {result.met ? "✓" : "✗"}
                 </Text>
-                <Text style={[styles.checkText, !result.met && styles.checkTextMissed]}>
+                <Text
+                  style={[
+                    styles.checkText,
+                    !result.met && styles.checkTextMissed,
+                  ]}
+                >
                   {result.mustHave}
                 </Text>
               </View>
@@ -437,15 +643,15 @@ function MustHavesSection({
 }
 
 // Dealbreakers Section Component
-function DealbreakersSection({ 
-  myProfile, 
-  theirProfile, 
-  myName, 
-  theirName 
-}: { 
-  myProfile: UserProfile; 
-  theirProfile: UserProfile; 
-  myName: string; 
+function DealbreakersSection({
+  myProfile,
+  theirProfile,
+  myName,
+  theirName,
+}: {
+  myProfile: UserProfile;
+  theirProfile: UserProfile;
+  myName: string;
   theirName: string;
 }) {
   // Combine dealbreakers from both sources
@@ -459,52 +665,70 @@ function DealbreakersSection({
     ...(theirProfile.partnerPreferences?.dealbreakersInPartner || []),
     ...(theirProfile.partnerPreferences?.redFlags || []),
   ];
-  
+
   // Remove duplicates
   const uniqueMyDealbreakers = [...new Set(myDealbreakers)];
   const uniqueTheirDealbreakers = [...new Set(theirDealbreakers)];
-  
+
   const theyTriggerMine = checkDealbreakers(uniqueMyDealbreakers, theirProfile);
   const iTriggerTheirs = checkDealbreakers(uniqueTheirDealbreakers, myProfile);
-  
-  const myTriggeredCount = theyTriggerMine.filter(r => r.triggered).length;
-  const myWarningCount = theyTriggerMine.filter(r => r.severity === "warning").length;
-  const theirTriggeredCount = iTriggerTheirs.filter(r => r.triggered).length;
-  const theirWarningCount = iTriggerTheirs.filter(r => r.severity === "warning").length;
-  
-  if (uniqueMyDealbreakers.length === 0 && uniqueTheirDealbreakers.length === 0) {
+
+  const myTriggeredCount = theyTriggerMine.filter((r) => r.triggered).length;
+  const myWarningCount = theyTriggerMine.filter(
+    (r) => r.severity === "warning",
+  ).length;
+  const theirTriggeredCount = iTriggerTheirs.filter((r) => r.triggered).length;
+  const theirWarningCount = iTriggerTheirs.filter(
+    (r) => r.severity === "warning",
+  ).length;
+
+  if (
+    uniqueMyDealbreakers.length === 0 &&
+    uniqueTheirDealbreakers.length === 0
+  ) {
     return null;
   }
-  
+
   return (
     <View style={styles.checkSection}>
       <Text style={styles.checkSectionTitle}>⚠️ Dealbreakers Check</Text>
-      
+
       {uniqueMyDealbreakers.length > 0 && (
         <View style={styles.checkGroup}>
           <Text style={styles.checkGroupTitle}>
-            Your dealbreakers: {myTriggeredCount === 0 && myWarningCount === 0 
-              ? "All clear ✓" 
-              : myTriggeredCount > 0 
-                ? `${myTriggeredCount} triggered` 
+            Your dealbreakers:{" "}
+            {myTriggeredCount === 0 && myWarningCount === 0
+              ? "All clear ✓"
+              : myTriggeredCount > 0
+                ? `${myTriggeredCount} triggered`
                 : `${myWarningCount} warnings`}
           </Text>
           <View style={styles.checkItems}>
             {theyTriggerMine.map((result, i) => (
               <View key={i} style={styles.checkItem}>
-                <Text style={[
-                  styles.checkIcon, 
-                  result.severity === "clear" ? styles.checkMet : 
-                  result.severity === "warning" ? styles.checkWarning : 
-                  styles.checkMissed
-                ]}>
-                  {result.severity === "clear" ? "✓" : result.severity === "warning" ? "⚠" : "✗"}
+                <Text
+                  style={[
+                    styles.checkIcon,
+                    result.severity === "clear"
+                      ? styles.checkMet
+                      : result.severity === "warning"
+                        ? styles.checkWarning
+                        : styles.checkMissed,
+                  ]}
+                >
+                  {result.severity === "clear"
+                    ? "✓"
+                    : result.severity === "warning"
+                      ? "⚠"
+                      : "✗"}
                 </Text>
-                <Text style={[
-                  styles.checkText, 
-                  result.severity === "triggered" && styles.checkTextMissed,
-                  result.severity === "warning" && styles.checkTextWarning
-                ]}>
+                <Text
+                  style={[
+                    styles.checkText,
+                    result.severity === "triggered" && styles.checkTextMissed,
+                    result.severity === "warning" && styles.checkTextWarning,
+                  ]}
+                >
                   {result.dealbreaker}
                   {result.reason && result.severity !== "clear" && (
                     <Text style={styles.checkReason}> ({result.reason})</Text>
@@ -515,32 +739,43 @@ function DealbreakersSection({
           </View>
         </View>
       )}
-      
+
       {uniqueTheirDealbreakers.length > 0 && (
         <View style={styles.checkGroup}>
           <Text style={styles.checkGroupTitle}>
-            {theirName}'s dealbreakers: {theirTriggeredCount === 0 && theirWarningCount === 0 
-              ? "All clear ✓" 
-              : theirTriggeredCount > 0 
-                ? `${theirTriggeredCount} triggered` 
+            {theirName}'s dealbreakers:{" "}
+            {theirTriggeredCount === 0 && theirWarningCount === 0
+              ? "All clear ✓"
+              : theirTriggeredCount > 0
+                ? `${theirTriggeredCount} triggered`
                 : `${theirWarningCount} warnings`}
           </Text>
           <View style={styles.checkItems}>
             {iTriggerTheirs.map((result, i) => (
               <View key={i} style={styles.checkItem}>
-                <Text style={[
-                  styles.checkIcon, 
-                  result.severity === "clear" ? styles.checkMet : 
-                  result.severity === "warning" ? styles.checkWarning : 
-                  styles.checkMissed
-                ]}>
-                  {result.severity === "clear" ? "✓" : result.severity === "warning" ? "⚠" : "✗"}
+                <Text
+                  style={[
+                    styles.checkIcon,
+                    result.severity === "clear"
+                      ? styles.checkMet
+                      : result.severity === "warning"
+                        ? styles.checkWarning
+                        : styles.checkMissed,
+                  ]}
+                >
+                  {result.severity === "clear"
+                    ? "✓"
+                    : result.severity === "warning"
+                      ? "⚠"
+                      : "✗"}
                 </Text>
-                <Text style={[
-                  styles.checkText, 
-                  result.severity === "triggered" && styles.checkTextMissed,
-                  result.severity === "warning" && styles.checkTextWarning
-                ]}>
+                <Text
+                  style={[
+                    styles.checkText,
+                    result.severity === "triggered" && styles.checkTextMissed,
+                    result.severity === "warning" && styles.checkTextWarning,
+                  ]}
+                >
                   {result.dealbreaker}
                   {result.reason && result.severity !== "clear" && (
                     <Text style={styles.checkReason}> ({result.reason})</Text>
@@ -556,13 +791,9 @@ function DealbreakersSection({
 }
 
 // Watch Out For Section Component
-function WatchOutSection({ 
-  frictions 
-}: { 
-  frictions: string[];
-}) {
+function WatchOutSection({ frictions }: { frictions: string[] }) {
   if (frictions.length === 0) return null;
-  
+
   return (
     <View style={styles.watchOutSection}>
       <Text style={styles.watchOutTitle}>👀 Watch Out For</Text>
@@ -577,9 +808,21 @@ function WatchOutSection({
 }
 
 // Trait bar component
-function TraitBar({ name, value, lowLabel, highLabel, inverted }: { name: string; value: number; lowLabel: string; highLabel: string; inverted?: boolean }) {
+function TraitBar({
+  name,
+  value,
+  lowLabel,
+  highLabel,
+  inverted,
+}: {
+  name: string;
+  value: number;
+  lowLabel: string;
+  highLabel: string;
+  inverted?: boolean;
+}) {
   // If inverted, flip the percentage (10 becomes 0, 1 becomes 90, etc.)
-  const displayValue = inverted ? (10 - value) : value;
+  const displayValue = inverted ? 10 - value : value;
   const percentage = (displayValue / 10) * 100;
   return (
     <View style={styles.traitRow}>
@@ -597,7 +840,13 @@ function TraitBar({ name, value, lowLabel, highLabel, inverted }: { name: string
 }
 
 // Full profile view component
-function FullProfileView({ profile, userName }: { profile: UserProfile; userName?: string }) {
+function FullProfileView({
+  profile,
+  userName,
+}: {
+  profile: UserProfile;
+  userName?: string;
+}) {
   return (
     <View style={styles.fullProfileContainer}>
       {/* Generated Bio - no border/padding for first section */}
@@ -666,19 +915,25 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
           {profile.lifeStory.proudestAchievement && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>🏆 Proudest Achievement</Text>
-              <Text style={styles.storyText}>{profile.lifeStory.proudestAchievement}</Text>
+              <Text style={styles.storyText}>
+                {profile.lifeStory.proudestAchievement}
+              </Text>
             </View>
           )}
           {profile.lifeStory.definingHardship && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>💪 Defining Challenge</Text>
-              <Text style={styles.storyText}>{profile.lifeStory.definingHardship}</Text>
+              <Text style={styles.storyText}>
+                {profile.lifeStory.definingHardship}
+              </Text>
             </View>
           )}
           {profile.lifeStory.biggestRisk && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>🎲 Biggest Risk Taken</Text>
-              <Text style={styles.storyText}>{profile.lifeStory.biggestRisk}</Text>
+              <Text style={styles.storyText}>
+                {profile.lifeStory.biggestRisk}
+              </Text>
             </View>
           )}
           {profile.lifeStory.dreams.length > 0 && (
@@ -714,18 +969,24 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Social Style</Text>
-              <Text style={styles.infoValue}>{profile.socialProfile.socialStyle}</Text>
+              <Text style={styles.infoValue}>
+                {profile.socialProfile.socialStyle}
+              </Text>
             </View>
             {profile.socialProfile.weekendStyle && (
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Weekend Style</Text>
-                <Text style={styles.infoValue}>{profile.socialProfile.weekendStyle}</Text>
+                <Text style={styles.infoValue}>
+                  {profile.socialProfile.weekendStyle}
+                </Text>
               </View>
             )}
             {profile.socialProfile.idealFridayNight && (
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Ideal Friday Night</Text>
-                <Text style={styles.infoValue}>{profile.socialProfile.idealFridayNight}</Text>
+                <Text style={styles.infoValue}>
+                  {profile.socialProfile.idealFridayNight}
+                </Text>
               </View>
             )}
           </View>
@@ -749,12 +1010,16 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
         <ProfileSection title="Love Philosophy">
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Believes in Soulmates</Text>
-            <Text style={styles.infoValue}>{profile.lovePhilosophy.believesInSoulmates ? "Yes 💕" : "No"}</Text>
+            <Text style={styles.infoValue}>
+              {profile.lovePhilosophy.believesInSoulmates ? "Yes 💕" : "No"}
+            </Text>
           </View>
           {profile.lovePhilosophy.loveDefinition && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>What is Love?</Text>
-              <Text style={styles.storyText}>{profile.lovePhilosophy.loveDefinition}</Text>
+              <Text style={styles.storyText}>
+                {profile.lovePhilosophy.loveDefinition}
+              </Text>
             </View>
           )}
           {profile.lovePhilosophy.romanticGestures.length > 0 && (
@@ -772,7 +1037,9 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
           {profile.lovePhilosophy.bestAdviceReceived && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>Best Relationship Advice</Text>
-              <Text style={styles.storyText}>"{profile.lovePhilosophy.bestAdviceReceived}"</Text>
+              <Text style={styles.storyText}>
+                "{profile.lovePhilosophy.bestAdviceReceived}"
+              </Text>
             </View>
           )}
         </ProfileSection>
@@ -795,7 +1062,9 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
           />
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>PDA Comfort</Text>
-            <Text style={styles.infoValue}>{profile.intimacyProfile.pdaComfort}</Text>
+            <Text style={styles.infoValue}>
+              {profile.intimacyProfile.pdaComfort}
+            </Text>
           </View>
           {profile.intimacyProfile.connectionTriggers.length > 0 && (
             <View style={styles.storyItem}>
@@ -861,7 +1130,9 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>💬 Conversation Starters</Text>
               {profile.bioElements.conversationStarters.map((c, i) => (
-                <Text key={i} style={styles.bulletText}>• {c}</Text>
+                <Text key={i} style={styles.bulletText}>
+                  • {c}
+                </Text>
               ))}
             </View>
           )}
@@ -897,19 +1168,27 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Love Language</Text>
-            <Text style={styles.infoValue}>{profile.relationshipStyle.loveLanguage}</Text>
+            <Text style={styles.infoValue}>
+              {profile.relationshipStyle.loveLanguage}
+            </Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Conflict Style</Text>
-            <Text style={styles.infoValue}>{profile.relationshipStyle.conflictStyle}</Text>
+            <Text style={styles.infoValue}>
+              {profile.relationshipStyle.conflictStyle}
+            </Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Communication</Text>
-            <Text style={styles.infoValue}>{profile.relationshipStyle.communicationFrequency}</Text>
+            <Text style={styles.infoValue}>
+              {profile.relationshipStyle.communicationFrequency}
+            </Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Financial Approach</Text>
-            <Text style={styles.infoValue}>{profile.relationshipStyle.financialApproach}</Text>
+            <Text style={styles.infoValue}>
+              {profile.relationshipStyle.financialApproach}
+            </Text>
           </View>
         </View>
         <TraitBar
@@ -925,18 +1204,24 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Wants Kids</Text>
-            <Text style={styles.infoValue}>{profile.familyPlans.wantsKids}</Text>
+            <Text style={styles.infoValue}>
+              {profile.familyPlans.wantsKids}
+            </Text>
           </View>
           {profile.familyPlans.kidsTimeline && (
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Timeline</Text>
-              <Text style={styles.infoValue}>{profile.familyPlans.kidsTimeline}</Text>
+              <Text style={styles.infoValue}>
+                {profile.familyPlans.kidsTimeline}
+              </Text>
             </View>
           )}
           {profile.familyPlans.parentingStyle && (
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Parenting Style</Text>
-              <Text style={styles.infoValue}>{profile.familyPlans.parentingStyle}</Text>
+              <Text style={styles.infoValue}>
+                {profile.familyPlans.parentingStyle}
+              </Text>
             </View>
           )}
         </View>
@@ -953,11 +1238,15 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Sleep</Text>
-            <Text style={styles.infoValue}>{profile.lifestyle.sleepSchedule}</Text>
+            <Text style={styles.infoValue}>
+              {profile.lifestyle.sleepSchedule}
+            </Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Exercise</Text>
-            <Text style={styles.infoValue}>{profile.lifestyle.exerciseLevel}</Text>
+            <Text style={styles.infoValue}>
+              {profile.lifestyle.exerciseLevel}
+            </Text>
           </View>
           {profile.lifestyle.dietType && (
             <View style={styles.infoItem}>
@@ -975,11 +1264,15 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Pets</Text>
-            <Text style={styles.infoValue}>{profile.lifestyle.petPreference}</Text>
+            <Text style={styles.infoValue}>
+              {profile.lifestyle.petPreference}
+            </Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Location</Text>
-            <Text style={styles.infoValue}>{profile.lifestyle.locationPreference}</Text>
+            <Text style={styles.infoValue}>
+              {profile.lifestyle.locationPreference}
+            </Text>
           </View>
         </View>
       </ProfileSection>
@@ -1002,11 +1295,15 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Smoking</Text>
-              <Text style={styles.infoValue}>{profile.health.smokingStatus}</Text>
+              <Text style={styles.infoValue}>
+                {profile.health.smokingStatus}
+              </Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Drinking</Text>
-              <Text style={styles.infoValue}>{profile.health.drinkingFrequency}</Text>
+              <Text style={styles.infoValue}>
+                {profile.health.drinkingFrequency}
+              </Text>
             </View>
           </View>
         </ProfileSection>
@@ -1019,19 +1316,25 @@ function FullProfileView({ profile, userName }: { profile: UserProfile; userName
             {profile.demographics.ethnicity && (
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Ethnicity</Text>
-                <Text style={styles.infoValue}>{profile.demographics.ethnicity}</Text>
+                <Text style={styles.infoValue}>
+                  {profile.demographics.ethnicity}
+                </Text>
               </View>
             )}
             {profile.demographics.religion && (
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Religion</Text>
-                <Text style={styles.infoValue}>{profile.demographics.religion}</Text>
+                <Text style={styles.infoValue}>
+                  {profile.demographics.religion}
+                </Text>
               </View>
             )}
             {profile.demographics.politicalLeaning && (
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Political</Text>
-                <Text style={styles.infoValue}>{profile.demographics.politicalLeaning}</Text>
+                <Text style={styles.infoValue}>
+                  {profile.demographics.politicalLeaning}
+                </Text>
               </View>
             )}
           </View>
@@ -1075,18 +1378,20 @@ export default function MatchesScreen() {
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showMyProfile, setShowMyProfile] = useState(false);
   // Track which tab is active per user: "compatibility" (default) or "profile"
-  const [activeTab, setActiveTab] = useState<Record<string, "compatibility" | "profile">>({});
+  const [activeTab, setActiveTab] = useState<
+    Record<string, "compatibility" | "profile">
+  >({});
 
   // Get current user
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   // Get current user's profile
   const myProfile = useQuery(
     api.userProfiles.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
   // Get all profiles (we'll filter to test users)
@@ -1112,7 +1417,7 @@ export default function MatchesScreen() {
     if (!myProfile || !allProfiles || !allUsers) return null;
 
     const testUsers = allUsers.filter(
-      (u) => u.waitlistPosition === 999 && u._id !== currentUser?._id
+      (u) => u.waitlistPosition === 999 && u._id !== currentUser?._id,
     );
 
     return testUsers
@@ -1129,7 +1434,11 @@ export default function MatchesScreen() {
         };
       })
       .filter(Boolean)
-      .sort((a, b) => (b?.compatibility.overallScore ?? 0) - (a?.compatibility.overallScore ?? 0));
+      .sort(
+        (a, b) =>
+          (b?.compatibility.overallScore ?? 0) -
+          (a?.compatibility.overallScore ?? 0),
+      );
   })();
 
   if (!currentUser) {
@@ -1202,7 +1511,9 @@ export default function MatchesScreen() {
             )}
             <View style={styles.myProfileInfo}>
               <Text style={styles.myProfileLabel}>YOUR PROFILE</Text>
-              <Text style={styles.myProfileName}>{currentUser.name || "You"}</Text>
+              <Text style={styles.myProfileName}>
+                {currentUser.name || "You"}
+              </Text>
             </View>
             <Text style={styles.expandArrow}>{showMyProfile ? "▼" : "▶"}</Text>
           </View>
@@ -1212,7 +1523,10 @@ export default function MatchesScreen() {
           )}
 
           {showMyProfile && (
-            <FullProfileView profile={myProfile} userName={currentUser.name || "You"} />
+            <FullProfileView
+              profile={myProfile}
+              userName={currentUser.name || "You"}
+            />
           )}
 
           <Text style={styles.expandHint}>
@@ -1255,10 +1569,16 @@ export default function MatchesScreen() {
                 <View
                   style={[
                     styles.scoreBadge,
-                    { backgroundColor: getScoreColor(match.compatibility.overallScore) },
+                    {
+                      backgroundColor: getScoreColor(
+                        match.compatibility.overallScore,
+                      ),
+                    },
                   ]}
                 >
-                  <Text style={styles.scoreText}>{match.compatibility.overallScore}</Text>
+                  <Text style={styles.scoreText}>
+                    {match.compatibility.overallScore}
+                  </Text>
                 </View>
               </View>
 
@@ -1276,80 +1596,129 @@ export default function MatchesScreen() {
                       <Pressable
                         style={[
                           styles.toggleOption,
-                          (activeTab[match.user._id] || "compatibility") === "compatibility" && styles.toggleOptionActive,
+                          (activeTab[match.user._id] || "compatibility") ===
+                            "compatibility" && styles.toggleOptionActive,
                         ]}
-                        onPress={() => setActiveTab({ ...activeTab, [match.user._id]: "compatibility" })}
+                        onPress={() =>
+                          setActiveTab({
+                            ...activeTab,
+                            [match.user._id]: "compatibility",
+                          })
+                        }
                       >
-                        <Text style={[
-                          styles.toggleText,
-                          (activeTab[match.user._id] || "compatibility") === "compatibility" && styles.toggleTextActive,
-                        ]}>Compatibility</Text>
+                        <Text
+                          style={[
+                            styles.toggleText,
+                            (activeTab[match.user._id] || "compatibility") ===
+                              "compatibility" && styles.toggleTextActive,
+                          ]}
+                        >
+                          Compatibility
+                        </Text>
                       </Pressable>
                       <Pressable
                         style={[
                           styles.toggleOption,
-                          activeTab[match.user._id] === "profile" && styles.toggleOptionActive,
+                          activeTab[match.user._id] === "profile" &&
+                            styles.toggleOptionActive,
                         ]}
-                        onPress={() => setActiveTab({ ...activeTab, [match.user._id]: "profile" })}
+                        onPress={() =>
+                          setActiveTab({
+                            ...activeTab,
+                            [match.user._id]: "profile",
+                          })
+                        }
                       >
-                        <Text style={[
-                          styles.toggleText,
-                          activeTab[match.user._id] === "profile" && styles.toggleTextActive,
-                        ]}>Full Profile</Text>
+                        <Text
+                          style={[
+                            styles.toggleText,
+                            activeTab[match.user._id] === "profile" &&
+                              styles.toggleTextActive,
+                          ]}
+                        >
+                          Full Profile
+                        </Text>
                       </Pressable>
                     </View>
                   </View>
 
                   {/* Compatibility Tab */}
-                  {(activeTab[match.user._id] || "compatibility") === "compatibility" && (
+                  {(activeTab[match.user._id] || "compatibility") ===
+                    "compatibility" && (
                     <View>
                       {/* All 6 categories */}
                       {[
                         { key: "theBasics", label: CATEGORY_NAMES.theBasics },
                         { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre },
-                        { key: "relationshipStyle", label: CATEGORY_NAMES.relationshipStyle },
+                        {
+                          key: "relationshipStyle",
+                          label: CATEGORY_NAMES.relationshipStyle,
+                        },
                         { key: "lifestyle", label: CATEGORY_NAMES.lifestyle },
                         { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture },
-                        { key: "theDeeperStuff", label: CATEGORY_NAMES.theDeeperStuff },
+                        {
+                          key: "theDeeperStuff",
+                          label: CATEGORY_NAMES.theDeeperStuff,
+                        },
                       ].map(({ key, label }) => {
-                        const categoryId = SCORE_KEY_TO_CATEGORY_ID[key as keyof CategoryScores];
+                        const categoryId =
+                          SCORE_KEY_TO_CATEGORY_ID[key as keyof CategoryScores];
                         const CategoryIcon = CATEGORY_ICONS[categoryId];
                         // TEMP: Hardcode last two categories as locked for testing
-                        const lockedCategoryIds = ["life_future", "deeper_stuff"];
+                        const lockedCategoryIds = [
+                          "life_future",
+                          "deeper_stuff",
+                        ];
                         const isLocked = lockedCategoryIds.includes(categoryId);
-                        const score = match.compatibility.categoryScores[key as keyof CategoryScores];
-                        
+                        const score =
+                          match.compatibility.categoryScores[
+                            key as keyof CategoryScores
+                          ];
+
                         if (isLocked) {
                           return (
                             <View key={key} style={styles.categoryBarLocked}>
                               <View style={styles.categoryBarContentLocked}>
                                 <IconLockFilled size={20} color="#E8C547" />
-                                <Text style={styles.categoryBarLabelLocked}>{label}</Text>
+                                <Text style={styles.categoryBarLabelLocked}>
+                                  {label}
+                                </Text>
                                 <Pressable
                                   style={styles.unlockButton}
-                                  onPress={() => router.push(`/(onboarding)/questions?categoryId=${categoryId}`)}
+                                  onPress={() =>
+                                    router.push(
+                                      `/(onboarding)/questions?categoryId=${categoryId}`,
+                                    )
+                                  }
                                 >
-                                  <Text style={styles.unlockButtonText}>Unlock</Text>
-                                  <IconChevronRight size={14} color={colors.text} />
+                                  <Text style={styles.unlockButtonText}>
+                                    Unlock
+                                  </Text>
+                                  <IconChevronRight
+                                    size={14}
+                                    color={colors.text}
+                                  />
                                 </Pressable>
                               </View>
                             </View>
                           );
                         }
-                        
+
                         const scoreColor = getScoreColor(score);
                         const isFull = score === 100;
                         return (
                           <View key={key} style={styles.categoryBar}>
                             {/* Gradient fill: 30% opacity left -> 60% right, with 100% border if not full */}
-                            <View style={[
-                              styles.categoryBarFill, 
-                              { 
-                                width: `${score}%`,
-                                borderTopRightRadius: isFull ? 10 : 0,
-                                borderBottomRightRadius: isFull ? 10 : 0,
-                              }
-                            ]}>
+                            <View
+                              style={[
+                                styles.categoryBarFill,
+                                {
+                                  width: `${score}%`,
+                                  borderTopRightRadius: isFull ? 10 : 0,
+                                  borderBottomRightRadius: isFull ? 10 : 0,
+                                },
+                              ]}
+                            >
                               <LinearGradient
                                 colors={[`${scoreColor}4D`, `${scoreColor}99`]}
                                 start={{ x: 0, y: 0 }}
@@ -1357,13 +1726,22 @@ export default function MatchesScreen() {
                                 style={styles.categoryBarGradient}
                               />
                               {!isFull && (
-                                <View style={[styles.categoryBarEdge, { backgroundColor: scoreColor }]} />
+                                <View
+                                  style={[
+                                    styles.categoryBarEdge,
+                                    { backgroundColor: scoreColor },
+                                  ]}
+                                />
                               )}
                             </View>
                             <View style={styles.categoryBarContent}>
                               <CategoryIcon size={20} color={colors.text} />
-                              <Text style={styles.categoryBarLabel}>{label}</Text>
-                              <Text style={styles.categoryBarScore}>{score}%</Text>
+                              <Text style={styles.categoryBarLabel}>
+                                {label}
+                              </Text>
+                              <Text style={styles.categoryBarScore}>
+                                {score}%
+                              </Text>
                             </View>
                           </View>
                         );
@@ -1372,7 +1750,9 @@ export default function MatchesScreen() {
                       {/* Shared values */}
                       {match.compatibility.sharedValues.length > 0 && (
                         <View style={styles.sharedSection}>
-                          <Text style={styles.sharedTitleBold}>Shared Values</Text>
+                          <Text style={styles.sharedTitleBold}>
+                            Shared Values
+                          </Text>
                           <View style={styles.tagsRow}>
                             {match.compatibility.sharedValues.map((v, i) => (
                               <View key={i} style={styles.tagShared}>
@@ -1386,7 +1766,9 @@ export default function MatchesScreen() {
                       {/* Shared interests */}
                       {match.compatibility.sharedInterests.length > 0 && (
                         <View style={styles.sharedSection}>
-                          <Text style={styles.sharedTitleBold}>Shared Interests</Text>
+                          <Text style={styles.sharedTitleBold}>
+                            Shared Interests
+                          </Text>
                           <View style={styles.tagsRow}>
                             {match.compatibility.sharedInterests.map((v, i) => (
                               <View key={i} style={styles.tagShared}>
@@ -1398,16 +1780,23 @@ export default function MatchesScreen() {
                       )}
 
                       {/* Dealbreakers */}
-                      {match.compatibility.dealbreakers.triggered.length > 0 && (
+                      {match.compatibility.dealbreakers.triggered.length >
+                        0 && (
                         <View style={styles.sharedSection}>
-                          <Text style={styles.sharedTitleBold}>Dealbreakers</Text>
+                          <Text style={styles.sharedTitleBold}>
+                            Dealbreakers
+                          </Text>
                           <View style={styles.tagsRow}>
-                            {match.compatibility.dealbreakers.triggered.map((d, i) => (
-                              <View key={i} style={styles.tagDealbreaker}>
-                                <IconX size={12} color="#991b1b" />
-                                <Text style={styles.tagDealbreakerText}>{d}</Text>
-                              </View>
-                            ))}
+                            {match.compatibility.dealbreakers.triggered.map(
+                              (d, i) => (
+                                <View key={i} style={styles.tagDealbreaker}>
+                                  <IconX size={12} color="#991b1b" />
+                                  <Text style={styles.tagDealbreakerText}>
+                                    {d}
+                                  </Text>
+                                </View>
+                              ),
+                            )}
                           </View>
                         </View>
                       )}
@@ -1431,14 +1820,21 @@ export default function MatchesScreen() {
 
                       {/* Watch Out For */}
                       <WatchOutSection
-                        frictions={getFrictionPoints(myProfile, match.profile, match.compatibility.categoryScores)}
+                        frictions={getFrictionPoints(
+                          myProfile,
+                          match.profile,
+                          match.compatibility.categoryScores,
+                        )}
                       />
                     </View>
                   )}
 
                   {/* Full Profile Tab */}
                   {activeTab[match.user._id] === "profile" && (
-                    <FullProfileView profile={match.profile} userName={match.user.name || "User"} />
+                    <FullProfileView
+                      profile={match.profile}
+                      userName={match.user.name || "User"}
+                    />
                   )}
                 </View>
               )}

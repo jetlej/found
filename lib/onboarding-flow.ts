@@ -1,23 +1,25 @@
 // Onboarding Flow Configuration
-// Defines the linear flow and provides navigation helpers that work without history
+// Defines the linear flow and provides navigation helpers
 
 import { Router } from "expo-router";
 
 // The onboarding screens in order (after auth)
-export const ONBOARDING_FLOW = ["referral", "basics", "photos"] as const;
-export type OnboardingScreen = (typeof ONBOARDING_FLOW)[number];
+// To reorder steps, just move items in this array
+export const ONBOARDING_FLOW = [
+  "referral",
+  "name",
+  "gender",
+  "sexuality",
+  "location",
+  "birthday",
+  "height",
+  "photos",
+] as const;
 
-// Routes for each screen
-const SCREEN_ROUTES: Record<OnboardingScreen, string> = {
-  referral: "/(onboarding)/referral",
-  basics: "/(onboarding)/basics",
-  photos: "/(onboarding)/photos",
-};
+export type OnboardingStep = (typeof ONBOARDING_FLOW)[number];
 
-// Get the next screen in the flow
-export function getNextScreen(
-  current: OnboardingScreen,
-): OnboardingScreen | null {
+// Get the next step in the flow
+export function getNextStep(current: OnboardingStep): OnboardingStep | null {
   const index = ONBOARDING_FLOW.indexOf(current);
   if (index === -1 || index === ONBOARDING_FLOW.length - 1) {
     return null;
@@ -25,10 +27,8 @@ export function getNextScreen(
   return ONBOARDING_FLOW[index + 1];
 }
 
-// Get the previous screen in the flow
-export function getPrevScreen(
-  current: OnboardingScreen,
-): OnboardingScreen | null {
+// Get the previous step in the flow
+export function getPrevStep(current: OnboardingStep): OnboardingStep | null {
   const index = ONBOARDING_FLOW.indexOf(current);
   if (index <= 0) {
     return null;
@@ -36,42 +36,25 @@ export function getPrevScreen(
   return ONBOARDING_FLOW[index - 1];
 }
 
-// Navigate forward in the flow (slide from right animation)
-export function navigateForward(
-  router: Router,
-  current: OnboardingScreen,
-): void {
-  const next = getNextScreen(current);
+// Navigate forward in the flow using router.push() for natural history
+export function goToNextStep(router: Router, current: OnboardingStep): void {
+  const next = getNextStep(current);
   if (next) {
-    router.replace({
-      pathname: SCREEN_ROUTES[next] as any,
-      params: { direction: "forward" },
-    });
-  }
-}
-
-// Navigate backward in the flow (slide from left animation)
-export function navigateBack(router: Router, current: OnboardingScreen): void {
-  const prev = getPrevScreen(current);
-  if (prev) {
-    router.replace({
-      pathname: SCREEN_ROUTES[prev] as any,
-      params: { direction: "back" },
-    });
+    router.push(`/(onboarding)/${next}`);
   } else {
-    // First screen - go to homepage
-    router.replace("/");
+    // End of onboarding - go to main app
+    router.replace("/(tabs)");
   }
 }
 
-// Navigate to a specific screen with direction
-export function navigateTo(
-  router: Router,
-  screen: OnboardingScreen,
-  direction: "forward" | "back" = "forward",
-): void {
-  router.replace({
-    pathname: SCREEN_ROUTES[screen] as any,
-    params: { direction },
-  });
+// Get progress as a fraction (0 to 1)
+export function getProgress(current: OnboardingStep): number {
+  const index = ONBOARDING_FLOW.indexOf(current);
+  if (index === -1) return 0;
+  return (index + 1) / ONBOARDING_FLOW.length;
+}
+
+// Check if a step is valid
+export function isValidStep(step: string): step is OnboardingStep {
+  return ONBOARDING_FLOW.includes(step as OnboardingStep);
 }

@@ -32,7 +32,7 @@ export default function HomeScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   useEffect(() => {
@@ -51,7 +51,12 @@ export default function HomeScreen() {
   }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl]);
 
   // Countdown timer - hardcoded to 10 days from now
-  const [countdown, setCountdown] = useState({ days: 10, hours: 0, minutes: 0, seconds: 0 });
+  const [countdown, setCountdown] = useState({
+    days: 10,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
   const [countdownEnd] = useState(() => Date.now() + TEN_DAYS_MS);
 
   useEffect(() => {
@@ -60,7 +65,9 @@ export default function HomeScreen() {
       const diff = Math.max(0, countdownEnd - now);
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const hours = Math.floor(
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      );
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
@@ -99,12 +106,11 @@ export default function HomeScreen() {
               <View style={styles.optionBadge}>
                 <Text style={styles.optionBadgeText}>A</Text>
               </View>
-              <Text style={styles.optionTitle}>Refer a friend to skip the wait</Text>
+              <Text style={styles.optionTitle}>
+                Refer a friend to skip the wait
+              </Text>
             </View>
-            <Pressable
-              style={styles.shareButton}
-              onPress={handleShare}
-            >
+            <Pressable style={styles.shareButton} onPress={handleShare}>
               <Text style={styles.shareButtonText}>Share referral code</Text>
             </Pressable>
           </View>

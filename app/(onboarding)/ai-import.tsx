@@ -3,18 +3,16 @@ import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { generateAIPrompt } from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconArrowLeft, IconEdit, IconSparkles } from "@tabler/icons-react-native";
+import {
+  IconArrowLeft,
+  IconEdit,
+  IconSparkles,
+} from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
-import {
-    Animated,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMMKVObject } from "react-native-mmkv";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -32,7 +30,9 @@ export default function AIImportScreen() {
   }, []);
 
   // Store AI-answered question IDs for review flow
-  const [, setAiAnsweredQuestions] = useMMKVObject<number[]>("ai-answered-questions");
+  const [, setAiAnsweredQuestions] = useMMKVObject<number[]>(
+    "ai-answered-questions",
+  );
 
   const handleBack = () => {
     router.replace("/(onboarding)/photos");
@@ -62,7 +62,9 @@ export default function AIImportScreen() {
           </Pressable>
           <Text style={styles.title}>Time for your 100 questions</Text>
           <Text style={styles.subtitle}>
-            If you've been really open with ChatGPT or Claude, we'll give you a prompt to ask them—they can answer a lot of these for you. Or you can answer them manually.
+            If you've been really open with ChatGPT or Claude, we'll give you a
+            prompt to ask them—they can answer a lot of these for you. Or you
+            can answer them manually.
           </Text>
         </View>
 

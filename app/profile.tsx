@@ -1,10 +1,10 @@
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import {
-    cancelDailyReminder,
-    hasNotificationPermission,
-    promptForNotifications,
-    scheduleDailyReminder,
+  cancelDailyReminder,
+  hasNotificationPermission,
+  promptForNotifications,
+  scheduleDailyReminder,
 } from "@/hooks/usePushNotifications";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
@@ -15,19 +15,19 @@ import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Linking,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -38,7 +38,7 @@ export default function ProfileScreen() {
   const { devClerkId } = useOfflineStore();
 
   // Use dev clerkId when impersonating
-  const userId = (__DEV__ && devClerkId) ? devClerkId : clerkUserId;
+  const userId = __DEV__ && devClerkId ? devClerkId : clerkUserId;
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -49,21 +49,21 @@ export default function ProfileScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
-  
+
   const updateProfile = useMutation(api.users.updateProfile);
   const updateNotifications = useMutation(api.users.updateNotificationSettings);
 
   // Get user's photos
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
   // Get first photo URL (sorted by order)
-  const firstPhotoUrl = userPhotos
-    ?.sort((a, b) => a.order - b.order)[0]?.url || null;
+  const firstPhotoUrl =
+    userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   const notificationsEnabled = currentUser?.notificationsEnabled ?? false;
   const reminderHour = currentUser?.reminderHour ?? 12;
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
                   text: "Open Settings",
                   onPress: () => Linking.openSettings(),
                 },
-              ]
+              ],
             );
           }
         }

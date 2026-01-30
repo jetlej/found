@@ -1,30 +1,57 @@
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { navigateForward } from "@/lib/onboarding-flow";
+import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
+import { useFocusEffect } from "@react-navigation/native";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ReferralScreen() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const insets = useSafeAreaInsets();
+
+  // Reset loading state when screen comes back into focus
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(false);
+    }, [])
+  );
+
+  // Listen for keyboard events to get actual keyboard height
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height - insets.bottom);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom]);
 
   const router = useRouter();
   const { signOut } = useAuth();
@@ -62,7 +89,7 @@ export default function ReferralScreen() {
         );
         // Wait a moment to show success, then continue
         setTimeout(() => {
-          continueToBasics();
+          continueToNext();
         }, 1500);
       } else {
         setError(result.error ?? "Invalid code");
@@ -74,95 +101,82 @@ export default function ReferralScreen() {
     }
   };
 
-  const continueToBasics = async () => {
+  const continueToNext = async () => {
     if (userId) {
-      await setOnboardingStep({ clerkId: userId, step: "basics" });
+      await setOnboardingStep({ clerkId: userId, step: "name" });
     }
-    navigateForward(router, "referral");
+    goToNextStep(router, "referral");
   };
 
   const handleSkip = async () => {
-    setSkipping(true);
-    try {
-      if (userId) {
-        await setOnboardingStep({ clerkId: userId, step: "basics" });
-      }
-      navigateForward(router, "referral");
-    } catch {
-      // Navigate anyway if mutation fails
-      navigateForward(router, "referral");
+    if (userId) {
+      setOnboardingStep({ clerkId: userId, step: "name" });
     }
+    goToNextStep(router, "referral");
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.content}
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.inner, { paddingBottom: keyboardHeight }]}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.inner}
-          keyboardShouldPersistTaps="handled"
-          bounces={false}
+        <View style={styles.header}>
+          <Text style={styles.title}>Have a referral code?</Text>
+          <Text style={styles.subtitle}>
+            If someone invited you to Found, enter their code below to help them skip the line.
+          </Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, code.length > 0 && styles.inputWithText]}
+            value={code}
+            onChangeText={(text) => {
+              setCode(text.toUpperCase());
+              setError("");
+              setSuccess("");
+            }}
+            placeholder="Enter code"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={6}
+            editable={!loading && !success}
+          />
+        </View>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {success ? <Text style={styles.success}>{success}</Text> : null}
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleApply}
+          disabled={loading || !!success || !code.trim()}
+          activeOpacity={0.7}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Have a referral code?</Text>
-            <Text style={styles.subtitle}>
-              If someone invited you to Found, enter their code below to help them skip the line.
-            </Text>
-          </View>
+          <Text style={styles.buttonText}>
+            {loading ? "Submitting..." : "Submit"}
+          </Text>
+        </TouchableOpacity>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, code.length > 0 && styles.inputWithText]}
-              value={code}
-              onChangeText={(text) => {
-                setCode(text.toUpperCase());
-                setError("");
-                setSuccess("");
-              }}
-              placeholder="Enter code"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={6}
-              editable={!loading && !success}
-            />
-          </View>
+        <Text style={styles.orText}>or</Text>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>{success}</Text> : null}
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleApply}
-            disabled={loading || skipping || !!success || !code.trim()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? "Submitting..." : "Submit"}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.orText}>or</Text>
-
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-            disabled={loading || skipping || !!success}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipText}>
-              {skipping ? "Loading..." : "I don't have a code"}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <TouchableOpacity
+          style={styles.skipButton}
+          onPress={handleSkip}
+          disabled={loading || !!success}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.skipText}>I don't have a code</Text>
+        </TouchableOpacity>
+      </ScrollView>
 
       <Pressable style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Log out</Text>
       </Pressable>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -170,9 +184,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
   },
   inner: {
     flexGrow: 1,

@@ -1,22 +1,32 @@
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { generateAIPrompt, getAnswerCount, parseAIResponse } from "@/lib/ai-import";
+import {
+  generateAIPrompt,
+  getAnswerCount,
+  parseAIResponse,
+} from "@/lib/ai-import";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconArrowLeft, IconCheck, IconCircleCheck, IconClipboard, IconCopy } from "@tabler/icons-react-native";
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconCircleCheck,
+  IconClipboard,
+  IconCopy,
+} from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { useMMKVObject } from "react-native-mmkv";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,7 +35,10 @@ export default function AIPasteScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
 
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? { clerkId: userId } : "skip",
+  );
   const questions = useQuery(api.questions.getAll);
   const upsertAnswer = useMutation(api.answers.upsert);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
@@ -36,7 +49,9 @@ export default function AIPasteScreen() {
   const [justCopied, setJustCopied] = useState(false);
 
   // Store AI-answered question IDs for review flow
-  const [, setAiAnsweredQuestions] = useMMKVObject<number[]>("ai-answered-questions");
+  const [, setAiAnsweredQuestions] = useMMKVObject<number[]>(
+    "ai-answered-questions",
+  );
 
   // Reset "just copied" state after 2 seconds
   useEffect(() => {
@@ -71,7 +86,10 @@ export default function AIPasteScreen() {
     const result = parseAIResponse(jsonInput);
 
     if (!result.success || !result.data) {
-      Alert.alert("Import Error", result.error || "Could not parse the response");
+      Alert.alert(
+        "Import Error",
+        result.error || "Could not parse the response",
+      );
       setParsing(false);
       return;
     }
@@ -128,7 +146,8 @@ export default function AIPasteScreen() {
             {importedCount} of 100 questions answered!
           </Text>
           <Text style={styles.successSubtitle}>
-            Now let's answer the remaining {100 - importedCount} questions together.
+            Now let's answer the remaining {100 - importedCount} questions
+            together.
           </Text>
         </View>
         <View style={styles.footer}>
@@ -161,7 +180,11 @@ export default function AIPasteScreen() {
             <Text style={styles.stepNumber}>Step 1</Text>
             <Text style={styles.stepTitle}>Paste into ChatGPT or Claude</Text>
             <Pressable style={styles.copyButton} onPress={handleCopyPrompt}>
-              {justCopied ? <IconCheck size={18} color={colors.primaryText} /> : <IconCopy size={18} color={colors.primaryText} />}
+              {justCopied ? (
+                <IconCheck size={18} color={colors.primaryText} />
+              ) : (
+                <IconCopy size={18} color={colors.primaryText} />
+              )}
               <Text style={styles.copyButtonText}>
                 {justCopied ? "Prompt Copied" : "Copy Prompt"}
               </Text>
@@ -171,7 +194,10 @@ export default function AIPasteScreen() {
           <View style={styles.stepContainer}>
             <Text style={styles.stepNumber}>Step 2</Text>
             <Text style={styles.stepTitle}>Paste the response here</Text>
-            <Pressable style={styles.pasteButton} onPress={handlePasteFromClipboard}>
+            <Pressable
+              style={styles.pasteButton}
+              onPress={handlePasteFromClipboard}
+            >
               <IconClipboard size={18} color={colors.text} />
               <Text style={styles.pasteButtonText}>Paste from clipboard</Text>
             </Pressable>

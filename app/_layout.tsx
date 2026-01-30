@@ -55,25 +55,21 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+import { isValidStep, ONBOARDING_FLOW } from "@/lib/onboarding-flow";
+
 // Helper to determine which onboarding step to resume from
 function getOnboardingRoute(user: any): string {
   if (!user) {
     return "/(onboarding)/referral";
   }
 
-  // Use saved onboarding step if available
-  if (user.onboardingStep) {
+  // Use saved onboarding step if it's valid
+  if (user.onboardingStep && isValidStep(user.onboardingStep)) {
     return `/(onboarding)/${user.onboardingStep}`;
   }
 
-  // Fallback: check if basics are complete (name is now required)
-  const basicsComplete = user.name && user.gender && user.sexuality && user.location && user.birthdate && user.heightInches;
-  if (!basicsComplete) {
-    return "/(onboarding)/referral";
-  }
-
-  // Default to photos if no step saved but basics done
-  return "/(onboarding)/photos";
+  // Default to first step
+  return "/(onboarding)/referral";
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {

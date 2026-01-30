@@ -1,6 +1,6 @@
 import { GradientBackground } from "@/components/GradientBackground";
 import { colors } from "@/lib/theme";
-import { IconHeart, IconHome, IconMicrophone, IconRoute } from "@tabler/icons-react-native";
+import { IconHeart, IconHome, IconMessageQuestion, IconRoute } from "@tabler/icons-react-native";
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
@@ -39,15 +39,16 @@ export default function TabLayout() {
           options={{
             title: "Journey",
             headerShown: false,
+            href: null, // Hidden - may bring back later
             tabBarIcon: ({ color }) => <IconRoute size={24} color={color} />,
           }}
         />
         <Tabs.Screen
-          name="voice"
+          name="questions"
           options={{
-            title: "Voice",
+            title: "Questions",
             headerShown: false,
-            tabBarIcon: ({ color }) => <IconMicrophone size={24} color={color} />,
+            tabBarIcon: ({ color }) => <IconMessageQuestion size={24} color={color} />,
           }}
         />
         <Tabs.Screen

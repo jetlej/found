@@ -6,7 +6,7 @@
 
 Found is an AI matchmaking dating app for people serious about finding real partnerships. Users answer 91 deep questions about themselves, and the AI uses these answers to find highly compatible matches. The app emphasizes depth over volume - no swiping, just meaningful connections.
 
-**Current Status**: Beta - Gamified journey system with 6 category levels. Matching features with dealbreakers and preference checklists implemented.
+**Current Status**: Beta - Voice-first onboarding with 10 open-ended voice questions. AI extracts structured profile data from voice recordings using Whisper + GPT. Matching features with dealbreakers and preference checklists implemented.
 
 ## Tech Stack
 
@@ -33,23 +33,26 @@ app/                    # Expo Router screens (file-based routing)
 ├── (onboarding)/      # Onboarding flow
 │   ├── _layout.tsx    # Onboarding stack layout
 │   ├── basics.tsx     # One-per-page: gender, location, sexuality, birthday, height
-│   ├── photos.tsx     # Photo upload (6 slots, 2 required) → completes Level 1
-│   └── questions.tsx  # Category-based questions with progress (modal presentation)
+│   ├── photos.tsx     # Photo upload (6 slots, 2 required) → navigates to Questions tab
+│   ├── questions.tsx  # Category-based questions with progress (modal, for Journey system - archived)
+│   └── voice-questions.tsx # Voice recording screen for 10 questions
 ├── (tabs)/            # Main tab navigation (post-onboarding)
 │   ├── _layout.tsx    # Tab bar layout
 │   ├── index.tsx      # Home screen
-│   ├── journey.tsx    # Journey/Level progression screen
+│   ├── journey.tsx    # Journey/Level progression screen (hidden - may return later)
+│   ├── questions.tsx  # Voice questions progress/navigation (main onboarding path)
 │   └── matches.tsx    # Matches screen
 └── profile.tsx        # Profile page (modal)
 
 convex/                # Convex backend
-├── schema.ts          # Database schema (users, photos, questions, answers, userProfiles)
+├── schema.ts          # Database schema (users, photos, questions, answers, userProfiles, voiceRecordings)
 ├── users.ts           # User mutations/queries + onboarding completion
 ├── photos.ts          # Photo upload/management
 ├── questions.ts       # Question queries
 ├── seedQuestions.ts   # 91 questions seed data + seed mutation
 ├── answers.ts         # User answer storage + internal query for AI parsing
 ├── userProfiles.ts    # Structured profile data queries/mutations
+├── voiceRecordings.ts # Voice recording storage + auto-triggers parsing when all 10 complete
 ├── matching.ts        # Legacy compatibility scoring
 ├── storage.ts         # File storage URL generation
 ├── lib/
@@ -58,7 +61,9 @@ convex/                # Convex backend
 │   ├── interests.ts   # Interest library (1000+ items by category)
 │   └── canonicalValues.ts # Canonical values for AI extraction (~30 items)
 └── actions/
-    ├── parseProfile.ts # Background action to parse answers into structured data
+    ├── parseProfile.ts # Background action to parse text answers into structured data
+    ├── parseVoiceProfile.ts # Background action to transcribe + parse voice recordings
+    ├── voiceQuestionDefinitions.ts # 10 voice question definitions
     └── seedTestUsers.ts # Seed test users with AI-generated answers and photos
 
 components/            # Reusable components
@@ -73,7 +78,8 @@ components/            # Reusable components
 lib/                   # Utilities
 ├── theme.ts           # Light theme colors + typography (fonts, fontSizes, spacing, colors)
 ├── categories.ts      # 6 question categories with levels, question ranges, unlock descriptions
-├── matching.ts        # NEW: 6-category compatibility scoring algorithm
+├── voice-questions.ts # 10 voice question definitions with categories and icons
+├── matching.ts        # 6-category compatibility scoring algorithm
 ├── onboarding-flow.ts # Configurable onboarding step order for A/B testing
 ├── ai-import.ts       # AI prompt generation and JSON response parsing
 ├── clerk.tsx          # Clerk auth provider
@@ -185,7 +191,8 @@ Checklist behavior:
 - `heightInches`: number (optional)
 - `onboardingComplete`: boolean (optional)
 - `onboardingStep`: string (optional) - Current step for resume: "basics", "photos"
-- `level`: number (optional) - 1-6, derived from completed categories
+- `onboardingType`: "journey" | "voice" (optional) - Which onboarding path user took
+- `level`: number (optional) - 1-6, derived from completed categories (Journey system)
 - `completedCategories`: string[] (optional) - ["the_basics", "who_you_are", ...]
 - `waitlistPosition`: number (optional)
 - `pushToken`: string (optional)
@@ -230,6 +237,15 @@ Checklist behavior:
   - `interest_picker`: JSON array of interest IDs
 - `source`: "ai" | "manual" (optional) - Tracks whether answer came from AI import or manual entry
 - `isDealbreaker`: boolean (optional) - Whether user marked this preference as a dealbreaker
+- Indexes: `by_user`, `by_user_question`
+
+### voiceRecordings
+- `userId`: Id<"users">
+- `questionIndex`: number (0-9)
+- `storageId`: Id<"_storage">
+- `durationSeconds`: number
+- `transcription`: string (optional) - Filled by AI parsing action
+- `createdAt`: number (timestamp)
 - Indexes: `by_user`, `by_user_question`
 
 ### userProfiles (AI-extracted structured data)
@@ -392,9 +408,19 @@ After a user completes all 91 questions, a background Convex action parses their
 ### Photos Screen (`app/(onboarding)/photos.tsx`)
 - 6-slot grid, first 2 marked "Required"
 - Uses `react-native-image-crop-picker` with 1:1 aspect ratio
-- On continue: calls `completeCategory("the_basics")` and navigates to Journey tab
+- On continue: navigates to Questions tab (voice onboarding flow)
 
-### Questions Screen (`app/(onboarding)/questions.tsx`)
+### Voice Questions Screen (`app/(onboarding)/voice-questions.tsx`)
+- Full-screen recording interface for 10 open-ended questions
+- Shows question text, category, and icon
+- Recording states: idle → recording (with waveform) → preview
+- Haptic feedback on start/stop/save/delete
+- Auto-saves recordings to Convex storage
+- When all 10 complete: automatically triggers `parseVoiceProfile` action
+- Re-running a question re-triggers parsing (for updates)
+
+### Questions Screen (`app/(onboarding)/questions.tsx`) - ARCHIVED
+- Used by Journey system (currently hidden, may return later)
 - Opens as modal from Journey screen with `categoryId` param
 - Shows category name centered with X button to close
 - Progress bar + "X/Y" count for current category only
@@ -465,7 +491,69 @@ bun start
 
 ## Implemented Features
 
-### Journey/Level System (IMPLEMENTED)
+### Voice Questions System (IMPLEMENTED - PRIMARY ONBOARDING)
+
+**Purpose**: Replace structured questionnaires with natural voice responses. Users answer 10 open-ended questions by recording voice memos, creating an authentic and low-friction onboarding experience.
+
+**User Flow**:
+1. After photos, user lands on Questions tab showing 10 voice questions
+2. Questions unlock sequentially (must complete in order)
+3. Tapping a question opens full-screen recording interface
+4. User records their answer (no editing, keeps it authentic)
+5. After recording, can preview, re-record, or save
+6. Completing all 10 triggers automatic profile parsing
+
+**10 Voice Questions** (`lib/voice-questions.ts`):
+| # | Category | Question |
+|---|----------|----------|
+| 1 | Values | "What matters most to you in life right now?" |
+| 2 | Love | "What does love mean to you?" |
+| 3 | Story | "Tell me about a moment that shaped who you are" |
+| 4 | Lifestyle | "Walk me through your ideal day" |
+| 5 | Future | "Where do you see yourself in five years?" |
+| 6 | Partner | "What are you really looking for in a partner?" |
+| 7 | Communication | "How do you handle conflict in relationships?" |
+| 8 | Interests | "What do you geek out about?" |
+| 9 | Growth | "What's something you're working on about yourself?" |
+| 10 | Authentic | "What would your best friend say about you?" |
+
+**Technical Architecture**:
+- **Recording**: `expo-av` Audio API with M4A format
+- **Storage**: Recordings saved to Convex `_storage` bucket
+- **Transcription**: OpenAI Whisper API (`whisper-1`)
+- **Profile Extraction**: GPT processes all 10 transcripts together
+- **Auto-trigger**: `saveRecording` mutation schedules parsing when count reaches 10
+- **Re-parsing**: Updating any recording after completion re-triggers full parsing
+
+**Database Schema** (`voiceRecordings` table):
+- `userId`: Id<"users">
+- `questionIndex`: number (0-9)
+- `storageId`: Id<"_storage">
+- `durationSeconds`: number
+- `transcription`: string (optional, filled by parsing action)
+- `createdAt`: number (timestamp)
+- Indexes: `by_user`, `by_user_question`
+
+**Convex Action** (`convex/actions/parseVoiceProfile.ts`):
+1. Fetches all 10 recordings for user
+2. Gets audio URLs from storage
+3. Transcribes each with Whisper (parallel)
+4. Saves transcriptions to `voiceRecordings` table
+5. Extracts structured profile data via GPT:
+   - Canonical values (~30 predefined values)
+   - Personality traits (11 dimensions, 1-10 scale)
+   - Relationship style preferences
+   - Lifestyle indicators
+   - Generated bios (full and short)
+6. Saves to `userProfiles` table
+
+**Cost**: ~$0.05-0.10 per user (Whisper + GPT extraction)
+
+---
+
+### Journey/Level System (ARCHIVED - MAY RETURN LATER)
+
+> **Note**: The Journey tab is currently hidden in favor of Voice Questions onboarding. The code remains in place and can be re-enabled by removing `href: null` from the journey tab in `app/(tabs)/_layout.tsx`.
 
 **Purpose**: Gamify the 91 questions by breaking them into 6 categories. Users progress through levels by completing categories, with each level unlocking a new compatibility score.
 
@@ -496,6 +584,13 @@ bun start
 - `completeCategory`: Adds category to completedCategories, increments level
 - `uncompleteCategory`: Removes category (for testing)
 - `resetJourney`: Clears all progress (DEV only)
+
+**Files** (kept for potential future use):
+- `app/(tabs)/journey.tsx` - Journey tab screen
+- `app/(onboarding)/questions.tsx` - Category question modal
+- `components/JourneyPath.tsx` - Journey progression UI
+- `lib/categories.ts` - 6 category definitions
+- `convex/seedQuestions.ts` - 91 structured questions
 
 ---
 

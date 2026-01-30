@@ -45,7 +45,7 @@ export default function PhotosScreen() {
       // Complete the_basics category (Level 1) and mark onboarding complete
       await completeCategory({ clerkId: userId, categoryId: "the_basics" });
       // Navigate to main tabs (journey tab)
-      router.replace("/(tabs)/journey");
+      router.replace("/(tabs)/questions");
     } catch (error) {
       console.error("Error completing onboarding:", error);
       setIsSubmitting(false);

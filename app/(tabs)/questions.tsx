@@ -54,7 +54,7 @@ const ICONS: Record<VoiceQuestionIcon, React.ComponentType<{ size: number; color
   sparkles: IconSparkles,
 };
 
-export default function VoiceScreen() {
+export default function QuestionsScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
 

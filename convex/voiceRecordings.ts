@@ -1,6 +1,11 @@
 import { v } from "convex/values";
-import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 
 const TOTAL_VOICE_QUESTIONS = 10;
 
@@ -17,7 +22,7 @@ export const saveRecording = mutation({
     const existing = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user_question", (q) =>
-        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex)
+        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex),
       )
       .first();
 
@@ -46,9 +51,13 @@ export const saveRecording = mutation({
     if (allRecordings.length === TOTAL_VOICE_QUESTIONS) {
       // All 10 complete - schedule voice profile parsing
       // This runs both on initial completion AND when updating any recording
-      await ctx.scheduler.runAfter(0, internal.actions.parseVoiceProfile.parseVoiceProfile, {
-        userId: args.userId,
-      });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.parseVoiceProfile.parseVoiceProfile,
+        {
+          userId: args.userId,
+        },
+      );
 
       // Update user's onboarding type to "voice"
       const user = await ctx.db
@@ -74,7 +83,7 @@ export const deleteRecording = mutation({
     const recording = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user_question", (q) =>
-        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex)
+        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex),
       )
       .first();
 
@@ -112,7 +121,7 @@ export const getRecordingForQuestion = query({
     const recording = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user_question", (q) =>
-        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex)
+        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex),
       )
       .first();
 

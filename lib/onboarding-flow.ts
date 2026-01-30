@@ -15,7 +15,9 @@ const SCREEN_ROUTES: Record<OnboardingScreen, string> = {
 };
 
 // Get the next screen in the flow
-export function getNextScreen(current: OnboardingScreen): OnboardingScreen | null {
+export function getNextScreen(
+  current: OnboardingScreen,
+): OnboardingScreen | null {
   const index = ONBOARDING_FLOW.indexOf(current);
   if (index === -1 || index === ONBOARDING_FLOW.length - 1) {
     return null;
@@ -24,7 +26,9 @@ export function getNextScreen(current: OnboardingScreen): OnboardingScreen | nul
 }
 
 // Get the previous screen in the flow
-export function getPrevScreen(current: OnboardingScreen): OnboardingScreen | null {
+export function getPrevScreen(
+  current: OnboardingScreen,
+): OnboardingScreen | null {
   const index = ONBOARDING_FLOW.indexOf(current);
   if (index <= 0) {
     return null;
@@ -33,7 +37,10 @@ export function getPrevScreen(current: OnboardingScreen): OnboardingScreen | nul
 }
 
 // Navigate forward in the flow (slide from right animation)
-export function navigateForward(router: Router, current: OnboardingScreen): void {
+export function navigateForward(
+  router: Router,
+  current: OnboardingScreen,
+): void {
   const next = getNextScreen(current);
   if (next) {
     router.replace({
@@ -61,7 +68,7 @@ export function navigateBack(router: Router, current: OnboardingScreen): void {
 export function navigateTo(
   router: Router,
   screen: OnboardingScreen,
-  direction: "forward" | "back" = "forward"
+  direction: "forward" | "back" = "forward",
 ): void {
   router.replace({
     pathname: SCREEN_ROUTES[screen] as any,

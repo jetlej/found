@@ -5,7 +5,7 @@ export default function OnboardingLayout() {
     <Stack
       screenOptions={({ route }) => ({
         headerShown: false,
-        gestureEnabled: false,
+        gestureEnabled: true,
         animation:
           (route.params as any)?.direction === "back"
             ? "slide_from_left"

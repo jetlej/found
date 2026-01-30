@@ -7,14 +7,14 @@ import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function ReferralScreen() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -80,8 +81,17 @@ export default function ReferralScreen() {
     navigateForward(router, "referral");
   };
 
-  const handleSkip = () => {
-    continueToBasics();
+  const handleSkip = async () => {
+    setSkipping(true);
+    try {
+      if (userId) {
+        await setOnboardingStep({ clerkId: userId, step: "basics" });
+      }
+      navigateForward(router, "referral");
+    } catch {
+      // Navigate anyway if mutation fails
+      navigateForward(router, "referral");
+    }
   };
 
   return (
@@ -90,57 +100,63 @@ export default function ReferralScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.content}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.inner}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Have a referral code?</Text>
-              <Text style={styles.subtitle}>
-                If someone invited you to Found, enter their code below to help them skip the line.
-              </Text>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.input, code.length > 0 && styles.inputWithText]}
-                value={code}
-                onChangeText={(text) => {
-                  setCode(text.toUpperCase());
-                  setError("");
-                  setSuccess("");
-                }}
-                placeholder="Enter code"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={6}
-                editable={!loading && !success}
-              />
-            </View>
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            {success ? <Text style={styles.success}>{success}</Text> : null}
-
-            <Pressable
-              style={styles.button}
-              onPress={handleApply}
-              disabled={loading || !!success || !code.trim()}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? "Submitting..." : "Submit"}
-              </Text>
-            </Pressable>
-
-            <Text style={styles.orText}>or</Text>
-
-            <Pressable
-              style={styles.skipButton}
-              onPress={handleSkip}
-              disabled={loading || !!success}
-            >
-              <Text style={styles.skipText}>I don't have a code</Text>
-            </Pressable>
+        <ScrollView
+          contentContainerStyle={styles.inner}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Have a referral code?</Text>
+            <Text style={styles.subtitle}>
+              If someone invited you to Found, enter their code below to help them skip the line.
+            </Text>
           </View>
-        </TouchableWithoutFeedback>
+
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, code.length > 0 && styles.inputWithText]}
+              value={code}
+              onChangeText={(text) => {
+                setCode(text.toUpperCase());
+                setError("");
+                setSuccess("");
+              }}
+              placeholder="Enter code"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={6}
+              editable={!loading && !success}
+            />
+          </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {success ? <Text style={styles.success}>{success}</Text> : null}
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleApply}
+            disabled={loading || skipping || !!success || !code.trim()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? "Submitting..." : "Submit"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.orText}>or</Text>
+
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+            disabled={loading || skipping || !!success}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.skipText}>
+              {skipping ? "Loading..." : "I don't have a code"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       <Pressable style={styles.logoutButton} onPress={handleLogout}>
@@ -159,7 +175,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inner: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.xl,
     justifyContent: "center",
   },

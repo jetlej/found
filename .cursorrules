@@ -473,6 +473,38 @@ bun start
 
 ---
 
+## Development Tools
+
+### Dev Admin Panel (DEV MODE ONLY)
+
+**Purpose**: Test onboarding flows and impersonate any user without affecting your real account data.
+
+**How to Access**:
+- Long-press the center-top area of any screen for 3 seconds
+- Works from any screen including onboarding, auth, and main app
+- Only available in `__DEV__` mode (development builds)
+
+**Features**:
+- **Search Users**: Find any user by name or phone number
+- **Impersonate User**: Tap a user to switch to their account instantly
+- **Create Fresh User**: One-tap to create a blank test user and start onboarding from scratch
+- **Return to Real Account**: Switch back to your real account anytime
+
+**Technical Implementation**:
+- `components/DevTrigger.tsx`: Invisible trigger + modal wrapper around app
+- `components/DevAdminPanel.tsx`: User search and impersonation UI
+- `stores/offline.ts`: `devClerkId` field persists impersonation state
+- `hooks/useEffectiveUserId.ts`: Returns `devClerkId` when impersonating, otherwise real Clerk userId
+- All screens use `useEffectiveUserId()` instead of `useAuth()` directly
+
+**Convex Queries/Mutations** (`convex/users.ts`):
+- `searchUsers`: Search users by name or phone
+- `createDevTestUser`: Create a fresh user with fake clerkId for testing
+
+**Note**: When impersonating, "Log out" only signs out of Clerk but keeps the impersonation active. Use "Return to Real Account" in the dev panel to stop impersonating.
+
+---
+
 ## Important Notes
 
 - **Development build required** for native modules (image picker, slider)

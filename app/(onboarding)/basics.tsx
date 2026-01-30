@@ -12,11 +12,14 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Animated,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -366,48 +369,61 @@ export default function BasicsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
-        <View style={styles.header}>
-          <Pressable style={styles.backArrow} onPress={handleBack}>
-            <IconChevronLeft size={28} color={colors.text} />
-          </Pressable>
-          <View style={styles.progressContainer}>
-            {Array.from({ length: 7 }).map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressDot,
-                  index <= currentStep && styles.progressDotActive,
-                ]}
-              />
-            ))}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
+      >
+        <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+          <View style={styles.header}>
+            <Pressable style={styles.backArrow} onPress={handleBack}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+            <View style={styles.progressContainer}>
+              {Array.from({ length: 7 }).map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.progressDot,
+                    index <= currentStep && styles.progressDotActive,
+                  ]}
+                />
+              ))}
+            </View>
           </View>
-        </View>
 
-        <View style={styles.content}>
-          {renderStepContent()}
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
-
-        <View style={styles.footer}>
-          <Pressable
-            style={[
-              styles.nextButton,
-              (!canProceed() || loading) && styles.buttonDisabled,
-            ]}
-            onPress={handleNext}
-            disabled={!canProceed() || loading}
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
           >
-            <Text style={styles.nextButtonText}>
-              {loading
-                ? "Saving..."
-                : currentStep === STEPS.length - 1
-                  ? "Continue"
-                  : "Next"}
-            </Text>
-          </Pressable>
-        </View>
-      </Animated.View>
+            <View style={styles.content}>
+              {renderStepContent()}
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </View>
+
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={[
+                  styles.nextButton,
+                  (!canProceed() || loading) && styles.buttonDisabled,
+                ]}
+                onPress={handleNext}
+                disabled={!canProceed() || loading}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.nextButtonText}>
+                  {loading
+                    ? "Saving..."
+                    : currentStep === STEPS.length - 1
+                      ? "Continue"
+                      : "Next"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -419,6 +435,10 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "space-between",
   },
   header: {
     flexDirection: "row",

@@ -2,13 +2,19 @@ import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
-import { navigateBack } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PhotosScreen() {
@@ -17,11 +23,11 @@ export default function PhotosScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
   const existingPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
   const completeCategory = useMutation(api.users.completeCategory);
@@ -40,7 +46,7 @@ export default function PhotosScreen() {
 
   const handleContinue = async () => {
     if (!userId || isSubmitting) return;
-    
+
     setIsSubmitting(true);
     try {
       // Complete the_basics category (Level 1) and mark onboarding complete
@@ -63,7 +69,15 @@ export default function PhotosScreen() {
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
         <View style={styles.header}>
-          <Pressable style={styles.backArrow} onPress={() => router.replace({ pathname: "/(onboarding)/basics", params: { direction: "back", step: "5" } })}>
+          <Pressable
+            style={styles.backArrow}
+            onPress={() =>
+              router.replace({
+                pathname: "/(onboarding)/basics",
+                params: { direction: "back", step: "5" },
+              })
+            }
+          >
             <IconChevronLeft size={28} color={colors.text} />
           </Pressable>
           <View style={styles.progressContainer}>
@@ -97,7 +111,10 @@ export default function PhotosScreen() {
 
         <View style={styles.footer}>
           <Pressable
-            style={[styles.button, (!isValid || isSubmitting) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (!isValid || isSubmitting) && styles.buttonDisabled,
+            ]}
             onPress={handleContinue}
             disabled={!isValid || isSubmitting}
           >

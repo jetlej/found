@@ -22,7 +22,7 @@ export function DevTrigger({ children }: DevTriggerProps) {
       {children}
 
       {/* Centered long-press trigger */}
-      <View style={styles.triggerWrapper}>
+      <View style={styles.triggerWrapper} pointerEvents="box-none">
         <Pressable
           style={styles.trigger}
           onLongPress={() => setShowPanel(true)}

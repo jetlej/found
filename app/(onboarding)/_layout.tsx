@@ -2,7 +2,16 @@ import { Stack } from "expo-router";
 
 export default function OnboardingLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
+    <Stack
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        gestureEnabled: false,
+        animation:
+          (route.params as any)?.direction === "back"
+            ? "slide_from_left"
+            : "slide_from_right",
+      })}
+    >
       <Stack.Screen name="referral" />
       <Stack.Screen name="basics" />
       <Stack.Screen name="photos" />

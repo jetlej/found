@@ -1,7 +1,8 @@
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { navigateForward } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft } from "@tabler/icons-react-native";
+import { useAuth } from "@clerk/clerk-expo";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -25,9 +26,15 @@ export default function ReferralScreen() {
   const [success, setSuccess] = useState("");
 
   const router = useRouter();
+  const { signOut } = useAuth();
   const userId = useEffectiveUserId();
   const applyReferralCode = useMutation(api.users.applyReferralCode);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
+
+  const handleLogout = async () => {
+    await signOut();
+    router.replace("/");
+  };
 
   const handleApply = async () => {
     if (!code.trim()) {
@@ -70,7 +77,7 @@ export default function ReferralScreen() {
     if (userId) {
       await setOnboardingStep({ clerkId: userId, step: "basics" });
     }
-    router.push("/(onboarding)/basics");
+    navigateForward(router, "referral");
   };
 
   const handleSkip = () => {
@@ -79,9 +86,6 @@ export default function ReferralScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Pressable style={styles.backArrow} onPress={() => router.dismissAll()}>
-        <IconChevronLeft size={28} color={colors.text} />
-      </Pressable>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.content}
@@ -138,6 +142,10 @@ export default function ReferralScreen() {
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+
+      <Pressable style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Log out</Text>
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -146,13 +154,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  backArrow: {
-    position: "absolute",
-    left: spacing.lg,
-    top: spacing["3xl"],
-    zIndex: 1,
-    padding: spacing.xs,
   },
   content: {
     flex: 1,
@@ -237,5 +238,13 @@ const styles = StyleSheet.create({
   skipText: {
     color: colors.textSecondary,
     fontSize: fontSizes.base,
+  },
+  logoutButton: {
+    alignItems: "center",
+    paddingBottom: spacing.lg,
+  },
+  logoutText: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
   },
 });

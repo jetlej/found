@@ -2,6 +2,7 @@ import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
+import { navigateBack } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
@@ -62,7 +63,7 @@ export default function PhotosScreen() {
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
         <View style={styles.header}>
-          <Pressable style={styles.backArrow} onPress={() => router.replace({ pathname: "/(onboarding)/basics", params: { step: "5" } })}>
+          <Pressable style={styles.backArrow} onPress={() => router.replace({ pathname: "/(onboarding)/basics", params: { direction: "back", step: "5" } })}>
             <IconChevronLeft size={28} color={colors.text} />
           </Pressable>
           <View style={styles.progressContainer}>

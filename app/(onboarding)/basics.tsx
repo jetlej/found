@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
+import { navigateBack, navigateForward } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { IconChevronLeft, IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
@@ -125,7 +126,7 @@ export default function BasicsScreen() {
       setCurrentStep(currentStep - 1);
       setError("");
     } else {
-      router.canGoBack() ? router.back() : router.replace("/(onboarding)/referral");
+      navigateBack(router, "basics");
     }
   };
 
@@ -155,7 +156,7 @@ export default function BasicsScreen() {
           heightInches,
         });
         await setOnboardingStep({ clerkId: userId, step: "photos" });
-        router.push("/(onboarding)/photos");
+        navigateForward(router, "basics");
       } catch (err: any) {
         setError(err.message || "Something went wrong");
         setLoading(false);

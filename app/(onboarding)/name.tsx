@@ -6,7 +6,7 @@ import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useFocusEffect } from "@react-navigation/native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
@@ -34,6 +34,7 @@ export default function NameScreen() {
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
+  const inputRef = useRef<TextInput>(null);
 
   // Reset loading state when screen comes back into focus
   useFocusEffect(
@@ -52,6 +53,14 @@ export default function NameScreen() {
 
   useEffect(() => {
     setScreenReady(true);
+  }, []);
+
+  // Delay focus until after page transition completes to avoid jank
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 400);
+    return () => clearTimeout(timer);
   }, []);
 
   // Listen for keyboard events to get actual keyboard height
@@ -102,6 +111,7 @@ export default function NameScreen() {
             This is how you'll appear to matches
           </Text>
           <TextInput
+            ref={inputRef}
             style={styles.nameInput}
             value={firstName}
             onChangeText={setFirstName}
@@ -109,7 +119,6 @@ export default function NameScreen() {
             placeholderTextColor={colors.textMuted}
             autoCapitalize="words"
             autoCorrect={false}
-            autoFocus
           />
         </ScrollView>
 

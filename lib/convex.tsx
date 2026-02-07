@@ -6,6 +6,7 @@ const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
 if (!convexUrl) {
   console.warn("Missing EXPO_PUBLIC_CONVEX_URL - database will not work");
+  alert("EXPO_PUBLIC_CONVEX_URL is missing! Convex will not work.");
 }
 
 const convex = new ConvexReactClient(convexUrl ?? "");

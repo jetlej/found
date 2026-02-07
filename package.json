@@ -15,6 +15,7 @@
     "update": "eas update --channel production --message"
   },
   "dependencies": {
+    "@bsky.app/expo-image-crop-tool": "^0.5.0",
     "@clerk/clerk-expo": "^2.19.14",
     "@expo-google-fonts/figtree": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
@@ -55,7 +56,6 @@
     "react-native-compressor": "^1.13.0",
     "react-native-draggable-grid": "^2.2.2",
     "react-native-drax": "0.11.0-alpha.2",
-    "react-native-image-crop-picker": "^0.51.1",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-mmkv": "3",
     "react-native-nitro-modules": "^0.32.0",

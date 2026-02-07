@@ -67,12 +67,11 @@ export const remove = mutation({
 export const reorder = mutation({
   args: {
     userId: v.id("users"),
-    photoIds: v.array(v.id("photos")),
+    orders: v.array(v.object({ photoId: v.id("photos"), order: v.number() })),
   },
   handler: async (ctx, args) => {
-    // Update order based on array position
-    for (let i = 0; i < args.photoIds.length; i++) {
-      await ctx.db.patch(args.photoIds[i], { order: i });
+    for (const { photoId, order } of args.orders) {
+      await ctx.db.patch(photoId, { order });
     }
   },
 });

@@ -1,16 +1,15 @@
 import { api } from "@/convex/_generated/api";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { colors, fontSizes, spacing } from "@/lib/theme";
+import ExpoImageCropTool from "@bsky.app/expo-image-crop-tool";
 import { IconCircleX, IconPlus } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as ExpoImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
     Alert,
     Dimensions,
     Image,
-    Modal,
     Platform,
     Pressable,
     StyleSheet,
@@ -19,11 +18,6 @@ import {
 } from "react-native";
 import { DraxProvider, DraxView } from "react-native-drax";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
-const ImageCropper =
-  Platform.OS !== "web"
-    ? require("react-native-image-crop-picker").default
-    : null;
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_GAP = spacing.md;
@@ -67,11 +61,11 @@ export function PhotoGrid({
     { id: "4", order: 4 },
     { id: "5", order: 5 },
   ]);
-  const [isPreparingCrop, setIsPreparingCrop] = useState(false);
+  const reorderPendingRef = useRef(false);
 
   // Sync with existing photos from database
   useEffect(() => {
-    if (!existingPhotos) return;
+    if (!existingPhotos || reorderPendingRef.current) return;
 
     setItems((prev) =>
       prev.map((item) => {
@@ -107,32 +101,7 @@ export function PhotoGrid({
     try {
       let uri: string;
 
-      const result = await ExpoImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: false,
-        quality: 1,
-      });
-
-      if (result.canceled || !result.assets?.[0]) return;
-      const selectedUri = result.assets[0].uri;
-
-      setIsPreparingCrop(true);
-      await new Promise<void>((resolve) => setTimeout(resolve, 800));
-      setIsPreparingCrop(false);
-
-      if (ImageCropper) {
-        const cropped = await ImageCropper.openCropper({
-          path: selectedUri,
-          width: 800,
-          height: 1000,
-          cropperCircleOverlay: false,
-          compressImageQuality: 0.8,
-          mediaType: "photo",
-          hideBottomControls: true,
-          enableRotationGesture: false,
-        });
-        uri = cropped.path;
-      } else {
+      if (Platform.OS === "web") {
         const editResult = await ExpoImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           allowsEditing: true,
@@ -141,6 +110,20 @@ export function PhotoGrid({
         });
         if (editResult.canceled || !editResult.assets?.[0]) return;
         uri = editResult.assets[0].uri;
+      } else {
+        const result = await ExpoImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: false,
+          quality: 1,
+        });
+        if (result.canceled || !result.assets?.[0]) return;
+
+        const cropped = await ExpoImageCropTool.openCropperAsync({
+          imageUri: result.assets[0].uri,
+          aspectRatio: 4 / 5,
+          compressImageQuality: 0.8,
+        });
+        uri = cropped.path;
       }
 
       const fileUri = uri.startsWith("file://") ? uri : `file://${uri}`;
@@ -208,23 +191,30 @@ export function PhotoGrid({
   };
 
   const handleSwap = useCallback((fromIndex: number, toIndex: number) => {
+    reorderPendingRef.current = true;
+
     setItems((prev) => {
       const newItems = [...prev];
-      // Swap the items
-      const temp = newItems[fromIndex];
-      newItems[fromIndex] = { ...newItems[toIndex], order: fromIndex };
-      newItems[toIndex] = { ...temp, order: toIndex };
+      // Only swap photo data, keep id/order in place
+      const fromPhoto = { photoId: prev[fromIndex].photoId, storageId: prev[fromIndex].storageId, url: prev[fromIndex].url, localUri: prev[fromIndex].localUri, uploading: prev[fromIndex].uploading };
+      const toPhoto = { photoId: prev[toIndex].photoId, storageId: prev[toIndex].storageId, url: prev[toIndex].url, localUri: prev[toIndex].localUri, uploading: prev[toIndex].uploading };
+      newItems[fromIndex] = { ...newItems[fromIndex], ...toPhoto };
+      newItems[toIndex] = { ...newItems[toIndex], ...fromPhoto };
       return newItems;
     });
 
     // Persist to database
     setTimeout(() => {
       setItems((currentItems) => {
-        const photoIds = currentItems
+        const orders = currentItems
           .filter((item) => item.photoId)
-          .map((item) => item.photoId!);
-        if (photoIds.length > 0) {
-          reorderPhotos({ userId, photoIds }).catch(console.error);
+          .map((item) => ({ photoId: item.photoId!, order: item.order }));
+        if (orders.length > 0) {
+          reorderPhotos({ userId, orders })
+            .catch(console.error)
+            .finally(() => setTimeout(() => { reorderPendingRef.current = false; }, 500));
+        } else {
+          reorderPendingRef.current = false;
         }
         return currentItems;
       });
@@ -306,14 +296,6 @@ export function PhotoGrid({
         </View>
       </DraxProvider>
 
-      <Modal visible={isPreparingCrop} transparent animationType="fade">
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Preparing photo...</Text>
-          </View>
-        </View>
-      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -405,22 +387,5 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
     fontSize: fontSizes.xs,
     fontWeight: "600",
-  },
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingBox: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing["2xl"],
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  loadingText: {
-    fontSize: fontSizes.base,
-    color: colors.text,
   },
 });

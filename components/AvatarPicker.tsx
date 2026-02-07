@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { getAvatarUrl } from "@/lib/avatar";
+import ExpoImageCropTool from "@bsky.app/expo-image-crop-tool";
 import { useMutation } from "convex/react";
 import * as ExpoImagePicker from "expo-image-picker";
 import { useState } from "react";
@@ -13,12 +14,6 @@ import {
   Text,
   View,
 } from "react-native";
-
-// Only import cropper on native platforms
-const ImageCropper =
-  Platform.OS !== "web"
-    ? require("react-native-image-crop-picker").default
-    : null;
 
 interface AvatarPickerProps {
   avatarUrl?: string | null;
@@ -45,30 +40,26 @@ export function AvatarPicker({
 
   const pickImage = async () => {
     try {
-      if (ImageCropper) {
-        // Use react-native-image-crop-picker for selection + circular cropping
-        const image = await ImageCropper.openPicker({
-          mediaType: "photo",
-          cropping: true,
-          width: 400,
-          height: 400,
-          cropperCircleOverlay: true,
+      const result = await ExpoImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: Platform.OS === "web",
+        aspect: [1, 1],
+        quality: Platform.OS === "web" ? 0.8 : 1,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      if (Platform.OS === "web") {
+        await uploadImage(result.assets[0].uri);
+      } else {
+        const cropped = await ExpoImageCropTool.openCropperAsync({
+          imageUri: result.assets[0].uri,
+          aspectRatio: 1,
+          shape: "circle",
           compressImageQuality: 0.8,
         });
-        await uploadImage(image.path);
-      } else {
-        // Fallback for web - use expo-image-picker with built-in editing
-        const result = await ExpoImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.8,
-        });
-        if (result.canceled || !result.assets?.[0]) return;
-        await uploadImage(result.assets[0].uri);
+        await uploadImage(cropped.path);
       }
     } catch (error: any) {
-      // User cancelled - don't show error
       if (error?.code === "E_PICKER_CANCELLED") return;
       console.error("Image picker error:", error);
       Alert.alert("Error", "Could not select image. Please try again.");

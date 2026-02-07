@@ -1,0 +1,22 @@
+---
+description: Expo Router navigation patterns and auth flow
+globs: app/**/*.tsx
+alwaysApply: false
+---
+
+# Navigation Conventions
+
+- Use `router.replace()` for auth redirects and when navigation history may be empty
+- Use `router.push()` for normal navigation within a flow
+- Use `router.back()` only when certain there's navigation history
+- Auth flow handled in `app/_layout.tsx` via `AuthGate` component
+- Onboarding uses `router.replace()` for back navigation to avoid errors when history is empty
+- Onboarding step saved to database (`onboardingStep` field) for resume on app restart
+
+## Dev Admin Panel (DEV MODE ONLY)
+
+- Long-press center-top of any screen for 3 seconds to open
+- `components/DevTrigger.tsx` + `components/DevAdminPanel.tsx`
+- Supports user search, impersonation, fresh test user creation
+- `stores/offline.ts`: `devClerkId` persists impersonation
+- `hooks/useEffectiveUserId.ts`: returns `devClerkId` when impersonating, otherwise real Clerk userId

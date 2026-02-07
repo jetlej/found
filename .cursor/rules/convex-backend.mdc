@@ -1,0 +1,39 @@
+---
+description: Convex backend patterns and conventions
+globs: convex/**
+alwaysApply: false
+---
+
+# Convex Backend Conventions
+
+## Data Fetching (used in app/ files that import from convex)
+
+- `useQuery()` for reads (automatically real-time)
+- `useMutation()` for writes
+- Pass `"skip"` to conditionally skip queries:
+  ```typescript
+  const data = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  ```
+
+## Background Actions
+
+- Schedule with `ctx.scheduler.runAfter(0, internal.actions.myAction, { args })`
+- Actions can call external APIs (OpenAI, etc.)
+- Use `internalAction` / `internalMutation` for non-client-callable functions
+
+## Environment Variables
+
+- Set via `bunx convex env set KEY value`
+- Access via `process.env.KEY` in actions
+- `OPENAI_API_KEY` must be set for profile parsing
+
+## Seeding
+
+```bash
+bunx convex run seedQuestions:seedQuestions           # Seed 91 questions (run once)
+bunx convex run actions/seedTestUsers:seedTestUsers   # Seed 10 test users (~20-30 min)
+```
+
+## Config Table
+
+Key-value store in `config` table for app-wide settings (e.g., `minBuildNumber` for force updates). Query by key index.

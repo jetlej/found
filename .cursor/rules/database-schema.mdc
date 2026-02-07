@@ -1,0 +1,55 @@
+---
+description: Database schema reference for all Convex tables
+globs: convex/schema.ts, convex/**
+alwaysApply: false
+---
+
+# Database Schema (Convex)
+
+## users
+- `clerkId`: string (index: `by_clerk_id`), `phone`: string (index: `by_phone`)
+- `name`, `avatarUrl`, `gender` ("Man"/"Woman"/"Non-binary"), `location`, `sexuality` ("Men"/"Women"/"Everyone"): optional strings
+- `birthdate`: optional string (ISO date), `heightInches`: optional number
+- `onboardingComplete`: optional boolean, `onboardingStep`: optional string ("basics"/"photos")
+- `onboardingType`: optional "journey" | "voice"
+- `level`: optional number (1-6), `completedCategories`: optional string[]
+- `waitlistPosition`, `pushToken`, `notificationsEnabled`, `reminderHour`, `reminderMinute`: optional
+
+## photos
+- `userId`: Id<"users">, `storageId`: Id<"_storage">, `url`: string, `order`: number (0-5)
+- Index: `by_user`
+
+## questions
+- `order`: number (1-91), `questionKey`: string (stable identifier), `text`: string
+- `type`: "multiple_choice" | "text" | "essay" | "scale" | "range" | "checklist" | "interest_picker"
+- `options`: optional string[], `category`: optional string
+- `scaleMin`, `scaleMax`: optional number; `scaleMinLabel`, `scaleMaxLabel`: optional string
+- `linkedQuestionKey`: optional string, `hasDealbreaker`: optional boolean
+- Indexes: `by_order`, `by_key`
+
+## answers
+- `userId`: Id<"users">, `questionId`: Id<"questions">
+- `value`: string (format varies: plain string, number string, JSON object `{"min","max"}`, JSON array)
+- `source`: optional "ai" | "manual", `isDealbreaker`: optional boolean
+- Indexes: `by_user`, `by_user_question`
+
+## voiceRecordings
+- `userId`: Id<"users">, `questionIndex`: number (0-9)
+- `storageId`: Id<"_storage">, `durationSeconds`: number
+- `transcription`: optional string, `createdAt`: number (timestamp)
+- Indexes: `by_user`, `by_user_question`
+
+## config
+- `key`: string (index: `by_key`), `value`: string
+
+## userProfiles (AI-extracted structured data)
+- `userId`: Id<"users"> (index: `by_user`)
+- `selectedInterests`: optional string[], `canonicalValues`: optional string[]
+- `preferences`: optional object with keys: `relationshipGoals`, `relationshipStyle`, `hasChildren`, `wantsChildren`, `ethnicity`, `religion`, `politics`, `education`, `alcohol`, `smoking`, `marijuana`, `drugs` -- each `{ self: string, openTo: string[], isDealbreaker: boolean }`
+- `values`, `interests`, `dealbreakers`: string[] (legacy display fields)
+- `traits`: 11 dimensions (1-10): introversion, adventurousness, ambition, emotionalOpenness, traditionalValues, independenceNeed, romanticStyle, socialEnergy, communicationStyle, attachmentStyle, planningStyle
+- `relationshipStyle`: loveLanguage, conflictStyle, communicationFrequency, financialApproach, aloneTimeNeed
+- `familyPlans`: wantsKids, kidsTimeline, familyCloseness, parentingStyle
+- `lifestyle`: sleepSchedule, exerciseLevel, dietType, alcoholUse, drugUse, petPreference, locationPreference
+- Narrative sections: lifeStory, socialProfile, intimacyProfile, lovePhilosophy, partnerPreferences, bioElements, demographics, health
+- Generated: `generatedBio`, `shortBio`, `keywords`: string[], `processedAt`, `openaiModel`, `confidence`

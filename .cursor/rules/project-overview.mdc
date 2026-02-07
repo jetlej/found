@@ -1,0 +1,49 @@
+---
+description: Core project context for Found dating app
+alwaysApply: true
+---
+
+# Found - AI Matchmaking Dating App
+
+AI matchmaking app for serious partnerships. Voice-first onboarding with 10 open-ended questions. AI extracts structured profiles via Whisper + GPT. Matching with dealbreakers and preference checklists.
+
+## Tech Stack
+
+- React Native + Expo SDK 54, Expo Router (file-based routing)
+- Convex (real-time backend, no migrations)
+- Clerk (phone/SMS auth)
+- OpenAI API (gpt-5-mini-2025-08-07)
+- MMKV v3 + Zustand (offline storage)
+- TypeScript, Bun (package manager)
+
+## Project Structure
+
+```
+app/                    # Expo Router screens
+├── index.tsx           # Landing page (pre-auth)
+├── _layout.tsx         # Root layout with AuthGate, fonts, splash
+├── (auth)/             # sign-in.tsx, verify.tsx
+├── (onboarding)/       # basics.tsx, photos.tsx, voice-questions.tsx, questions.tsx (archived)
+├── (tabs)/             # index.tsx, questions.tsx, matches.tsx, journey.tsx (hidden)
+└── profile.tsx
+convex/                 # Backend: schema, mutations, queries, actions
+components/             # Reusable UI components
+lib/                    # Utilities, theme, matching algorithm
+hooks/                  # Custom React hooks
+stores/                 # Zustand stores
+```
+
+## Critical Conventions
+
+- **Convex does NOT auto-sync.** After ANY change to `convex/` files, run `bunx convex dev` to push.
+- Always reference questions by `questionKey`, never by `order` number.
+- All screens use `useEffectiveUserId()` instead of `useAuth()` directly (supports dev impersonation).
+- Env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CONVEX_URL` in `.env.local`; `OPENAI_API_KEY` set via `bunx convex env set`.
+
+## Running the App
+
+```bash
+bun install
+bunx convex dev          # Keep running in separate terminal
+bun start                # Press 'i' for iOS simulator
+```

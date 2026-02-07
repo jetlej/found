@@ -1,0 +1,40 @@
+---
+description: Voice questions system for onboarding
+globs: "**/voice*", convex/voiceRecordings.ts
+alwaysApply: false
+---
+
+# Voice Questions System (Primary Onboarding)
+
+Users answer 10 open-ended questions by recording voice memos. AI transcribes and extracts structured profile data.
+
+## 10 Voice Questions (`lib/voice-questions.ts`)
+
+| # | Category | Question |
+|---|----------|----------|
+| 1 | Values | "What matters most to you in life right now?" |
+| 2 | Love | "What does love mean to you?" |
+| 3 | Story | "Tell me about a moment that shaped who you are" |
+| 4 | Lifestyle | "Walk me through your ideal day" |
+| 5 | Future | "Where do you see yourself in five years?" |
+| 6 | Partner | "What are you really looking for in a partner?" |
+| 7 | Communication | "How do you handle conflict in relationships?" |
+| 8 | Interests | "What do you geek out about?" |
+| 9 | Growth | "What's something you're working on about yourself?" |
+| 10 | Authentic | "What would your best friend say about you?" |
+
+## Technical Architecture
+- **Recording**: `expo-av` Audio API, M4A format
+- **Storage**: Saved to Convex `_storage` bucket
+- **Transcription**: OpenAI Whisper API (`whisper-1`), parallel
+- **Extraction**: GPT processes all 10 transcripts together
+- **Auto-trigger**: `saveRecording` mutation schedules `parseVoiceProfile` when count reaches 10
+- **Re-parsing**: Updating any recording after completion re-triggers full parsing
+- **Cost**: ~$0.05-0.10 per user (Whisper + GPT)
+
+## Convex Action (`convex/actions/parseVoiceProfile.ts`)
+1. Fetch all 10 recordings -> get audio URLs from storage
+2. Transcribe each with Whisper (parallel)
+3. Save transcriptions to `voiceRecordings` table
+4. Extract structured profile via GPT (values, traits, bios)
+5. Save to `userProfiles` table

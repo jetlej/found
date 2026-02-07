@@ -1,0 +1,36 @@
+---
+description: Compatibility scoring algorithm and matches screen
+globs: lib/matching.ts, convex/matching.ts, app/(tabs)/matches.tsx
+alwaysApply: false
+---
+
+# Compatibility Scoring Algorithm
+
+## 6 Category Scores
+
+| Category | Weight | Data Sources |
+|----------|--------|--------------|
+| The Basics | 25% | Checklist preferences + dealbreakers |
+| Who You Are | 20% | Personality traits + canonical values |
+| Relationship Style | 20% | Love language, conflict, communication, finances |
+| Lifestyle | 15% | Sleep, exercise, social, substances |
+| Life & Future | 10% | Family closeness, kids, religion/politics |
+| The Deeper Stuff | 10% | Shared interests (rarity-weighted) + philosophy |
+
+## Dealbreaker System
+- Extracted from checklist preferences (specific selections, not "Open to any")
+- Bidirectional: both users' dealbreakers checked
+- Can filter out matches or show warnings
+
+## Interest Matching (Rarity-Weighted)
+- Niche shared interests (specific movies, artists) = higher weight
+- Common interests (genres like "Rock") = lower weight
+- Uses `selectedInterests` from `userProfiles`
+
+## Canonical Values (~30 items in `convex/lib/canonicalValues.ts`)
+honesty, loyalty, family, growth, adventure, independence, security, creativity, ambition, kindness, humor, faith, authenticity, empathy, respect, integrity, balance, passion, curiosity, optimism, resilience, patience, generosity, compassion, courage, wisdom, freedom, tradition, equality, justice
+
+## Matches Screen (`app/(tabs)/matches.tsx`)
+- Overall score badge: green 80+, yellow 60+, red <40
+- Expandable cards with Compatibility tab (6 bars, shared values/interests, dealbreaker alerts) and Full Profile tab
+- "Watch Out For" section for friction points

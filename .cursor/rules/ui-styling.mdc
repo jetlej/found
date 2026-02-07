@@ -1,0 +1,25 @@
+---
+description: UI styling conventions and theme usage
+globs: app/**/*.tsx, components/**/*.tsx
+alwaysApply: false
+---
+
+# UI Styling Conventions
+
+- **Light theme only** -- clean, elegant aesthetic
+- Use `StyleSheet.create()` at bottom of each file
+- Import `colors`, `fonts`, `fontSizes`, `spacing` from `@/lib/theme`
+
+## Fonts
+
+- Body: System sans-serif
+- Headings: `Cormorant_500Medium`, `Cormorant_700Bold`, `Cormorant_500Medium_Italic`
+- Loaded via `@expo-google-fonts/cormorant` in `app/_layout.tsx`
+- Access via `fonts.serif`, `fonts.serifBold`, `fonts.serifItalic` from theme
+
+## Color Palette (from `lib/theme.ts`)
+
+- Background: `#FAFAFA`, Surface: `#FFFFFF`
+- Text: `#1A1A1A`, Text secondary: `#666666`, Text muted: `#999999`
+- Primary (buttons): `#000000`, Border: `#E5E5E5`
+- Success: `#22c55e`, Error: `#ef4444`

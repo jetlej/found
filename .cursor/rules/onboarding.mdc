@@ -1,0 +1,41 @@
+---
+description: Onboarding flow details and screen behavior
+globs: app/(onboarding)/**
+alwaysApply: false
+---
+
+# Onboarding Flow
+
+## Basics Screen (`basics.tsx`)
+One question per page with back/next navigation:
+1. **Gender**: "Man", "Woman", "Non-binary"
+2. **Interested In**: "Men", "Women", "Everyone"
+3. **Location**: `expo-location` auto-detect city/state
+4. **Birthday**: `@react-native-community/datetimepicker`, 18+ required
+5. **Height**: Slider in feet/inches
+
+## Photos Screen (`photos.tsx`)
+- 6-slot grid, first 2 required
+- `react-native-image-crop-picker` (native) or `expo-image-picker` (web fallback)
+- Upload: pick -> crop -> Convex storage -> photos table
+- On continue: navigates to Questions tab (voice flow)
+
+## Voice Questions Screen (`voice-questions.tsx`)
+- Full-screen recording interface for 10 open-ended questions
+- States: idle -> recording (waveform) -> preview
+- Haptic feedback on start/stop/save/delete
+- Auto-saves recordings to Convex storage
+- All 10 complete -> auto-triggers `parseVoiceProfile` action
+- Re-recording any question re-triggers full parsing
+
+## Questions Screen (`questions.tsx`) -- ARCHIVED
+Used by Journey system (hidden). Opens as modal with `categoryId` param. Supports all 7 question types. Completing last question triggers `completeCategory` mutation.
+
+## Question Types (7)
+`multiple_choice`, `text`, `essay`, `scale`, `range`, `checklist`, `interest_picker`
+
+## Checklist Behavior
+- Comes in pairs: Q1 (self, multiple_choice) + Q2 (partner pref, checklist)
+- "Open to any" auto-selects all, hides dealbreaker toggle
+- Specific selections show dealbreaker toggle
+- Stored with `isDealbreaker` flag in answers table

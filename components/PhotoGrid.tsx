@@ -79,6 +79,7 @@ function DraggableSlot({
   activeIndex,
   dragX,
   dragY,
+  maxSlot,
   onSwap,
   onDragEnd,
   onTap,
@@ -91,6 +92,7 @@ function DraggableSlot({
   activeIndex: Animated.SharedValue<number>;
   dragX: Animated.SharedValue<number>;
   dragY: Animated.SharedValue<number>;
+  maxSlot: Animated.SharedValue<number>;
   onSwap: () => void;
   onDragEnd: () => void;
   onTap: (order: number) => void;
@@ -123,7 +125,8 @@ function DraggableSlot({
       dragX.value = startXY.value.x + e.translationX;
       dragY.value = startXY.value.y + e.translationY;
 
-      const overSlot = getSlotFromXY(dragX.value, dragY.value);
+      const rawSlot = getSlotFromXY(dragX.value, dragY.value);
+      const overSlot = Math.min(rawSlot, maxSlot.value);
       const currentSlot = positions.value[index];
 
       if (overSlot !== currentSlot) {
@@ -269,6 +272,7 @@ export function PhotoGrid({
   const activeIndex = useSharedValue(-1);
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
+  const maxSlot = useSharedValue(5);
 
   // Sync with existing photos from database
   useEffect(() => {
@@ -299,6 +303,7 @@ export function PhotoGrid({
   }, [existingPhotos]);
 
   const filledCount = items.filter((s) => s.url || s.localUri).length;
+  maxSlot.value = Math.max(0, filledCount - 1);
 
   useEffect(() => {
     onPhotoCountChange?.(filledCount);
@@ -390,11 +395,46 @@ export function PhotoGrid({
     if (item.photoId) {
       await removePhoto({ photoId: item.photoId });
     }
-    setItems((prev) =>
-      prev.map((s) =>
+    reorderPendingRef.current = true;
+
+    setItems((prev) => {
+      // Clear the removed slot
+      const cleared = prev.map((s) =>
         s.order === item.order ? { id: s.id, order: s.order } : s
-      )
-    );
+      );
+
+      // Separate filled and empty, keeping filled sorted by current order
+      const filled = cleared
+        .filter((s) => s.url || s.localUri)
+        .sort((a, b) => a.order - b.order);
+      const empty = cleared.filter((s) => !s.url && !s.localUri);
+
+      // Assign sequential orders: filled first, then empty
+      const compacted = [
+        ...filled.map((s, i) => ({ ...s, order: i })),
+        ...empty.map((s, i) => ({ ...s, order: filled.length + i })),
+      ];
+
+      // Update positions shared value so items animate to new slots
+      const newPositions = compacted.map((s) => s.order);
+      positions.value = newPositions;
+
+      // Persist compacted orders to DB
+      const orders = compacted
+        .filter((s) => s.photoId)
+        .map((s) => ({ photoId: s.photoId!, order: s.order }));
+      if (orders.length > 0) {
+        reorderPhotos({ userId, orders })
+          .catch(console.error)
+          .finally(() =>
+            setTimeout(() => { reorderPendingRef.current = false; }, 500)
+          );
+      } else {
+        reorderPendingRef.current = false;
+      }
+
+      return compacted;
+    });
   };
 
   // Light haptic on each swap during drag
@@ -443,6 +483,7 @@ export function PhotoGrid({
             activeIndex={activeIndex}
             dragX={dragX}
             dragY={dragY}
+            maxSlot={maxSlot}
             onSwap={handleSwap}
             onDragEnd={handleDragEnd}
             onTap={pickImage}

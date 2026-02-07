@@ -5,25 +5,54 @@ import ExpoImageCropTool from "@bsky.app/expo-image-crop-tool";
 import { IconCircleX, IconPlus } from "@tabler/icons-react-native";
 import { useMutation } from "convex/react";
 import * as ExpoImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    Image,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { DraxProvider, DraxView } from "react-native-drax";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_GAP = spacing.md;
 const GRID_PADDING = spacing.xl;
 const SLOT_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 const SLOT_HEIGHT = SLOT_WIDTH * 1.3;
+const COL_STRIDE = SLOT_WIDTH + GRID_GAP;
+const ROW_STRIDE = SLOT_HEIGHT + GRID_GAP;
+
+function getSlotXY(slot: number) {
+  "worklet";
+  return {
+    x: (slot % 3) * COL_STRIDE,
+    y: Math.floor(slot / 3) * ROW_STRIDE,
+  };
+}
+
+function getSlotFromXY(x: number, y: number) {
+  "worklet";
+  const col = Math.round(x / COL_STRIDE);
+  const row = Math.round(y / ROW_STRIDE);
+  return Math.min(5, Math.max(0, Math.min(2, col)) + Math.max(0, Math.min(1, row)) * 3);
+}
 
 interface PhotoItem {
   id: string;
@@ -42,6 +71,178 @@ interface PhotoGridProps {
   onPhotoCountChange?: (count: number) => void;
 }
 
+// ─── Draggable slot ───────────────────────────────────────────
+function DraggableSlot({
+  item,
+  index,
+  positions,
+  activeIndex,
+  dragX,
+  dragY,
+  onSwap,
+  onDragEnd,
+  onTap,
+  onRemove,
+  showRequired,
+}: {
+  item: PhotoItem;
+  index: number;
+  positions: Animated.SharedValue<number[]>;
+  activeIndex: Animated.SharedValue<number>;
+  dragX: Animated.SharedValue<number>;
+  dragY: Animated.SharedValue<number>;
+  onSwap: () => void;
+  onDragEnd: () => void;
+  onTap: (order: number) => void;
+  onRemove: (item: PhotoItem) => void;
+  showRequired: boolean;
+}) {
+  const hasImage = !!(item.url || item.localUri);
+  const isRequired = showRequired && item.order < 4;
+  const isFirst = item.order === 0;
+
+  const startXY = useSharedValue({ x: 0, y: 0 });
+
+  const triggerLiftHaptic = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
+
+  const pan = Gesture.Pan()
+    .activateAfterLongPress(200)
+    .enabled(hasImage)
+    .onStart(() => {
+      const slot = positions.value[index];
+      const pos = getSlotXY(slot);
+      startXY.value = pos;
+      activeIndex.value = index;
+      dragX.value = pos.x;
+      dragY.value = pos.y;
+      runOnJS(triggerLiftHaptic)();
+    })
+    .onUpdate((e) => {
+      dragX.value = startXY.value.x + e.translationX;
+      dragY.value = startXY.value.y + e.translationY;
+
+      const overSlot = getSlotFromXY(dragX.value, dragY.value);
+      const currentSlot = positions.value[index];
+
+      if (overSlot !== currentSlot) {
+        const targetIdx = positions.value.indexOf(overSlot);
+        if (targetIdx >= 0) {
+          const next = [...positions.value];
+          next[targetIdx] = currentSlot;
+          next[index] = overSlot;
+          positions.value = next;
+          runOnJS(onSwap)();
+        }
+      }
+    })
+    .onEnd(() => {
+      const slot = positions.value[index];
+      const target = getSlotXY(slot);
+      dragX.value = withSpring(target.x, { damping: 20, stiffness: 200 });
+      dragY.value = withSpring(target.y, { damping: 20, stiffness: 200 });
+      activeIndex.value = -1;
+      runOnJS(onDragEnd)();
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const isActive = activeIndex.value === index;
+
+    if (isActive) {
+      return {
+        transform: [
+          { translateX: dragX.value },
+          { translateY: dragY.value },
+          { scale: 1.05 },
+        ],
+        zIndex: 100,
+        shadowOpacity: 0.3,
+        elevation: 8,
+      };
+    }
+
+    const slot = positions.value[index];
+    const { x, y } = getSlotXY(slot);
+    return {
+      transform: [
+        {
+          translateX: withTiming(x, {
+            duration: 300,
+            easing: Easing.out(Easing.cubic),
+          }),
+        },
+        {
+          translateY: withTiming(y, {
+            duration: 300,
+            easing: Easing.out(Easing.cubic),
+          }),
+        },
+        { scale: withTiming(1, { duration: 200 }) },
+      ],
+      zIndex: 0,
+      shadowOpacity: 0,
+      elevation: 0,
+    };
+  });
+
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        style={[
+          styles.slot,
+          !hasImage && isRequired && styles.slotRequired,
+          styles.slotShadow,
+          animatedStyle,
+        ]}
+      >
+        {hasImage ? (
+          <>
+            <Pressable
+              style={styles.slotContent}
+              onPress={() => onTap(item.order)}
+            >
+              <Image
+                source={{ uri: item.localUri || item.url }}
+                style={styles.image}
+              />
+              {item.uploading && (
+                <View style={styles.uploadingOverlay}>
+                  <Text style={styles.uploadingText}>...</Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.removeButton}
+              onPress={() => onRemove(item)}
+              hitSlop={8}
+            >
+              <IconCircleX size={24} color={colors.text} />
+            </Pressable>
+            {isFirst && (
+              <View style={styles.mainBadge}>
+                <Text style={styles.mainBadgeText}>Main</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <Pressable
+            style={styles.slotContent}
+            onPress={() => onTap(item.order)}
+          >
+            <IconPlus
+              size={32}
+              color={isRequired ? colors.text : colors.textMuted}
+            />
+            {isRequired && <Text style={styles.requiredLabel}>Required</Text>}
+          </Pressable>
+        )}
+      </Animated.View>
+    </GestureDetector>
+  );
+}
+
+// ─── Main grid ────────────────────────────────────────────────
 export function PhotoGrid({
   userId,
   existingPhotos,
@@ -62,6 +263,12 @@ export function PhotoGrid({
     { id: "5", order: 5 },
   ]);
   const reorderPendingRef = useRef(false);
+
+  // positions[i] = which grid slot item i currently occupies
+  const positions = useSharedValue([0, 1, 2, 3, 4, 5]);
+  const activeIndex = useSharedValue(-1);
+  const dragX = useSharedValue(0);
+  const dragY = useSharedValue(0);
 
   // Sync with existing photos from database
   useEffect(() => {
@@ -190,112 +397,60 @@ export function PhotoGrid({
     );
   };
 
-  const handleSwap = useCallback((fromIndex: number, toIndex: number) => {
+  // Light haptic on each swap during drag
+  const handleSwap = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  // Persist the new order after drag ends
+  const handleDragEnd = useCallback(() => {
     reorderPendingRef.current = true;
 
+    const currentPositions = positions.value;
     setItems((prev) => {
-      const newItems = [...prev];
-      // Only swap photo data, keep id/order in place
-      const fromPhoto = { photoId: prev[fromIndex].photoId, storageId: prev[fromIndex].storageId, url: prev[fromIndex].url, localUri: prev[fromIndex].localUri, uploading: prev[fromIndex].uploading };
-      const toPhoto = { photoId: prev[toIndex].photoId, storageId: prev[toIndex].storageId, url: prev[toIndex].url, localUri: prev[toIndex].localUri, uploading: prev[toIndex].uploading };
-      newItems[fromIndex] = { ...newItems[fromIndex], ...toPhoto };
-      newItems[toIndex] = { ...newItems[toIndex], ...fromPhoto };
+      const newItems = prev.map((item, i) => ({
+        ...item,
+        order: currentPositions[i],
+      }));
+
+      const orders = newItems
+        .filter((item) => item.photoId)
+        .map((item) => ({ photoId: item.photoId!, order: item.order }));
+      if (orders.length > 0) {
+        reorderPhotos({ userId, orders })
+          .catch(console.error)
+          .finally(() =>
+            setTimeout(() => {
+              reorderPendingRef.current = false;
+            }, 500)
+          );
+      } else {
+        reorderPendingRef.current = false;
+      }
       return newItems;
     });
-
-    // Persist to database
-    setTimeout(() => {
-      setItems((currentItems) => {
-        const orders = currentItems
-          .filter((item) => item.photoId)
-          .map((item) => ({ photoId: item.photoId!, order: item.order }));
-        if (orders.length > 0) {
-          reorderPhotos({ userId, orders })
-            .catch(console.error)
-            .finally(() => setTimeout(() => { reorderPendingRef.current = false; }, 500));
-        } else {
-          reorderPendingRef.current = false;
-        }
-        return currentItems;
-      });
-    }, 100);
-  }, [userId, reorderPhotos]);
-
-  const renderSlot = (item: PhotoItem, index: number) => {
-    const hasImage = item.url || item.localUri;
-    const isRequired = showRequired && index < 4;
-    const isFirst = index === 0;
-
-    return (
-      <DraxView
-        key={item.id}
-        style={[styles.slot, !hasImage && isRequired && styles.slotRequired]}
-        draggingStyle={styles.dragging}
-        dragReleasedStyle={styles.dragReleased}
-        receivingStyle={styles.receiving}
-        payload={index}
-        longPressDelay={200}
-        onReceiveDragDrop={({ dragged }) => {
-          const fromIndex = dragged.payload as number;
-          if (fromIndex !== index) {
-            handleSwap(fromIndex, index);
-          }
-        }}
-        onDragEnd={() => {
-          // Drag ended without drop
-        }}
-      >
-        {hasImage ? (
-          <>
-            <Pressable style={styles.slotContent} onPress={() => pickImage(item.order)}>
-              <Image
-                source={{ uri: item.localUri || item.url }}
-                style={styles.image}
-              />
-              {item.uploading && (
-                <View style={styles.uploadingOverlay}>
-                  <Text style={styles.uploadingText}>...</Text>
-                </View>
-              )}
-            </Pressable>
-            <Pressable
-              style={styles.removeButton}
-              onPress={() => handleRemove(item)}
-            >
-              <IconCircleX size={24} color={colors.text} />
-            </Pressable>
-            {isFirst && (
-              <View style={styles.mainBadge}>
-                <Text style={styles.mainBadgeText}>Main</Text>
-              </View>
-            )}
-          </>
-        ) : (
-          <Pressable style={styles.slotContent} onPress={() => pickImage(item.order)}>
-            <IconPlus
-              size={32}
-              color={isRequired ? colors.text : colors.textMuted}
-            />
-            {isRequired && <Text style={styles.requiredLabel}>Required</Text>}
-          </Pressable>
-        )}
-      </DraxView>
-    );
-  };
+  }, [userId, reorderPhotos, positions]);
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <DraxProvider>
-        <View style={styles.grid}>
-          <View style={styles.row}>
-            {items.slice(0, 3).map((item, index) => renderSlot(item, index))}
-          </View>
-          <View style={styles.row}>
-            {items.slice(3, 6).map((item, index) => renderSlot(item, index + 3))}
-          </View>
-        </View>
-      </DraxProvider>
-
+      <View style={styles.grid}>
+        {items.map((item, index) => (
+          <DraggableSlot
+            key={item.id}
+            item={item}
+            index={index}
+            positions={positions}
+            activeIndex={activeIndex}
+            dragX={dragX}
+            dragY={dragY}
+            onSwap={handleSwap}
+            onDragEnd={handleDragEnd}
+            onTap={pickImage}
+            onRemove={handleRemove}
+            showRequired={showRequired}
+          />
+        ))}
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -305,15 +460,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: GRID_PADDING,
   },
   grid: {
-    flexDirection: "column",
-  },
-  row: {
-    flexDirection: "row",
-    gap: GRID_GAP,
-    height: SLOT_HEIGHT,
-    marginBottom: GRID_GAP,
+    height: ROW_STRIDE * 2 - GRID_GAP,
   },
   slot: {
+    position: "absolute",
     width: SLOT_WIDTH,
     height: SLOT_HEIGHT,
     borderRadius: 12,
@@ -322,26 +472,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: "hidden",
   },
+  slotShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 12,
+  },
   slotRequired: {
     borderColor: colors.text,
     borderStyle: "dashed",
-  },
-  dragging: {
-    opacity: 0.9,
-    transform: [{ scale: 1.05 }],
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  dragReleased: {
-    opacity: 1,
-    transform: [{ scale: 1 }],
-  },
-  receiving: {
-    borderColor: colors.primary,
-    borderWidth: 2,
   },
   slotContent: {
     flex: 1,

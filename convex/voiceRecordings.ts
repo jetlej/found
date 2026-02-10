@@ -42,6 +42,13 @@ export const saveRecording = mutation({
       createdAt: Date.now(),
     });
 
+    // Immediately schedule transcription for this recording
+    await ctx.scheduler.runAfter(
+      0,
+      internal.actions.parseVoiceProfile.transcribeRecording,
+      { recordingId: id },
+    );
+
     // Check if all 10 questions are now complete
     const allRecordings = await ctx.db
       .query("voiceRecordings")
@@ -154,6 +161,16 @@ export const updateTranscription = mutation({
     await ctx.db.patch(args.recordingId, {
       transcription: args.transcription,
     });
+  },
+});
+
+// Get a single recording by ID (used by transcribeRecording action)
+export const getRecordingById = internalQuery({
+  args: {
+    recordingId: v.id("voiceRecordings"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.recordingId);
   },
 });
 

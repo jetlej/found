@@ -1,4 +1,5 @@
 import { DevTrigger } from "@/components/DevTrigger";
+import { UpdateRequiredScreen } from "@/components/UpdateRequiredScreen";
 import { api } from "@/convex/_generated/api";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -21,7 +22,9 @@ import {
 } from "@expo-google-fonts/figtree";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useQuery } from "convex/react";
+import * as Application from "expo-application";
 import { useFonts } from "expo-font";
+import * as Linking from "expo-linking";
 import {
     Stack,
     useRootNavigationState,
@@ -37,7 +40,6 @@ import {
     ActivityIndicator,
     AppState,
     AppStateStatus,
-    Pressable,
     StyleSheet,
     Text,
     View
@@ -345,7 +347,7 @@ const CustomLightTheme = {
 };
 
 function useUpdateChecker() {
-  const [updateReady, setUpdateReady] = useState(false);
+  const [otaReady, setOtaReady] = useState(false);
   const appState = useRef(AppState.currentState);
 
   const checkForUpdate = async () => {
@@ -354,18 +356,15 @@ function useUpdateChecker() {
       const update = await Updates.checkForUpdateAsync();
       if (update.isAvailable) {
         await Updates.fetchUpdateAsync();
-        setUpdateReady(true);
+        setOtaReady(true);
       }
     } catch (e) {
-      // Silently fail
+      console.warn("[OTA] Update check failed:", e);
     }
   };
 
   useEffect(() => {
-    // Check on mount
     checkForUpdate();
-
-    // Check when app comes to foreground
     const subscription = AppState.addEventListener(
       "change",
       (nextAppState: AppStateStatus) => {
@@ -378,74 +377,46 @@ function useUpdateChecker() {
         appState.current = nextAppState;
       }
     );
-
     return () => subscription.remove();
   }, []);
 
-  const applyUpdate = async () => {
+  const applyOta = async () => {
     await Updates.reloadAsync();
   };
 
-  return { updateReady, applyUpdate };
+  // Check TestFlight build number
+  const minBuild = useQuery(api.config.getMinBuildNumber);
+  const currentBuild = parseInt(Application.nativeBuildVersion ?? "0", 10);
+  const needsTestFlight =
+    minBuild !== null &&
+    minBuild !== undefined &&
+    currentBuild < minBuild;
+
+  return { otaReady, applyOta, needsTestFlight };
 }
-
-function UpdateBanner({
-  visible,
-  onUpdate,
-}: {
-  visible: boolean;
-  onUpdate: () => void;
-}) {
-  if (!visible) return null;
-
-  return (
-    <View style={updateStyles.banner}>
-      <Text style={updateStyles.bannerText}>App update available</Text>
-      <Pressable onPress={onUpdate} style={updateStyles.bannerButton}>
-        <Text style={updateStyles.bannerButtonText}>Restart</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-const updateStyles = StyleSheet.create({
-  banner: {
-    backgroundColor: "#22c55e",
-    paddingTop: 50,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    marginBottom: -42,
-    zIndex: 100,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  bannerText: {
-    color: "#000",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  bannerButton: {
-    backgroundColor: "rgba(0,0,0,0.15)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  bannerButtonText: {
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
 
 function RootLayoutNav() {
-  const { updateReady, applyUpdate } = useUpdateChecker();
+  const { otaReady, applyOta, needsTestFlight } = useUpdateChecker();
+
+  if (otaReady) {
+    return <UpdateRequiredScreen type="ota" onInstall={applyOta} />;
+  }
+
+  if (needsTestFlight) {
+    return (
+      <UpdateRequiredScreen
+        type="testflight"
+        onInstall={() =>
+          Linking.openURL("itms-beta://beta.apple.com/sp/betaprogram")
+        }
+      />
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ThemeProvider value={CustomLightTheme}>
-        <StatusBar style={updateReady ? "light" : "dark"} />
-        <UpdateBanner visible={updateReady} onUpdate={applyUpdate} />
+        <StatusBar style="dark" />
         <AuthGate>
           <DevTrigger>
             <Stack

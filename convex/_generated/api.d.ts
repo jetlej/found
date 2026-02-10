@@ -13,6 +13,7 @@ import type * as actions_parseVoiceProfile from "../actions/parseVoiceProfile.js
 import type * as actions_seedTestUsers from "../actions/seedTestUsers.js";
 import type * as actions_voiceQuestionDefinitions from "../actions/voiceQuestionDefinitions.js";
 import type * as answers from "../answers.js";
+import type * as config from "../config.js";
 import type * as lib_canonicalValues from "../lib/canonicalValues.js";
 import type * as lib_interests from "../lib/interests.js";
 import type * as lib_openai from "../lib/openai.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "actions/seedTestUsers": typeof actions_seedTestUsers;
   "actions/voiceQuestionDefinitions": typeof actions_voiceQuestionDefinitions;
   answers: typeof answers;
+  config: typeof config;
   "lib/canonicalValues": typeof lib_canonicalValues;
   "lib/interests": typeof lib_interests;
   "lib/openai": typeof lib_openai;

@@ -41,16 +41,8 @@ export function AppHeader({
 
   return (
     <View style={styles.header}>
-      <Pressable
-        style={styles.headerLeft}
-        onPress={handleLevelPress}
-        disabled={!showLevelLink}
-      >
-        <View style={styles.levelBadge}>
-          <IconBoltFilled size={16} color={colors.text} />
-          <Text style={styles.levelText}>Level {level}</Text>
-        </View>
-      </Pressable>
+      {/* Level badge hidden for now — keep code for future use */}
+      <View style={styles.headerLeft} />
       {onLogoPress ? (
         <Pressable onPress={onLogoPress}>
           <Text style={styles.logo}>Found.</Text>

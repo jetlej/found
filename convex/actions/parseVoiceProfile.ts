@@ -144,29 +144,56 @@ Trait scales explanation:
 
 Use 5 as default when information is insufficient.`;
 
-// Transcribe audio using OpenAI Whisper
+// Transcribe audio using OpenAI Whisper (with retries)
+const WHISPER_MAX_RETRIES = 3;
+const WHISPER_BASE_DELAY_MS = 1000;
+
 async function transcribeAudio(audioUrl: string): Promise<{ text: string; cost: number }> {
   const client = getOpenAIClient();
   
   // Fetch the audio file
   const response = await fetch(audioUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
+  }
   const audioBuffer = await response.arrayBuffer();
   
   // Create a File object for the API
   const audioFile = new File([audioBuffer], "recording.m4a", { type: "audio/m4a" });
   
-  // Transcribe with Whisper
-  const transcription = await client.audio.transcriptions.create({
-    file: audioFile,
-    model: "whisper-1",
-    response_format: "text",
-  });
-  
-  // Whisper pricing: $0.006 per minute
-  // Estimate ~1 minute per recording on average
-  const estimatedCost = 0.006;
-  
-  return { text: transcription, cost: estimatedCost };
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= WHISPER_MAX_RETRIES; attempt++) {
+    try {
+      const transcription = await client.audio.transcriptions.create({
+        file: audioFile,
+        model: "whisper-1",
+        response_format: "text",
+      });
+
+      // Ensure we have a string (SDK may return object in some versions)
+      const text = typeof transcription === "string"
+        ? transcription
+        : (transcription as any).text ?? String(transcription);
+
+      if (!text || text.trim().length === 0) {
+        throw new Error("Whisper returned empty transcription");
+      }
+
+      // Whisper pricing: $0.006 per minute
+      const estimatedCost = 0.006;
+      return { text: text.trim(), cost: estimatedCost };
+    } catch (err: any) {
+      lastError = err;
+      // Don't retry auth errors
+      if (err?.status === 401 || err?.status === 403) throw err;
+      if (attempt < WHISPER_MAX_RETRIES) {
+        const delayMs = WHISPER_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        console.warn(`Whisper attempt ${attempt}/${WHISPER_MAX_RETRIES} failed, retrying in ${delayMs}ms...`, err?.message);
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+  throw lastError || new Error("Whisper transcription failed after retries");
 }
 
 // Internal action to parse voice recordings into a profile
@@ -198,12 +225,22 @@ export const parseVoiceProfile = internalAction({
     const costs: ExtractionCost[] = [];
     let totalTranscriptionCost = 0;
 
-    // Transcribe all recordings
+    // Transcribe recordings (reuse existing transcriptions when available)
     const transcripts: { questionIndex: number; text: string }[] = [];
     
     for (const recording of recordings) {
       try {
-        // Get the audio URL from storage
+        // Reuse existing transcription if available
+        if (recording.transcription) {
+          transcripts.push({
+            questionIndex: recording.questionIndex,
+            text: recording.transcription,
+          });
+          console.log(`Reusing existing transcription for Q${recording.questionIndex + 1}`);
+          continue;
+        }
+
+        // Otherwise transcribe from audio
         const audioUrl = await ctx.storage.getUrl(recording.storageId);
         if (!audioUrl) {
           console.error(`No URL for recording ${recording._id}`);
@@ -421,6 +458,39 @@ export const parseVoiceProfile = internalAction({
 
     console.log(`Voice profile parsing complete for user ${args.userId}`);
     return { success: true, confidence: extractedProfile.confidence };
+  },
+});
+
+// Transcribe a single recording immediately after save
+export const transcribeRecording = internalAction({
+  args: {
+    recordingId: v.id("voiceRecordings"),
+  },
+  handler: async (ctx, args) => {
+    const recording = await ctx.runQuery(internal.voiceRecordings.getRecordingById, {
+      recordingId: args.recordingId,
+    });
+    if (!recording) {
+      console.error(`transcribeRecording: recording ${args.recordingId} not found (may have been deleted)`);
+      return;
+    }
+
+    const audioUrl = await ctx.storage.getUrl(recording.storageId);
+    if (!audioUrl) {
+      console.error(`transcribeRecording: no storage URL for recording ${args.recordingId}`);
+      return;
+    }
+
+    try {
+      const { text } = await transcribeAudio(audioUrl);
+      await ctx.runMutation(internal.voiceRecordings.updateTranscriptionInternal, {
+        recordingId: args.recordingId,
+        transcription: text,
+      });
+      console.log(`Transcribed recording ${args.recordingId} (Q${recording.questionIndex + 1}): ${text.substring(0, 80)}...`);
+    } catch (err) {
+      console.error(`transcribeRecording failed for ${args.recordingId}:`, err);
+    }
   },
 });
 

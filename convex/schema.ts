@@ -307,4 +307,9 @@ export default defineSchema({
     openaiModel: v.string(),
     confidence: v.number(), // 0-1 confidence score
   }).index("by_user", ["userId"]),
+
+  config: defineTable({
+    key: v.string(),
+    value: v.string(),
+  }).index("by_key", ["key"]),
 });

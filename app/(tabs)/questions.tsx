@@ -41,7 +41,10 @@ function formatDuration(seconds: number): string {
 
 type QuestionState = "completed" | "current" | "locked";
 
-const ICONS: Record<VoiceQuestionIcon, React.ComponentType<{ size: number; color: string }>> = {
+const ICONS: Record<
+  VoiceQuestionIcon,
+  React.ComponentType<{ size: number; color: string }>
+> = {
   diamond: IconDiamond,
   heart: IconHeart,
   book: IconBook,
@@ -68,12 +71,12 @@ export default function QuestionsScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip"
+    userId ? { clerkId: userId } : "skip",
   );
 
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
   // Create a map of questionIndex -> recording for quick lookup
@@ -172,20 +175,22 @@ export default function QuestionsScreen() {
                         {question.category}
                       </Text>
                     </View>
-                  {state === "completed" && (
-                    <View style={styles.completedBadge}>
-                      <IconCheck size={14} color={colors.success} />
-                      <Text style={styles.durationText}>
-                        {formatDuration(recording!.durationSeconds)}
-                      </Text>
-                    </View>
-                  )}
-                  {state === "current" && (
-                    <View style={styles.answerButton}>
-                      <Text style={styles.answerButtonText}>Answer</Text>
-                    </View>
-                  )}
-                  {state === "locked" && <IconLock size={14} color="#AAAAAA" />}
+                    {state === "completed" && (
+                      <View style={styles.completedBadge}>
+                        <IconCheck size={14} color={colors.success} />
+                        <Text style={styles.durationText}>
+                          {formatDuration(recording!.durationSeconds)}
+                        </Text>
+                      </View>
+                    )}
+                    {state === "current" && (
+                      <View style={styles.answerButton}>
+                        <Text style={styles.answerButtonText}>Answer</Text>
+                      </View>
+                    )}
+                    {state === "locked" && (
+                      <IconLock size={14} color="#AAAAAA" />
+                    )}
                   </View>
                 </Pressable>
               </View>

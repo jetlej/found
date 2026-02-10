@@ -4,9 +4,10 @@ import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from "@/lib/voice-questions";
 import {
   IconMicrophone,
-  IconPlayerStop,
+  IconPlayerPause,
   IconTrash,
   IconX,
+  IconFileText,
 } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { Audio } from "expo-av";
@@ -14,7 +15,7 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -93,6 +94,8 @@ export default function VoiceQuestionsScreen() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -228,6 +231,7 @@ export default function VoiceQuestionsScreen() {
       }
 
       setIsRecording(false);
+      setIsPaused(false);
       setSaving(true);
 
       // Stop recording
@@ -274,6 +278,37 @@ export default function VoiceQuestionsScreen() {
     }
   };
 
+  const pauseRecording = async () => {
+    if (!recordingRef.current) return;
+    await recordingRef.current.pauseAsync();
+    setIsPaused(true);
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const resumeRecording = async () => {
+    if (!recordingRef.current) return;
+    await recordingRef.current.startAsync();
+    setIsPaused(false);
+    durationIntervalRef.current = setInterval(() => {
+      setRecordingDuration((prev) => prev + 1);
+    }, 1000);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const discardRecording = async () => {
+    if (!recordingRef.current) return;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await recordingRef.current.stopAndUnloadAsync();
+    recordingRef.current = null;
+    setIsRecording(false);
+    setIsPaused(false);
+    setRecordingDuration(0);
+  };
+
   const handleDelete = async () => {
     if (!currentUser?._id) return;
 
@@ -290,16 +325,21 @@ export default function VoiceQuestionsScreen() {
     }
   };
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
+    // If paused mid-recording, stop and save first
+    if (isPaused && recordingRef.current) {
+      await stopRecording();
+    }
+    setShowTranscript(false);
     if (isLastQuestion) {
-      // Go back to voice tab
       router.back();
     } else {
       setCurrentIndex((prev) => prev + 1);
     }
-  }, [isLastQuestion, router]);
+  }, [isLastQuestion, router, isPaused]);
 
   const handleBack = useCallback(() => {
+    setShowTranscript(false);
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     } else {
@@ -312,6 +352,7 @@ export default function VoiceQuestionsScreen() {
     if (isRecording && recordingRef.current) {
       await recordingRef.current.stopAndUnloadAsync();
       recordingRef.current = null;
+      setIsPaused(false);
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
@@ -341,7 +382,7 @@ export default function VoiceQuestionsScreen() {
   const canProceed = hasRecording || saving;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <Animated.View style={[styles.flex, fadeStyle]}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
@@ -372,21 +413,7 @@ export default function VoiceQuestionsScreen() {
           <Text style={styles.questionText}>{currentQuestion.text}</Text>
 
           <View style={styles.recordingArea}>
-            {isRecording ? (
-              // Recording in progress
-              <View style={styles.recordingState}>
-                <Animated.View style={[styles.recordingPulse, pulseStyle]}>
-                  <Pressable style={styles.stopButton} onPress={stopRecording}>
-                    <IconPlayerStop size={32} color="#FFFFFF" />
-                  </Pressable>
-                </Animated.View>
-                <SoundWave isRecording={isRecording} />
-                <Text style={styles.recordingDuration}>
-                  {formatDuration(recordingDuration)}
-                </Text>
-                <Text style={styles.recordingHint}>Tap to stop recording</Text>
-              </View>
-            ) : hasRecording ? (
+            {hasRecording && !isRecording ? (
               // Has existing recording
               <View style={styles.recordedState}>
                 <View style={styles.recordedBadge}>
@@ -399,6 +426,13 @@ export default function VoiceQuestionsScreen() {
                   <IconTrash size={18} color={colors.error} />
                   <Text style={styles.deleteText}>Delete & Re-record</Text>
                 </Pressable>
+                <Pressable
+                  style={styles.transcriptLink}
+                  onPress={() => setShowTranscript(true)}
+                >
+                  <IconFileText size={14} color={colors.textMuted} />
+                  <Text style={styles.transcriptLinkText}>Show transcript</Text>
+                </Pressable>
               </View>
             ) : saving ? (
               // Saving state
@@ -406,12 +440,44 @@ export default function VoiceQuestionsScreen() {
                 <Text style={styles.savingText}>Saving...</Text>
               </View>
             ) : (
-              // Ready to record
-              <View style={styles.readyState}>
-                <Pressable style={styles.recordButton} onPress={startRecording}>
-                  <IconMicrophone size={32} color="#FFFFFF" />
-                </Pressable>
-                <Text style={styles.recordHint}>Tap to start recording</Text>
+              // Ready / recording / paused — unified layout, no shift
+              <View style={styles.recordingState}>
+                {isRecording && !isPaused ? (
+                  <Animated.View style={pulseStyle}>
+                    <Pressable style={styles.stopButton} onPress={pauseRecording}>
+                      <IconPlayerPause size={32} color="#FFFFFF" />
+                    </Pressable>
+                  </Animated.View>
+                ) : (
+                  <Pressable
+                    style={styles.recordButton}
+                    onPress={isPaused ? resumeRecording : startRecording}
+                  >
+                    <IconMicrophone size={32} color="#FFFFFF" />
+                  </Pressable>
+                )}
+                <View style={styles.belowButton}>
+                  {isRecording && !isPaused ? (
+                    <>
+                      <SoundWave isRecording={true} />
+                      <Text style={styles.recordingDuration}>
+                        {formatDuration(recordingDuration)}
+                      </Text>
+                    </>
+                  ) : isPaused ? (
+                    <>
+                      <Text style={styles.recordingDuration}>
+                        {formatDuration(recordingDuration)}
+                      </Text>
+                      <Pressable style={styles.discardButton} onPress={discardRecording}>
+                        <IconTrash size={18} color={colors.error} />
+                        <Text style={styles.deleteText}>Delete & start over</Text>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <Text style={styles.recordHint}>Tap to start recording</Text>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -429,10 +495,10 @@ export default function VoiceQuestionsScreen() {
             <Pressable
               style={[
                 styles.nextButton,
-                (!canProceed || isRecording) && styles.buttonDisabled,
+                (!canProceed && !isPaused || (isRecording && !isPaused)) && styles.buttonDisabled,
               ]}
               onPress={handleNext}
-              disabled={!canProceed || isRecording}
+              disabled={!canProceed && !isPaused || (isRecording && !isPaused)}
             >
               <Text style={styles.nextButtonText}>
                 {isLastQuestion ? "Done" : "Next"}
@@ -441,6 +507,32 @@ export default function VoiceQuestionsScreen() {
           </View>
         </View>
       </Animated.View>
+
+      <Modal
+        visible={showTranscript}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowTranscript(false)}
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{currentQuestion?.category}</Text>
+            <Pressable onPress={() => setShowTranscript(false)}>
+              <IconX size={20} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.modalTranscript}>
+              {existingRecording?.transcription || "No transcript available yet."}
+            </Text>
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -455,7 +547,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
   headerRow: {
@@ -536,8 +627,10 @@ const styles = StyleSheet.create({
   recordingState: {
     alignItems: "center",
   },
-  recordingPulse: {
-    marginBottom: spacing.md,
+  belowButton: {
+    height: 140,
+    alignItems: "center",
+    justifyContent: "flex-start",
   },
   stopButton: {
     width: 100,
@@ -546,6 +639,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing.lg,
   },
   soundWave: {
     flexDirection: "row",
@@ -602,6 +696,62 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.error,
     fontWeight: "500",
+  },
+  discardButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  transcriptLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  transcriptLinkText: {
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  modalHandle: {
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    alignSelf: "center",
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes.lg,
+    color: colors.text,
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: spacing.xl,
+  },
+  modalTranscript: {
+    fontSize: fontSizes.base,
+    color: colors.text,
+    lineHeight: 24,
   },
   savingState: {
     alignItems: "center",

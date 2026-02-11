@@ -10,9 +10,9 @@ import { StyleSheet, View } from "react-native";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { OptionButton } from "@/components/OptionButton";
 
-const INTERESTED_IN = ["Men", "Women", "Everyone"];
+const OPTIONS = ["Dog", "Cat", "Both", "Other", "None", "Prefer not to say"];
 
-export default function SexualityScreen() {
+export default function PetsScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
@@ -21,7 +21,7 @@ export default function SexualityScreen() {
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 
-  const [interestedIn, setInterestedIn] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
 
@@ -29,26 +29,26 @@ export default function SexualityScreen() {
 
   useEffect(() => {
     if (currentUser && !hasLoadedData) {
-      if (currentUser.sexuality) setInterestedIn(currentUser.sexuality);
+      if (currentUser.pets) setSelected(currentUser.pets);
       setHasLoadedData(true);
     }
   }, [currentUser, hasLoadedData]);
 
   const handleContinue = async () => {
-    if (!userId || !interestedIn) return;
+    if (!userId || !selected) return;
     setLoading(true);
     try {
-      await updateBasics({ clerkId: userId, sexuality: interestedIn });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "location" });
-      goToNextStep(router, "sexuality", isEditing);
+      await updateBasics({ clerkId: userId, pets: selected });
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "drinking" });
+      goToNextStep(router, "pets", isEditing);
     } catch { setLoading(false); }
   };
 
   return (
-    <OnboardingScreen question="I'm interested in..." canProceed={!!interestedIn} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined}>
+    <OnboardingScreen question="Do you have pets?" canProceed={!!selected} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined}>
       <View style={styles.options}>
-        {INTERESTED_IN.map((opt) => (
-          <OptionButton key={opt} label={opt} selected={interestedIn === opt} onPress={() => setInterestedIn(opt)} />
+        {OPTIONS.map((opt) => (
+          <OptionButton key={opt} label={opt} selected={selected === opt} onPress={() => setSelected(opt)} variant="chip" />
         ))}
       </View>
     </OnboardingScreen>
@@ -56,5 +56,5 @@ export default function SexualityScreen() {
 }
 
 const styles = StyleSheet.create({
-  options: { gap: spacing.md, marginTop: spacing.lg },
+  options: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.lg },
 });

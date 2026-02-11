@@ -10,9 +10,9 @@ import { StyleSheet, View } from "react-native";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { OptionButton } from "@/components/OptionButton";
 
-const INTERESTED_IN = ["Men", "Women", "Everyone"];
+const OPTIONS = ["he/him", "she/her", "they/them", "Other", "Prefer not to say"];
 
-export default function SexualityScreen() {
+export default function PronounsScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
@@ -21,7 +21,7 @@ export default function SexualityScreen() {
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 
-  const [interestedIn, setInterestedIn] = useState<string | null>(null);
+  const [pronouns, setPronouns] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
 
@@ -29,26 +29,26 @@ export default function SexualityScreen() {
 
   useEffect(() => {
     if (currentUser && !hasLoadedData) {
-      if (currentUser.sexuality) setInterestedIn(currentUser.sexuality);
+      if (currentUser.pronouns) setPronouns(currentUser.pronouns);
       setHasLoadedData(true);
     }
   }, [currentUser, hasLoadedData]);
 
   const handleContinue = async () => {
-    if (!userId || !interestedIn) return;
+    if (!userId || !pronouns) return;
     setLoading(true);
     try {
-      await updateBasics({ clerkId: userId, sexuality: interestedIn });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "location" });
-      goToNextStep(router, "sexuality", isEditing);
+      await updateBasics({ clerkId: userId, pronouns });
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "gender" });
+      goToNextStep(router, "pronouns", isEditing);
     } catch { setLoading(false); }
   };
 
   return (
-    <OnboardingScreen question="I'm interested in..." canProceed={!!interestedIn} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined}>
+    <OnboardingScreen question="What are your pronouns?" canProceed={!!pronouns} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined}>
       <View style={styles.options}>
-        {INTERESTED_IN.map((opt) => (
-          <OptionButton key={opt} label={opt} selected={interestedIn === opt} onPress={() => setInterestedIn(opt)} />
+        {OPTIONS.map((opt) => (
+          <OptionButton key={opt} label={opt} selected={pronouns === opt} onPress={() => setPronouns(opt)} />
         ))}
       </View>
     </OnboardingScreen>

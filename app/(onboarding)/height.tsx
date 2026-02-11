@@ -3,83 +3,62 @@ import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Animated,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-// Height options in feet/inches format
-const generateHeightOptions = () => {
-  const options: { label: string; inches: number }[] = [];
-  for (let feet = 4; feet <= 7; feet++) {
-    for (let inches = 0; inches < 12; inches++) {
-      if (feet === 4 && inches < 6) continue;
-      if (feet === 7 && inches > 6) break;
-      const totalInches = feet * 12 + inches;
-      options.push({
-        label: `${feet}'${inches}"`,
-        inches: totalInches,
-      });
-    }
-  }
-  return options;
-};
-
-const HEIGHT_OPTIONS = generateHeightOptions();
+const FEET = [4, 5, 6, 7];
+const INCHES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 export default function HeightScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
+  const { editing } = useLocalSearchParams<{ editing?: string }>();
+  const isEditing = editing === "true";
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
-  const [heightInches, setHeightInches] = useState<number | null>(null);
+  const [feet, setFeet] = useState(5);
+  const [inches, setInches] = useState(8);
   const [loading, setLoading] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
 
-  // Reset loading state when screen comes back into focus
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(false);
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { setLoading(false); }, []));
 
   useEffect(() => {
     if (currentUser && !hasLoadedData) {
-      if (currentUser.heightInches) setHeightInches(currentUser.heightInches);
+      if (currentUser.heightInches) {
+        setFeet(Math.floor(currentUser.heightInches / 12));
+        setInches(currentUser.heightInches % 12);
+      }
       setHasLoadedData(true);
     }
   }, [currentUser, hasLoadedData]);
 
-  useEffect(() => {
-    setScreenReady(true);
-  }, []);
+  useEffect(() => { setScreenReady(true); }, []);
 
-  const canProceed = !!heightInches;
+  const totalInches = feet * 12 + inches;
 
   const handleContinue = async () => {
-    if (!userId || !canProceed) return;
-
+    if (!userId) return;
     setLoading(true);
     try {
-      await updateBasics({ clerkId: userId, heightInches });
-      await setOnboardingStep({ clerkId: userId, step: "photos" });
-      goToNextStep(router, "height");
-    } catch (err) {
-      setLoading(false);
-    }
+      await updateBasics({ clerkId: userId, heightInches: totalInches });
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "photos" });
+      goToNextStep(router, "height", isEditing);
+    } catch { setLoading(false); }
   };
 
   return (
@@ -88,43 +67,48 @@ export default function HeightScreen() {
         <View style={styles.content}>
           <Text style={styles.question}>How tall are you?</Text>
 
-          <ScrollView
-            style={styles.heightPicker}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.heightPickerContent}
-          >
-            {HEIGHT_OPTIONS.map((h) => (
-              <Pressable
-                key={h.inches}
-                style={[
-                  styles.heightOption,
-                  heightInches === h.inches && styles.heightOptionSelected,
-                ]}
-                onPress={() => setHeightInches(h.inches)}
+          <View style={styles.pickerRow}>
+            <View style={styles.pickerColumn}>
+              <Text style={styles.pickerLabel}>ft</Text>
+              <Picker
+                selectedValue={feet}
+                onValueChange={setFeet}
+                style={styles.picker}
+                itemStyle={styles.pickerItem}
               >
-                <Text
-                  style={[
-                    styles.heightOptionText,
-                    heightInches === h.inches && styles.heightOptionTextSelected,
-                  ]}
-                >
-                  {h.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                {FEET.map((f) => (
+                  <Picker.Item key={f} label={String(f)} value={f} />
+                ))}
+              </Picker>
+            </View>
+            <View style={styles.pickerColumn}>
+              <Text style={styles.pickerLabel}>in</Text>
+              <Picker
+                selectedValue={inches}
+                onValueChange={setInches}
+                style={styles.picker}
+                itemStyle={styles.pickerItem}
+              >
+                {INCHES.map((i) => (
+                  <Picker.Item key={i} label={String(i)} value={i} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.heightDisplay}>
+            <Text style={styles.heightText}>{feet}'{inches}"</Text>
+          </View>
         </View>
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleContinue}
-            disabled={!canProceed || loading}
+            disabled={loading}
             activeOpacity={0.7}
           >
-            <Text style={styles.buttonText}>
-              {loading ? "Saving..." : "Next"}
-            </Text>
+            <Text style={styles.buttonText}>{loading ? "Saving..." : "Next"}</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -133,72 +117,19 @@ export default function HeightScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-  },
-  question: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.xl,
-  },
-  heightPicker: {
-    flex: 1,
-    marginTop: spacing.lg,
-  },
-  heightPickerContent: {
-    paddingBottom: spacing.xl,
-  },
-  heightOption: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 12,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  heightOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  heightOptionText: {
-    fontSize: fontSizes.lg,
-    color: colors.text,
-    textAlign: "center",
-  },
-  heightOptionTextSelected: {
-    color: colors.primaryText,
-    fontWeight: "600",
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.primaryText,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
+  content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"] },
+  question: { fontFamily: fonts.serif, fontSize: fontSizes["3xl"], color: colors.text, marginBottom: spacing.sm },
+  pickerRow: { flexDirection: "row", justifyContent: "center", marginTop: spacing.lg },
+  pickerColumn: { alignItems: "center", flex: 1 },
+  pickerLabel: { fontSize: fontSizes.base, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs },
+  picker: { height: 200, width: "100%" },
+  pickerItem: { fontSize: fontSizes["2xl"], color: colors.text },
+  heightDisplay: { alignItems: "center", marginTop: spacing.lg, paddingVertical: spacing.md },
+  heightText: { fontSize: fontSizes.xl, fontWeight: "600", color: colors.text },
+  footer: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },
+  button: { backgroundColor: colors.primary, borderRadius: 12, padding: spacing.lg, alignItems: "center" },
+  buttonDisabled: { opacity: 0.5 },
+  buttonText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primaryText },
 });

@@ -23,7 +23,7 @@ app/                    # Expo Router screens
 ├── index.tsx           # Landing page (pre-auth)
 ├── _layout.tsx         # Root layout with AuthGate, fonts, splash
 ├── (auth)/             # sign-in.tsx, verify.tsx
-├── (onboarding)/       # basics.tsx, photos.tsx, voice-questions.tsx, questions.tsx (archived)
+├── (onboarding)/       # gender.tsx, sexuality.tsx, location.tsx, birthday.tsx, height.tsx, photos.tsx, relationship-goals.tsx, kids.tsx, wants-kids.tsx, religion.tsx, politics.tsx, substances.tsx, voice-questions.tsx
 ├── (tabs)/             # index.tsx, questions.tsx, matches.tsx, journey.tsx (hidden)
 └── profile.tsx
 convex/                 # Backend: schema, mutations, queries, actions

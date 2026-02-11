@@ -1,24 +1,44 @@
 ---
 description: Onboarding flow details and screen behavior
-globs: app/(onboarding)/**
+globs: app/(onboarding)/**, components/OnboardingScreen.tsx, components/OptionButton.tsx, components/ImportanceSlider.tsx, lib/onboarding-flow.ts
 alwaysApply: false
 ---
 
 # Onboarding Flow
 
-## Basics Screen (`basics.tsx`)
-One question per page with back/next navigation:
-1. **Gender**: "Man", "Woman", "Non-binary"
-2. **Interested In**: "Men", "Women", "Everyone"
-3. **Location**: `expo-location` auto-detect city/state
-4. **Birthday**: `@react-native-community/datetimepicker`, 18+ required
-5. **Height**: Slider in feet/inches
+Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> gender -> sexuality -> location -> birthday -> height -> photos -> relationship-goals -> kids -> wants-kids -> religion -> politics -> substances.
 
-## Photos Screen (`photos.tsx`)
-- 6-slot grid, first 2 required
-- `react-native-image-crop-picker` (native) or `expo-image-picker` (web fallback)
-- Upload: pick -> crop -> Convex storage -> photos table
-- On continue: navigates to Questions tab (voice flow)
+## Shared Components
+
+- **`OnboardingScreen`** (`components/OnboardingScreen.tsx`): Wrapper for all question pages. Handles fade animation, layout (scrollable or fixed), question heading, and footer with Next button. Accepts optional `onBack` prop to show a Back + Next button row (used in editing mode).
+- **`OptionButton`** (`components/OptionButton.tsx`): Selectable option with `shadows.sm`, no border. Variants: `default` (full-width), `compact` (2-col grid), `pill` (rounded inline), `row` (equal-width side-by-side).
+- **`ImportanceSlider`** (`components/ImportanceSlider.tsx`): "How important is it that your partner aligns with you here?" subquestion + 1-10 slider. Used by religion and politics pages.
+
+## Editing Mode
+
+When entering onboarding from the Questions tab ("The Basics" card), pages receive `editing=true` param. In editing mode:
+- Layout shows "Edit Basics" title + X button (closes to Questions tab) instead of back arrow + progress dots
+- Footer shows Back + Next buttons (like voice questions)
+- `setOnboardingStep` is skipped (doesn't reset onboarding progress)
+- `goToNextStep(router, step, isEditing)` carries the `editing` param forward
+- The Basics card navigates to the first unanswered step (computed in `questions.tsx`)
+
+## Basics Screens (one question per page)
+1. **Name** (`name.tsx`): Text input
+2. **Gender** (`gender.tsx`): "Woman", "Man", "Non-binary"
+3. **Sexuality** (`sexuality.tsx`): "Men", "Women", "Everyone"
+4. **Location** (`location.tsx`): `expo-location` auto-detect city/state
+5. **Birthday** (`birthday.tsx`): `@react-native-community/datetimepicker`, 18+ required
+6. **Height** (`height.tsx`): Scrollable list of height options
+7. **Photos** (`photos.tsx`): 6-slot grid, first 4 required
+
+## Structured Questions (stored in `users` table)
+8. **Relationship Goals** (`relationship-goals.tsx`): Marriage, Long-term partner, etc.
+9. **Kids** (`kids.tsx`): "Do you have children?" Yes/No (row layout)
+10. **Wants Kids** (`wants-kids.tsx`): Yes, No, Open to it, Not sure
+11. **Religion** (`religion.tsx`): 2-column grid + ImportanceSlider
+12. **Politics** (`politics.tsx`): Column options + ImportanceSlider
+13. **Substances** (`substances.tsx`): Drinking/Smoking/Marijuana pill selectors. Last step -- calls `completeCategory` during initial onboarding.
 
 ## Voice Questions Screen (`voice-questions.tsx`)
 - Full-screen recording interface for 10 open-ended questions
@@ -27,15 +47,3 @@ One question per page with back/next navigation:
 - Auto-saves recordings to Convex storage
 - All 10 complete -> auto-triggers `parseVoiceProfile` action
 - Re-recording any question re-triggers full parsing
-
-## Questions Screen (`questions.tsx`) -- ARCHIVED
-Used by Journey system (hidden). Opens as modal with `categoryId` param. Supports all 7 question types. Completing last question triggers `completeCategory` mutation.
-
-## Question Types (7)
-`multiple_choice`, `text`, `essay`, `scale`, `range`, `checklist`, `interest_picker`
-
-## Checklist Behavior
-- Comes in pairs: Q1 (self, multiple_choice) + Q2 (partner pref, checklist)
-- "Open to any" auto-selects all, hides dealbreaker toggle
-- Specific selections show dealbreaker toggle
-- Stored with `isDealbreaker` flag in answers table

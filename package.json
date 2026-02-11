@@ -13,7 +13,9 @@
     "build": "eas build --platform ios --profile production",
     "submit": "eas submit --platform ios",
     "update": "eas update --channel production --message",
-    "set-min-build": "node -e \"const r=require('child_process').execSync('eas build:list --platform ios --limit 1 --non-interactive --json',{encoding:'utf8'});const b=JSON.parse(r)[0]?.buildNumber;if(!b){console.log('Could not get latest build number');process.exit(1)}require('child_process').execSync('bunx convex run config:setMinBuildNumber \\'{\\\"build\\\":'+b+'}\\'',(e,o)=>console.log(o||e));console.log('Set minBuildNumber to '+b)\""
+    "set-min-build": "node -e \"const r=require('child_process').execSync('eas build:list --platform ios --limit 1 --non-interactive --json',{encoding:'utf8'});const b=JSON.parse(r)[0]?.buildNumber;if(!b){console.log('Could not get latest build number');process.exit(1)}require('child_process').execSync('bunx convex run config:setMinBuildNumber \\'{\\\"build\\\":'+b+'}\\'',(e,o)=>console.log(o||e));console.log('Set minBuildNumber to '+b)\"",
+    "seed:voice-test-users": "bunx convex run actions/seedVoiceTestUsers:seedVoiceProfilesForTestUsers",
+    "seed:test-photos": "bunx convex run actions/seedTestPhotos:seedTestPhotos"
   },
   "dependencies": {
     "@bsky.app/expo-image-crop-tool": "^0.5.0",
@@ -25,6 +27,7 @@
     "@react-native-community/netinfo": "^11.4.1",
     "@react-native-community/slider": "^5.1.2",
     "@react-native-masked-view/masked-view": "0.3.2",
+    "@react-native-picker/picker": "^2.11.4",
     "@react-navigation/native": "^7.1.8",
     "@tabler/icons-react-native": "^3.36.1",
     "convex": "^1.31.2",

@@ -8,7 +8,8 @@ alwaysApply: false
 
 - **Light theme only** -- clean, elegant aesthetic
 - Use `StyleSheet.create()` at bottom of each file
-- Import `colors`, `fonts`, `fontSizes`, `spacing` from `@/lib/theme`
+- Import `colors`, `fonts`, `fontSizes`, `spacing`, `shadows` from `@/lib/theme`
+- Use shared components (`OnboardingScreen`, `OptionButton`, `ImportanceSlider`) for onboarding pages -- do NOT duplicate styles across pages
 
 ## Fonts
 

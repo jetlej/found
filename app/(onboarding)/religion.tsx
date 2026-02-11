@@ -9,10 +9,14 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { OnboardingScreen } from "@/components/OnboardingScreen";
 import { OptionButton } from "@/components/OptionButton";
+import { ImportanceSlider } from "@/components/ImportanceSlider";
 
-const INTERESTED_IN = ["Men", "Women", "Everyone"];
+const RELIGION_OPTIONS = [
+  "Christian", "Catholic", "Jewish", "Muslim", "Hindu", "Buddhist",
+  "Spiritual", "Agnostic", "Atheist", "Other", "Prefer not to say",
+];
 
-export default function SexualityScreen() {
+export default function ReligionScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
@@ -21,7 +25,8 @@ export default function SexualityScreen() {
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 
-  const [interestedIn, setInterestedIn] = useState<string | null>(null);
+  const [religion, setReligion] = useState<string | null>(null);
+  const [importance, setImportance] = useState(5);
   const [loading, setLoading] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
 
@@ -29,32 +34,34 @@ export default function SexualityScreen() {
 
   useEffect(() => {
     if (currentUser && !hasLoadedData) {
-      if (currentUser.sexuality) setInterestedIn(currentUser.sexuality);
+      if (currentUser.religion) setReligion(currentUser.religion);
+      if (currentUser.religionImportance) setImportance(currentUser.religionImportance);
       setHasLoadedData(true);
     }
   }, [currentUser, hasLoadedData]);
 
   const handleContinue = async () => {
-    if (!userId || !interestedIn) return;
+    if (!userId || !religion) return;
     setLoading(true);
     try {
-      await updateBasics({ clerkId: userId, sexuality: interestedIn });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "location" });
-      goToNextStep(router, "sexuality", isEditing);
+      await updateBasics({ clerkId: userId, religion, religionImportance: importance });
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "politics" });
+      goToNextStep(router, "religion", isEditing);
     } catch { setLoading(false); }
   };
 
   return (
-    <OnboardingScreen question="I'm interested in..." canProceed={!!interestedIn} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined}>
+    <OnboardingScreen question="What are your religious beliefs?" canProceed={!!religion} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined} scrollable>
       <View style={styles.options}>
-        {INTERESTED_IN.map((opt) => (
-          <OptionButton key={opt} label={opt} selected={interestedIn === opt} onPress={() => setInterestedIn(opt)} />
+        {RELIGION_OPTIONS.map((opt) => (
+          <OptionButton key={opt} label={opt} selected={religion === opt} onPress={() => setReligion(opt)} variant="chip" />
         ))}
       </View>
+      <ImportanceSlider value={importance} onChange={setImportance} />
     </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  options: { gap: spacing.md, marginTop: spacing.lg },
+  options: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
 });

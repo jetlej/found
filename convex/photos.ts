@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 
 export const getByUser = query({
   args: { userId: v.id("users") },
@@ -32,20 +32,20 @@ export const add = mutation({
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) throw new Error("Failed to get storage URL");
 
-    // Check if photo at this order already exists
+    // Find ALL existing photos at this order (handles duplicates from concurrent uploads)
     const existing = await ctx.db
       .query("photos")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .filter((q) => q.eq(q.field("order"), args.order))
-      .first();
+      .collect();
 
-    if (existing) {
-      // Replace existing photo
-      await ctx.db.patch(existing._id, {
-        storageId: args.storageId,
-        url,
-      });
-      return existing._id;
+    if (existing.length > 0) {
+      // Patch the first one, delete any extras
+      await ctx.db.patch(existing[0]._id, { storageId: args.storageId, url });
+      for (let i = 1; i < existing.length; i++) {
+        await ctx.db.delete(existing[i]._id);
+      }
+      return existing[0]._id;
     }
 
     return await ctx.db.insert("photos", {
@@ -80,5 +80,62 @@ export const reorder = mutation({
 export const listAll = query({
   handler: async (ctx) => {
     return await ctx.db.query("photos").collect();
+  },
+});
+
+// Internal mutation for seeding photos from actions (bypasses auth)
+export const addDirect = internalMutation({
+  args: {
+    userId: v.id("users"),
+    storageId: v.id("_storage"),
+    order: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const url = await ctx.storage.getUrl(args.storageId);
+    if (!url) throw new Error("Failed to get storage URL");
+
+    const existing = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("order"), args.order))
+      .collect();
+
+    if (existing.length > 0) {
+      await ctx.db.patch(existing[0]._id, { storageId: args.storageId, url });
+      for (let i = 1; i < existing.length; i++) {
+        await ctx.db.delete(existing[i]._id);
+      }
+      return existing[0]._id;
+    }
+
+    return await ctx.db.insert("photos", {
+      userId: args.userId,
+      storageId: args.storageId,
+      url,
+      order: args.order,
+    });
+  },
+});
+
+// Remove duplicate photos per user (keeps earliest record per order slot)
+export const deduplicateByUser = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const photos = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const seen = new Map<number, string>();
+    let removed = 0;
+    for (const photo of photos) {
+      if (seen.has(photo.order)) {
+        await ctx.db.delete(photo._id);
+        removed++;
+      } else {
+        seen.set(photo.order, photo._id);
+      }
+    }
+    return { kept: seen.size, removed };
   },
 });

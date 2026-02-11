@@ -201,3 +201,52 @@ export const updateTranscriptionInternal = internalMutation({
     });
   },
 });
+
+// Replace a user's recordings with seed transcriptions (for test seeding)
+export const replaceSeedRecordings = internalMutation({
+  args: {
+    userId: v.id("users"),
+    recordings: v.array(
+      v.object({
+        questionIndex: v.number(),
+        storageId: v.id("_storage"),
+        durationSeconds: v.number(),
+        transcription: v.string(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    if (args.recordings.length !== TOTAL_VOICE_QUESTIONS) {
+      throw new Error(
+        `Expected ${TOTAL_VOICE_QUESTIONS} recordings, got ${args.recordings.length}`,
+      );
+    }
+
+    const existing = await ctx.db
+      .query("voiceRecordings")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    for (const recording of existing) {
+      await ctx.storage.delete(recording.storageId);
+      await ctx.db.delete(recording._id);
+    }
+
+    const sortedRecordings = [...args.recordings].sort(
+      (a, b) => a.questionIndex - b.questionIndex,
+    );
+
+    for (const recording of sortedRecordings) {
+      await ctx.db.insert("voiceRecordings", {
+        userId: args.userId,
+        questionIndex: recording.questionIndex,
+        storageId: recording.storageId,
+        durationSeconds: recording.durationSeconds,
+        transcription: recording.transcription,
+        createdAt: Date.now() + recording.questionIndex,
+      });
+    }
+
+    await ctx.db.patch(args.userId, { onboardingType: "voice" });
+  },
+});

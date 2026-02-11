@@ -2,9 +2,10 @@ import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
+import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,6 +19,8 @@ import {
 export default function PhotosScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
+  const { editing } = useLocalSearchParams<{ editing?: string }>();
+  const isEditing = editing === "true";
 
   const currentUser = useQuery(
     api.users.current,
@@ -28,7 +31,7 @@ export default function PhotosScreen() {
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
-  const completeCategory = useMutation(api.users.completeCategory);
+  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
 
   // Screen ready state for smooth fade-in from splash
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
@@ -47,12 +50,10 @@ export default function PhotosScreen() {
 
     setIsSubmitting(true);
     try {
-      // Complete the_basics category (Level 1) and mark onboarding complete
-      await completeCategory({ clerkId: userId, categoryId: "the_basics" });
-      // Navigate to main tabs (journey tab)
-      router.replace("/(tabs)/questions");
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "relationship-goals" });
+      goToNextStep(router, "photos", isEditing);
     } catch (error) {
-      console.error("Error completing onboarding:", error);
+      console.error("Error continuing onboarding:", error);
       setIsSubmitting(false);
     }
   };

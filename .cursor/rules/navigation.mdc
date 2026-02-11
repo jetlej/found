@@ -12,6 +12,7 @@ alwaysApply: false
 - Auth flow handled in `app/_layout.tsx` via `AuthGate` component
 - Onboarding uses `router.replace()` for back navigation to avoid errors when history is empty
 - Onboarding step saved to database (`onboardingStep` field) for resume on app restart
+- Onboarding supports **editing mode** (`editing=true` param): entered from Questions tab, shows X button to close, skips `setOnboardingStep`, carries `editing` param via `goToNextStep(router, step, isEditing)`
 
 ## Dev Admin Panel (DEV MODE ONLY)
 

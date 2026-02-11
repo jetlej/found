@@ -13,6 +13,7 @@ import {
   IconDiamond,
   IconHeart,
   IconLeaf,
+  IconListCheck,
   IconLock,
   IconMessage,
   IconPlant,
@@ -21,17 +22,96 @@ import {
   IconTarget,
   IconUsers,
 } from "@tabler/icons-react-native";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// Confetti - explosive burst from center
+const CONFETTI_COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9", "#FF85A2", "#7BED9F", "#70A1FF", "#FFC048"];
+const CONFETTI_COUNT = 240;
+
+function ConfettiParticle({ index }: { index: number }) {
+  const translateY = useSharedValue(0);
+  const translateX = useSharedValue(0);
+  const rotate = useSharedValue(0);
+  const opacity = useSharedValue(1);
+  const scale = useSharedValue(0);
+
+  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
+  const angle = Math.random() * Math.PI * 2;
+  const velocity = 200 + Math.random() * 300;
+  const targetX = Math.cos(angle) * velocity;
+  const targetY = Math.sin(angle) * velocity - 100;
+  const size = 5 + Math.random() * 8;
+  const isCircle = Math.random() > 0.6;
+
+  useEffect(() => {
+    const d = Math.random() * 100;
+    const dur = 600 + Math.random() * 400;
+    const fallDur = 1200 + Math.random() * 800;
+    scale.value = withDelay(d, withTiming(1, { duration: 80 }));
+    translateX.value = withDelay(d, withTiming(targetX, { duration: dur, easing: Easing.out(Easing.quad) }));
+    translateY.value = withDelay(d, withSequence(
+      withTiming(targetY, { duration: dur, easing: Easing.out(Easing.quad) }),
+      withTiming(targetY + 600 + Math.random() * 300, { duration: fallDur, easing: Easing.in(Easing.quad) }),
+    ));
+    rotate.value = withDelay(d, withTiming(720 * (Math.random() > 0.5 ? 1 : -1), { duration: dur + fallDur }));
+    opacity.value = withDelay(d + dur + fallDur * 0.5, withTiming(0, { duration: fallDur * 0.5 }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    position: "absolute" as const,
+    top: "40%",
+    left: "50%",
+    width: size,
+    height: isCircle ? size : size * 2.5,
+    borderRadius: isCircle ? size / 2 : 2,
+    backgroundColor: color,
+    opacity: opacity.value,
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { rotate: `${rotate.value}deg` },
+      { scale: scale.value },
+    ],
+  }));
+
+  return <Animated.View style={style} />;
+}
+
+function Confetti() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {Array.from({ length: CONFETTI_COUNT }, (_, i) => (
+        <ConfettiParticle key={i} index={i} />
+      ))}
+    </View>
+  );
+}
+
+function CelebrationText({ children }: { children: React.ReactNode }) {
+  const opacity = useSharedValue(0);
+  useEffect(() => {
+    opacity.value = withDelay(800, withTiming(1, { duration: 500 }));
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View style={[{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }, animStyle]}>
+      {children}
+    </Animated.View>
+  );
+}
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -85,7 +165,62 @@ export default function QuestionsScreen() {
     return new Map(recordings.map((r) => [r.questionIndex, r]));
   }, [recordings]);
 
+  const myProfile = useQuery(
+    api.userProfiles.getByUser,
+    currentUser?._id ? { userId: currentUser._id } : "skip",
+  );
+
+  const triggerParsing = useAction(api.actions.parseVoiceProfile.triggerVoiceProfileParsing);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(null);
+
+  // Auto-dismiss celebration when profile is updated after regeneration
+  useEffect(() => {
+    if (regenerating && regenerateStartedAt && myProfile?.processedAt && myProfile.processedAt > regenerateStartedAt) {
+      setRegenerating(false);
+      setRegenerateStartedAt(null);
+    }
+  }, [regenerating, regenerateStartedAt, myProfile?.processedAt]);
+
   const completedCount = recordings?.length ?? 0;
+
+  const basicsComplete = !!(
+    currentUser?.relationshipGoal &&
+    currentUser?.wantsChildren &&
+    currentUser?.religion &&
+    currentUser?.politicalLeaning &&
+    currentUser?.drinking &&
+    currentUser?.drugs
+  );
+
+  const firstUnansweredBasicsStep = useMemo(() => {
+    if (!currentUser) return "pronouns";
+    const steps: { field: string; step: string }[] = [
+      { field: "pronouns", step: "pronouns" },
+      { field: "gender", step: "gender" },
+      { field: "sexuality", step: "sexuality" },
+      { field: "location", step: "location" },
+      { field: "birthdate", step: "birthday" },
+      { field: "heightInches", step: "height" },
+      { field: "relationshipGoal", step: "relationship-goals" },
+      { field: "relationshipType", step: "relationship-type" },
+      { field: "hasChildren", step: "kids" },
+      { field: "wantsChildren", step: "wants-kids" },
+      { field: "ethnicity", step: "ethnicity" },
+      { field: "hometown", step: "hometown" },
+      { field: "religion", step: "religion" },
+      { field: "politicalLeaning", step: "politics" },
+      { field: "pets", step: "pets" },
+      { field: "drinking", step: "drinking" },
+      { field: "smoking", step: "smoking" },
+      { field: "marijuana", step: "marijuana" },
+      { field: "drugs", step: "drugs" },
+    ];
+    for (const { field, step } of steps) {
+      if (!(currentUser as any)[field]) return step;
+    }
+    return "pronouns"; // all complete, start from beginning for editing
+  }, [currentUser]);
 
   // Find first unanswered question index
   const firstUnansweredIndex = useMemo(() => {
@@ -127,6 +262,58 @@ export default function QuestionsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* The Basics - structured onboarding questions */}
+          <View style={styles.nodeWrapper}>
+            <View
+              style={[
+                styles.connector,
+                basicsComplete && styles.connectorCompleted,
+              ]}
+            />
+            <Pressable
+              style={[
+                styles.node,
+                basicsComplete ? styles.nodeCompleted : styles.nodeCurrent,
+              ]}
+              onPress={() => {
+                if (basicsComplete) {
+                  router.push({ pathname: "/(onboarding)/edit-basics" });
+                } else {
+                  router.push({ pathname: `/(onboarding)/${firstUnansweredBasicsStep}`, params: { editing: "true" } });
+                }
+              }}
+            >
+              <View style={styles.nodeHeader}>
+                <View style={styles.nodeHeaderLeft}>
+                  <View style={styles.iconWrapper}>
+                    <IconListCheck
+                      size={21}
+                      color={basicsComplete ? colors.text : "#FFFFFF"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.nodeName,
+                      !basicsComplete && styles.nodeNameCurrent,
+                    ]}
+                  >
+                    The Basics
+                  </Text>
+                </View>
+                {basicsComplete ? (
+                  <View style={styles.completedBadge}>
+                    <IconCheck size={14} color={colors.success} />
+                    <Text style={styles.durationText}>Edit</Text>
+                  </View>
+                ) : (
+                  <View style={styles.answerButton}>
+                    <Text style={styles.answerButtonText}>Answer</Text>
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          </View>
+
           {VOICE_QUESTIONS.map((question, index) => {
             const recording = recordingMap.get(question.index);
             const state = getQuestionState(question.index);
@@ -196,8 +383,38 @@ export default function QuestionsScreen() {
               </View>
             );
           })}
+          {allComplete && currentUser?._id && (
+            <Pressable
+              style={styles.regenerateButton}
+              onPress={async () => {
+                setRegenerateStartedAt(Date.now());
+                setRegenerating(true);
+                await triggerParsing({ userId: currentUser._id });
+              }}
+            >
+              <Text style={styles.regenerateButtonText}>Regenerate Profile</Text>
+            </Pressable>
+          )}
           <View style={styles.bottomPadding} />
         </ScrollView>
+
+        {regenerating && (
+          <View style={styles.celebrationOverlay}>
+            <Confetti />
+            <CelebrationText>
+              <IconSparkles size={48} color={colors.text} />
+              <Text style={styles.celebrationTitle}>Regenerating!</Text>
+              <Text style={styles.celebrationSubtitle}>
+                We're using AI to craft your updated profile and compatibility scores. This usually takes about a minute.
+              </Text>
+              <ActivityIndicator
+                size="small"
+                color={colors.textMuted}
+                style={{ marginTop: spacing.xl }}
+              />
+            </CelebrationText>
+          </View>
+        )}
       </Animated.View>
     </SafeAreaView>
   );
@@ -244,20 +461,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.lg,
-    borderWidth: 2,
-    borderColor: colors.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
     zIndex: 1,
   },
   nodeCompleted: {
-    borderColor: colors.text,
     backgroundColor: colors.surface,
   },
   nodeCurrent: {
-    borderColor: colors.text,
     backgroundColor: colors.text,
   },
   nodeLocked: {
-    borderColor: "#AAAAAA",
     backgroundColor: colors.background,
   },
   nodeHeader: {
@@ -304,6 +521,45 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.text,
     fontWeight: "600",
+  },
+  regenerateButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
+    alignItems: "center",
+    marginTop: spacing.xl,
+  },
+  regenerateButtonText: {
+    fontSize: fontSizes.base,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  celebrationOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+    zIndex: 10,
+    overflow: "hidden",
+  },
+  celebrationContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing["2xl"],
+  },
+  celebrationTitle: {
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes["4xl"],
+    color: colors.text,
+    textAlign: "center",
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  celebrationSubtitle: {
+    fontSize: fontSizes.base,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: spacing.lg,
   },
   bottomPadding: {
     height: spacing["2xl"],

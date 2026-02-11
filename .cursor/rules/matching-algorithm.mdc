@@ -6,26 +6,31 @@ alwaysApply: false
 
 # Compatibility Scoring Algorithm
 
+## Data Sources
+- **Structured onboarding answers** (from `users` table): relationshipGoal, hasChildren, wantsChildren, religion, religionImportance, politicalLeaning, politicalImportance, drinking, smoking, marijuana
+- **Voice-parsed profile** (from `userProfiles` table): traits, values, interests, dealbreakers, partnerPreferences, relationshipStyle, familyPlans, lifestyle, etc.
+- `calculateCompatibility(p1, p2, u1?, u2?)` accepts both profile and user docs
+
 ## 6 Category Scores
 
 | Category | Weight | Data Sources |
 |----------|--------|--------------|
-| The Basics | 25% | Checklist preferences + dealbreakers |
-| Who You Are | 20% | Personality traits + canonical values |
-| Relationship Style | 20% | Love language, conflict, communication, finances |
-| Lifestyle | 15% | Sleep, exercise, social, substances |
-| Life & Future | 10% | Family closeness, kids, religion/politics |
-| The Deeper Stuff | 10% | Shared interests (rarity-weighted) + philosophy |
+| The Basics | 25% | Structured onboarding (relationship goals, kids, substances) + voice dealbreakers |
+| Who You Are | 20% | Personality traits + canonical values + broader values overlap |
+| Relationship Style | 20% | Love language, conflict, communication, finances, intimacy |
+| Lifestyle | 15% | Sleep, exercise, social, substances, location, pets |
+| Life & Future | 10% | Family closeness, kids, religion/politics (weighted by importance) |
+| The Deeper Stuff | 10% | Voice-extracted interests + passions + philosophy |
 
 ## Dealbreaker System
-- Extracted from checklist preferences (specific selections, not "Open to any")
-- Bidirectional: both users' dealbreakers checked
-- Can filter out matches or show warnings
+- Voice-extracted `dealbreakers[]` and `partnerPreferences.dealbreakersInPartner[]` cross-checked against other user's keywords/values
+- Kids mismatch (yes vs no) triggers dealbreaker
+- Legacy: checklist preferences with `isDealbreaker` flag (fallback for old users)
 
-## Interest Matching (Rarity-Weighted)
-- Niche shared interests (specific movies, artists) = higher weight
-- Common interests (genres like "Rock") = lower weight
-- Uses `selectedInterests` from `userProfiles`
+## Interest Matching
+- Primary: `interests[]` from voice parsing (free-text, Jaccard similarity)
+- Also compares `bioElements.passions[]`
+- Fallback: `selectedInterests` from interest picker (legacy)
 
 ## Canonical Values (~30 items in `convex/lib/canonicalValues.ts`)
 honesty, loyalty, family, growth, adventure, independence, security, creativity, ambition, kindness, humor, faith, authenticity, empathy, respect, integrity, balance, passion, curiosity, optimism, resilience, patience, generosity, compassion, courage, wisdom, freedom, tradition, equality, justice

@@ -10,7 +10,9 @@
 
 import type * as actions_parseProfile from "../actions/parseProfile.js";
 import type * as actions_parseVoiceProfile from "../actions/parseVoiceProfile.js";
+import type * as actions_seedTestPhotos from "../actions/seedTestPhotos.js";
 import type * as actions_seedTestUsers from "../actions/seedTestUsers.js";
+import type * as actions_seedVoiceTestUsers from "../actions/seedVoiceTestUsers.js";
 import type * as actions_voiceQuestionDefinitions from "../actions/voiceQuestionDefinitions.js";
 import type * as answers from "../answers.js";
 import type * as config from "../config.js";
@@ -37,7 +39,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   "actions/parseProfile": typeof actions_parseProfile;
   "actions/parseVoiceProfile": typeof actions_parseVoiceProfile;
+  "actions/seedTestPhotos": typeof actions_seedTestPhotos;
   "actions/seedTestUsers": typeof actions_seedTestUsers;
+  "actions/seedVoiceTestUsers": typeof actions_seedVoiceTestUsers;
   "actions/voiceQuestionDefinitions": typeof actions_voiceQuestionDefinitions;
   answers: typeof answers;
   config: typeof config;

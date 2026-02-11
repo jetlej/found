@@ -23,10 +23,12 @@ import {
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,6 +36,194 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CARD_INNER_WIDTH = SCREEN_WIDTH - spacing.lg * 4; // card padding + margin
+const PHOTO_GAP = 10;
+const PHOTO_WIDTH = CARD_INNER_WIDTH * 0.45;
+const PHOTO_HEIGHT = PHOTO_WIDTH * 1.25; // 4:5 aspect
+const PLACEHOLDER_COLOR = "#E0E0E0";
+
+// Inline photo carousel for match cards
+function PhotoStrip({
+  photos,
+  onPhotoPress,
+}: {
+  photos: string[];
+  onPhotoPress: (index: number) => void;
+}) {
+  const hasPhotos = photos.length > 0;
+  const items = hasPhotos ? photos : [null, null, null, null];
+
+  return (
+    <View style={photoStripStyles.container}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={PHOTO_WIDTH + PHOTO_GAP}
+        contentContainerStyle={{ gap: PHOTO_GAP }}
+        style={{ overflow: "visible" }}
+      >
+        {items.map((url, i) => {
+          const rotation = i % 2 === 0 ? "-5deg" : "5deg";
+          const translateY = i % 2 === 0 ? 0 : PHOTO_HEIGHT * 0.05;
+          return (
+          <Pressable
+            key={i}
+            onPress={() => hasPhotos && onPhotoPress(i)}
+            style={[
+              photoStripStyles.photoWrapper,
+              { transform: [{ rotate: rotation }, { translateY }] },
+            ]}
+          >
+            {url ? (
+              <Image
+                source={{ uri: url }}
+                style={photoStripStyles.photo}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={photoStripStyles.placeholder}>
+                <IconUserFilled size={40} color="#BDBDBD" />
+              </View>
+            )}
+          </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+const photoStripStyles = StyleSheet.create({
+  container: {
+    marginTop: spacing.md - PHOTO_HEIGHT * 0.1,
+    marginBottom: spacing.xs,
+    paddingVertical: 20,
+    overflow: "visible",
+  },
+  photoWrapper: {
+    width: PHOTO_WIDTH,
+    height: PHOTO_HEIGHT,
+  },
+  photo: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+  },
+  placeholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: PLACEHOLDER_COLOR,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 12,
+  },
+});
+
+// Fullscreen photo viewer
+function FullscreenPhotoViewer({
+  photos,
+  startIndex,
+  onClose,
+}: {
+  photos: string[];
+  startIndex: number;
+  onClose: () => void;
+}) {
+  const [activeIndex, setActiveIndex] = useState(startIndex);
+  const scrollRef = useRef<ScrollView>(null);
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={fullscreenStyles.backdrop}>
+        <Pressable style={fullscreenStyles.closeButton} onPress={onClose}>
+          <IconX size={28} color="#fff" />
+        </Pressable>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          contentOffset={{ x: startIndex * SCREEN_WIDTH, y: 0 }}
+          onScroll={(e) => {
+            const idx = Math.round(
+              e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+            );
+            setActiveIndex(idx);
+          }}
+          scrollEventThrottle={16}
+        >
+          {photos.map((url, i) => (
+            <View key={i} style={fullscreenStyles.page}>
+              <Image
+                source={{ uri: url }}
+                style={fullscreenStyles.image}
+                resizeMode="contain"
+              />
+            </View>
+          ))}
+        </ScrollView>
+        {photos.length > 1 && (
+          <View style={fullscreenStyles.dots}>
+            {photos.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  fullscreenStyles.dot,
+                  i === activeIndex && fullscreenStyles.dotActive,
+                ]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+const fullscreenStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  page: {
+    width: SCREEN_WIDTH,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  image: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH * 1.25,
+  },
+  dots: {
+    position: "absolute",
+    bottom: 60,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  dotActive: {
+    backgroundColor: "#fff",
+  },
+});
 
 // Category icons (filled versions)
 const CATEGORY_ICONS: Record<
@@ -60,6 +250,24 @@ const SCORE_KEY_TO_CATEGORY_ID: Record<keyof CategoryScores, string> = {
 
 // Types for compatibility calculation
 type UserProfile = Doc<"userProfiles">;
+const EMPTY_COMPATIBILITY = {
+  overallScore: 0,
+  categoryScores: {
+    theBasics: 0,
+    whoYouAre: 0,
+    relationshipStyle: 0,
+    lifestyle: 0,
+    lifeFuture: 0,
+    theDeeperStuff: 0,
+  },
+  dealbreakers: {
+    triggered: [] as string[],
+    warnings: [] as string[],
+    passed: true,
+  },
+  sharedInterests: [] as string[],
+  sharedValues: [] as string[],
+};
 
 // ===== MUST-HAVE AND DEALBREAKER MATCHING =====
 
@@ -452,16 +660,16 @@ function getFrictionPoints(
   return frictions.slice(0, 4); // Limit to 4 friction points
 }
 
-// Score color based on value (10% increments) - red to green gradient (saturated)
+// Score color based on value (10% increments) - red to green gradient (saturated/dark)
 function getScoreColor(score: number): string {
-  if (score >= 90) return "#00D26A"; // Bright saturated green
-  if (score >= 80) return "#7ED321"; // Bright lime-green
-  if (score >= 70) return "#B8E986"; // Soft lime
-  if (score >= 60) return "#F8E71C"; // Bright yellow
-  if (score >= 50) return "#F5A623"; // Bright orange-yellow
-  if (score >= 40) return "#F97316"; // Orange
-  if (score >= 30) return "#E74C3C"; // Red-orange
-  return "#D0021B"; // Bright red
+  if (score >= 90) return "#0B9D4F"; // Deep green
+  if (score >= 80) return "#2D8E3C"; // Forest green
+  if (score >= 70) return "#5A9E2F"; // Olive green
+  if (score >= 60) return "#B8960F"; // Dark gold
+  if (score >= 50) return "#C97A0A"; // Dark amber
+  if (score >= 40) return "#C95A10"; // Burnt orange
+  if (score >= 30) return "#B83220"; // Dark red-orange
+  return "#A3111B"; // Deep red
 }
 
 // Trait label helper
@@ -849,14 +1057,6 @@ function FullProfileView({
 }) {
   return (
     <View style={styles.fullProfileContainer}>
-      {/* Generated Bio - no border/padding for first section */}
-      {profile.generatedBio && (
-        <View style={styles.aboutSection}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.bioText}>{profile.generatedBio}</Text>
-        </View>
-      )}
-
       {/* Values & Interests */}
       <ProfileSection title="Values">
         <View style={styles.tagsRow}>
@@ -1377,6 +1577,10 @@ export default function MatchesScreen() {
   const router = useRouter();
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showMyProfile, setShowMyProfile] = useState(false);
+  const [fullscreenPhotos, setFullscreenPhotos] = useState<{
+    urls: string[];
+    startIndex: number;
+  } | null>(null);
   // Track which tab is active per user: "compatibility" (default) or "profile"
   const [activeTab, setActiveTab] = useState<
     Record<string, "compatibility" | "profile">
@@ -1394,6 +1598,13 @@ export default function MatchesScreen() {
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
+  // Get voice recordings to detect "processing" state
+  const myRecordings = useQuery(
+    api.voiceRecordings.getRecordingsForUser,
+    currentUser?._id ? { userId: currentUser._id } : "skip",
+  );
+  const isProcessing = !myProfile && (myRecordings?.length ?? 0) >= 10;
+
   // Get all profiles (we'll filter to test users)
   const allProfiles = useQuery(api.userProfiles.listAll);
 
@@ -1407,38 +1618,66 @@ export default function MatchesScreen() {
   const getFirstPhotoUrl = (uId: string): string | null => {
     if (!allPhotos) return null;
     const userPhotos = allPhotos
-      .filter((p) => p.userId === uId)
-      .sort((a, b) => a.order - b.order);
+      .filter((p: any) => p.userId === uId)
+      .sort((a: any, b: any) => a.order - b.order);
     return userPhotos[0]?.url || null;
+  };
+
+  // Helper to get all photo URLs for a user (deduplicated by order slot)
+  const getUserPhotos = (uId: string): string[] => {
+    if (!allPhotos) return [];
+    const seen = new Set<number>();
+    return allPhotos
+      .filter((p: any) => p.userId === uId)
+      .sort((a: any, b: any) => a.order - b.order)
+      .filter((p: any) => {
+        if (seen.has(p.order)) return false;
+        seen.add(p.order);
+        return true;
+      })
+      .map((p: any) => p.url);
   };
 
   // Filter to test users (waitlistPosition === 999) and calculate compatibility
   const testUserMatches = (() => {
-    if (!myProfile || !allProfiles || !allUsers) return null;
+    if (!allProfiles || !allUsers) return null;
 
     const testUsers = allUsers.filter(
-      (u) => u.waitlistPosition === 999 && u._id !== currentUser?._id,
+      (u) =>
+        u.waitlistPosition === 999 &&
+        u.onboardingType === "voice" &&
+        u._id !== currentUser?._id,
     );
 
-    return testUsers
+    const matches = testUsers
       .map((user) => {
         const profile = allProfiles.find((p) => p.userId === user._id);
         if (!profile) return null;
 
-        const compatibility = calculateCompatibility(myProfile, profile);
+        const compatibility = myProfile
+          ? calculateCompatibility(myProfile, profile, currentUser ?? undefined, user)
+          : EMPTY_COMPATIBILITY;
         return {
           user,
           profile,
           photoUrl: getFirstPhotoUrl(user._id),
+          photos: getUserPhotos(user._id),
           compatibility,
         };
       })
-      .filter(Boolean)
-      .sort(
+      .filter(Boolean);
+
+    if (myProfile) {
+      return matches.sort(
         (a, b) =>
           (b?.compatibility.overallScore ?? 0) -
           (a?.compatibility.overallScore ?? 0),
       );
+    }
+
+    return matches.sort((a, b) =>
+      (a?.user.name || "").localeCompare(b?.user.name || ""),
+    );
   })();
 
   if (!currentUser) {
@@ -1451,24 +1690,17 @@ export default function MatchesScreen() {
     );
   }
 
-  if (!myProfile) {
+  if (!testUserMatches) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <AppHeader />
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconContainer}>
-            <IconLock size={48} color={colors.textMuted} />
-          </View>
-          <Text style={styles.emptyTitle}>Matches locked</Text>
-          <Text style={styles.emptyText}>
-            Answer the 10 questions to see your matches.
-          </Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.text} />
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!testUserMatches || testUserMatches.length === 0) {
+  if (testUserMatches.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <AppHeader />
@@ -1492,47 +1724,112 @@ export default function MatchesScreen() {
 
       <ScrollView style={styles.scrollView}>
         {/* Your profile card - expandable */}
-        <Pressable
-          style={styles.myProfileCard}
-          onPress={() => setShowMyProfile(!showMyProfile)}
-        >
-          <View style={styles.myProfileHeader}>
-            {getFirstPhotoUrl(currentUser._id) ? (
-              <Image
-                source={{ uri: getFirstPhotoUrl(currentUser._id)! }}
-                style={styles.myProfilePhoto}
-              />
-            ) : (
-              <View style={styles.myProfilePhotoPlaceholder}>
-                <Text style={styles.myProfilePhotoInitial}>
-                  {currentUser.name?.charAt(0) || "?"}
+        {myProfile ? (
+          <View style={styles.cardShadow}>
+          <Pressable
+            style={styles.myProfileCard}
+            onPress={() => setShowMyProfile(!showMyProfile)}
+          >
+            <View style={styles.myProfileHeader}>
+              {getFirstPhotoUrl(currentUser._id) ? (
+                <Image
+                  source={{ uri: getFirstPhotoUrl(currentUser._id)! }}
+                  style={styles.myProfilePhoto}
+                />
+              ) : (
+                <View style={styles.myProfilePhotoPlaceholder}>
+                  <Text style={styles.myProfilePhotoInitial}>
+                    {currentUser.name?.charAt(0) || "?"}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.myProfileInfo}>
+                <Text style={styles.myProfileLabel}>YOUR PROFILE</Text>
+                <Text style={styles.myProfileName}>
+                  {currentUser.name || "You"}
                 </Text>
               </View>
-            )}
-            <View style={styles.myProfileInfo}>
-              <Text style={styles.myProfileLabel}>YOUR PROFILE</Text>
-              <Text style={styles.myProfileName}>
-                {currentUser.name || "You"}
-              </Text>
             </View>
-            <Text style={styles.expandArrow}>{showMyProfile ? "▼" : "▶"}</Text>
-          </View>
 
-          {!showMyProfile && myProfile.shortBio && (
-            <Text style={styles.shortBio}>{myProfile.shortBio}</Text>
-          )}
-
-          {showMyProfile && (
-            <FullProfileView
-              profile={myProfile}
-              userName={currentUser.name || "You"}
+            <PhotoStrip
+              photos={getUserPhotos(currentUser._id)}
+              onPhotoPress={(i) => {
+                const p = getUserPhotos(currentUser._id);
+                if (p.length > 0) setFullscreenPhotos({ urls: p, startIndex: i });
+              }}
             />
-          )}
 
-          <Text style={styles.expandHint}>
-            {showMyProfile ? "Tap to collapse" : "Tap to see full profile"}
-          </Text>
-        </Pressable>
+            {!showMyProfile && myProfile.shortBio && (
+              <Text style={styles.shortBio}>{myProfile.shortBio}</Text>
+            )}
+
+            {showMyProfile && (
+              <FullProfileView
+                profile={myProfile}
+                userName={currentUser.name || "You"}
+              />
+            )}
+
+            <Text style={styles.expandHint}>
+              {showMyProfile ? "Tap to collapse" : "Tap to see full profile"}
+            </Text>
+          </Pressable>
+          </View>
+        ) : (
+          <View style={styles.cardShadow}>
+          <View style={styles.myProfileCard}>
+            <View style={styles.myProfileHeader}>
+              {getFirstPhotoUrl(currentUser._id) ? (
+                <Image
+                  source={{ uri: getFirstPhotoUrl(currentUser._id)! }}
+                  style={styles.myProfilePhoto}
+                />
+              ) : (
+                <View style={styles.myProfilePhotoPlaceholder}>
+                  <Text style={styles.myProfilePhotoInitial}>
+                    {currentUser.name?.charAt(0) || "?"}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.myProfileInfo}>
+                <Text style={styles.myProfileLabel}>YOUR PROFILE</Text>
+                <Text style={styles.myProfileName}>
+                  {currentUser.name || "You"}
+                </Text>
+              </View>
+            </View>
+            <PhotoStrip
+              photos={getUserPhotos(currentUser._id)}
+              onPhotoPress={(i) => {
+                const p = getUserPhotos(currentUser._id);
+                if (p.length > 0) setFullscreenPhotos({ urls: p, startIndex: i });
+              }}
+            />
+            {isProcessing ? (
+              <View style={styles.processingContainer}>
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+                <Text style={styles.processingText}>
+                  Crafting your profile using AI...
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.emptyText}>
+                  Complete your profile to unlock compatibility scoring.
+                </Text>
+                <Pressable
+                  style={styles.completeProfileButton}
+                  onPress={() => router.push("/(onboarding)/voice-questions")}
+                >
+                  <Text style={styles.completeProfileButtonText}>
+                    Complete Profile
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+          </View>
+        )}
 
         {/* Match list */}
         {testUserMatches.map((match) => {
@@ -1540,29 +1837,20 @@ export default function MatchesScreen() {
           const isExpanded = expandedUser === match.user._id;
 
           return (
+            <View key={match.user._id} style={styles.matchCard}>
             <Pressable
-              key={match.user._id}
-              style={styles.matchCard}
+              style={styles.matchCardInner}
               onPress={() =>
                 setExpandedUser(isExpanded ? null : match.user._id)
               }
             >
               <View style={styles.matchHeader}>
-                {match.photoUrl ? (
-                  <Image
-                    source={{ uri: match.photoUrl }}
-                    style={styles.matchPhoto}
-                  />
-                ) : (
-                  <View style={styles.matchPhotoPlaceholder}>
-                    <Text style={styles.matchPhotoInitial}>
-                      {match.user.name?.charAt(0) || "?"}
-                    </Text>
-                  </View>
-                )}
                 <View style={styles.matchInfo}>
-                  <Text style={styles.matchName}>{match.user.name}</Text>
+                  <Text style={styles.matchName}>{match.user.name?.split(" ")[0] || "Unknown"}</Text>
                   <Text style={styles.matchLocation}>
+                    {match.user.birthdate
+                      ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
+                      : ""}
                     {match.user.location || "Unknown location"}
                   </Text>
                 </View>
@@ -1570,21 +1858,38 @@ export default function MatchesScreen() {
                   style={[
                     styles.scoreBadge,
                     {
-                      backgroundColor: getScoreColor(
-                        match.compatibility.overallScore,
-                      ),
+                      backgroundColor: myProfile
+                        ? getScoreColor(match.compatibility.overallScore)
+                        : colors.border,
                     },
                   ]}
                 >
-                  <Text style={styles.scoreText}>
-                    {match.compatibility.overallScore}
+                  <Text
+                    style={[
+                      styles.scoreText,
+                      !myProfile && { color: colors.textSecondary },
+                    ]}
+                  >
+                    {myProfile ? match.compatibility.overallScore : "--"}
                   </Text>
                 </View>
               </View>
 
-              {/* Short bio - always visible */}
-              {match.profile.shortBio && (
-                <Text style={styles.shortBio}>{match.profile.shortBio}</Text>
+              <PhotoStrip
+                photos={match.photos}
+                onPhotoPress={(i) => {
+                  if (match.photos.length > 0)
+                    setFullscreenPhotos({ urls: match.photos, startIndex: i });
+                }}
+              />
+
+              {/* Bio - always visible */}
+              {match.profile.generatedBio && (
+                <Text style={styles.shortBio}>
+                  {match.profile.generatedBio.length > 500
+                    ? match.profile.generatedBio.slice(0, 500).trimEnd() + "..."
+                    : match.profile.generatedBio}
+                </Text>
               )}
 
               {/* Expanded view with tabs */}
@@ -1596,31 +1901,8 @@ export default function MatchesScreen() {
                       <Pressable
                         style={[
                           styles.toggleOption,
-                          (activeTab[match.user._id] || "compatibility") ===
-                            "compatibility" && styles.toggleOptionActive,
-                        ]}
-                        onPress={() =>
-                          setActiveTab({
-                            ...activeTab,
-                            [match.user._id]: "compatibility",
-                          })
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.toggleText,
-                            (activeTab[match.user._id] || "compatibility") ===
-                              "compatibility" && styles.toggleTextActive,
-                          ]}
-                        >
-                          Compatibility
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.toggleOption,
-                          activeTab[match.user._id] === "profile" &&
-                            styles.toggleOptionActive,
+                          (activeTab[match.user._id] || "profile") ===
+                            "profile" && styles.toggleOptionActive,
                         ]}
                         onPress={() =>
                           setActiveTab({
@@ -1632,174 +1914,202 @@ export default function MatchesScreen() {
                         <Text
                           style={[
                             styles.toggleText,
-                            activeTab[match.user._id] === "profile" &&
-                              styles.toggleTextActive,
+                            (activeTab[match.user._id] || "profile") ===
+                              "profile" && styles.toggleTextActive,
                           ]}
                         >
                           Full Profile
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.toggleOption,
+                          activeTab[match.user._id] === "compatibility" &&
+                            styles.toggleOptionActive,
+                        ]}
+                        onPress={() =>
+                          setActiveTab({
+                            ...activeTab,
+                            [match.user._id]: "compatibility",
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.toggleText,
+                            activeTab[match.user._id] === "compatibility" &&
+                              styles.toggleTextActive,
+                          ]}
+                        >
+                          Compatibility
                         </Text>
                       </Pressable>
                     </View>
                   </View>
 
                   {/* Compatibility Tab */}
-                  {(activeTab[match.user._id] || "compatibility") ===
-                    "compatibility" && (
+                  {activeTab[match.user._id] === "compatibility" && (
                     <View>
-                      {/* All 6 categories */}
-                      {[
-                        { key: "theBasics", label: CATEGORY_NAMES.theBasics },
-                        { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre },
-                        {
-                          key: "relationshipStyle",
-                          label: CATEGORY_NAMES.relationshipStyle,
-                        },
-                        { key: "lifestyle", label: CATEGORY_NAMES.lifestyle },
-                        { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture },
-                        {
-                          key: "theDeeperStuff",
-                          label: CATEGORY_NAMES.theDeeperStuff,
-                        },
-                      ].map(({ key, label }) => {
-                        const categoryId =
-                          SCORE_KEY_TO_CATEGORY_ID[key as keyof CategoryScores];
-                        const CategoryIcon = CATEGORY_ICONS[categoryId];
-                        // TEMP: Hardcode last two categories as locked for testing
-                        const lockedCategoryIds = [
-                          "life_future",
-                          "deeper_stuff",
-                        ];
-                        const isLocked = lockedCategoryIds.includes(categoryId);
-                        const score =
-                          match.compatibility.categoryScores[
-                            key as keyof CategoryScores
-                          ];
+                      {!myProfile ? (
+                        <Text style={styles.emptyText}>
+                          Complete your profile to see compatibility insights.
+                        </Text>
+                      ) : (
+                        <>
+                          {/* All 6 categories */}
+                          {[
+                            { key: "theBasics", label: CATEGORY_NAMES.theBasics },
+                            { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre },
+                            {
+                              key: "relationshipStyle",
+                              label: CATEGORY_NAMES.relationshipStyle,
+                            },
+                            { key: "lifestyle", label: CATEGORY_NAMES.lifestyle },
+                            { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture },
+                            {
+                              key: "theDeeperStuff",
+                              label: CATEGORY_NAMES.theDeeperStuff,
+                            },
+                          ].map(({ key, label }) => {
+                            const categoryId =
+                              SCORE_KEY_TO_CATEGORY_ID[key as keyof CategoryScores];
+                            const CategoryIcon = CATEGORY_ICONS[categoryId];
+                            // TEMP: Hardcode last two categories as locked for testing
+                            const lockedCategoryIds = [
+                              "life_future",
+                              "deeper_stuff",
+                            ];
+                            const isLocked = lockedCategoryIds.includes(categoryId);
+                            const score =
+                              match.compatibility.categoryScores[
+                                key as keyof CategoryScores
+                              ];
 
-                        if (isLocked) {
-                          return (
-                            <View key={key} style={styles.categoryBarLocked}>
-                              <View style={styles.categoryBarContentLocked}>
-                                <IconLockFilled size={20} color="#E8C547" />
-                                <Text style={styles.categoryBarLabelLocked}>
-                                  {label}
-                                </Text>
-                                <Pressable
-                                  style={styles.unlockButton}
-                                  onPress={() =>
-                                    router.push(
-                                      `/(onboarding)/questions?categoryId=${categoryId}`,
-                                    )
-                                  }
-                                >
-                                  <Text style={styles.unlockButtonText}>
-                                    Unlock
-                                  </Text>
-                                  <IconChevronRight
-                                    size={14}
-                                    color={colors.text}
-                                  />
-                                </Pressable>
-                              </View>
-                            </View>
-                          );
-                        }
+                            if (isLocked) {
+                              return (
+                                <View key={key} style={styles.categoryBarLocked}>
+                                  <View style={styles.categoryBarContentLocked}>
+                                    <IconLockFilled size={20} color="#E8C547" />
+                                    <Text style={styles.categoryBarLabelLocked}>
+                                      {label}
+                                    </Text>
+                                    <Pressable
+                                      style={styles.unlockButton}
+                                      onPress={() =>
+                                        router.push(
+                                          `/(onboarding)/questions?categoryId=${categoryId}`,
+                                        )
+                                      }
+                                    >
+                                      <Text style={styles.unlockButtonText}>
+                                        Unlock
+                                      </Text>
+                                      <IconChevronRight
+                                        size={14}
+                                        color={colors.text}
+                                      />
+                                    </Pressable>
+                                  </View>
+                                </View>
+                              );
+                            }
 
-                        const scoreColor = getScoreColor(score);
-                        const isFull = score === 100;
-                        return (
-                          <View key={key} style={styles.categoryBar}>
-                            {/* Gradient fill: 30% opacity left -> 60% right, with 100% border if not full */}
-                            <View
-                              style={[
-                                styles.categoryBarFill,
-                                {
-                                  width: `${score}%`,
-                                  borderTopRightRadius: isFull ? 10 : 0,
-                                  borderBottomRightRadius: isFull ? 10 : 0,
-                                },
-                              ]}
-                            >
-                              <LinearGradient
-                                colors={[`${scoreColor}4D`, `${scoreColor}99`]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.categoryBarGradient}
-                              />
-                              {!isFull && (
+                            const scoreColor = getScoreColor(score);
+                            const isFull = score === 100;
+                            return (
+                              <View key={key} style={styles.categoryBar}>
+                                {/* Gradient fill: 30% opacity left -> 60% right, with 100% border if not full */}
                                 <View
                                   style={[
-                                    styles.categoryBarEdge,
-                                    { backgroundColor: scoreColor },
+                                    styles.categoryBarFill,
+                                    {
+                                      width: `${score}%`,
+                                      borderTopRightRadius: isFull ? 10 : 0,
+                                      borderBottomRightRadius: isFull ? 10 : 0,
+                                    },
                                   ]}
-                                />
-                              )}
-                            </View>
-                            <View style={styles.categoryBarContent}>
-                              <CategoryIcon size={20} color={colors.text} />
-                              <Text style={styles.categoryBarLabel}>
-                                {label}
-                              </Text>
-                              <Text style={styles.categoryBarScore}>
-                                {score}%
-                              </Text>
-                            </View>
-                          </View>
-                        );
-                      })}
-
-                      {/* Shared values */}
-                      {match.compatibility.sharedValues.length > 0 && (
-                        <View style={styles.sharedSection}>
-                          <Text style={styles.sharedTitleBold}>
-                            Shared Values
-                          </Text>
-                          <View style={styles.tagsRow}>
-                            {match.compatibility.sharedValues.map((v, i) => (
-                              <View key={i} style={styles.tagShared}>
-                                <Text style={styles.tagSharedText}>{v}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-
-                      {/* Shared interests */}
-                      {match.compatibility.sharedInterests.length > 0 && (
-                        <View style={styles.sharedSection}>
-                          <Text style={styles.sharedTitleBold}>
-                            Shared Interests
-                          </Text>
-                          <View style={styles.tagsRow}>
-                            {match.compatibility.sharedInterests.map((v, i) => (
-                              <View key={i} style={styles.tagShared}>
-                                <Text style={styles.tagSharedText}>{v}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-
-                      {/* Dealbreakers */}
-                      {match.compatibility.dealbreakers.triggered.length >
-                        0 && (
-                        <View style={styles.sharedSection}>
-                          <Text style={styles.sharedTitleBold}>
-                            Dealbreakers
-                          </Text>
-                          <View style={styles.tagsRow}>
-                            {match.compatibility.dealbreakers.triggered.map(
-                              (d, i) => (
-                                <View key={i} style={styles.tagDealbreaker}>
-                                  <IconX size={12} color="#991b1b" />
-                                  <Text style={styles.tagDealbreakerText}>
-                                    {d}
+                                >
+                                  <LinearGradient
+                                    colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.categoryBarGradient}
+                                  />
+                                  {!isFull && (
+                                    <View
+                                      style={[
+                                        styles.categoryBarEdge,
+                                        { backgroundColor: scoreColor },
+                                      ]}
+                                    />
+                                  )}
+                                </View>
+                                <View style={styles.categoryBarContent}>
+                                  <CategoryIcon size={20} color={colors.text} />
+                                  <Text style={styles.categoryBarLabel}>
+                                    {label}
+                                  </Text>
+                                  <Text style={styles.categoryBarScore}>
+                                    {score}%
                                   </Text>
                                 </View>
-                              ),
-                            )}
-                          </View>
-                        </View>
-                      )}
+                              </View>
+                            );
+                          })}
+
+                          {/* Shared values */}
+                          {match.compatibility.sharedValues.length > 0 && (
+                            <View style={styles.sharedSection}>
+                              <Text style={styles.sharedTitleBold}>
+                                Shared Values
+                              </Text>
+                              <View style={styles.tagsRow}>
+                                {match.compatibility.sharedValues.map((v, i) => (
+                                  <View key={i} style={styles.tagShared}>
+                                    <Text style={styles.tagSharedText}>{v}</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            </View>
+                          )}
+
+                          {/* Shared interests */}
+                          {match.compatibility.sharedInterests.length > 0 && (
+                            <View style={styles.sharedSection}>
+                              <Text style={styles.sharedTitleBold}>
+                                Shared Interests
+                              </Text>
+                              <View style={styles.tagsRow}>
+                                {match.compatibility.sharedInterests.map((v, i) => (
+                                  <View key={i} style={styles.tagShared}>
+                                    <Text style={styles.tagSharedText}>{v}</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            </View>
+                          )}
+
+                          {/* Dealbreakers */}
+                          {match.compatibility.dealbreakers.triggered.length >
+                            0 && (
+                            <View style={styles.sharedSection}>
+                              <Text style={styles.sharedTitleBold}>
+                                Dealbreakers
+                              </Text>
+                              <View style={styles.tagsRow}>
+                                {match.compatibility.dealbreakers.triggered.map(
+                                  (d, i) => (
+                                    <View key={i} style={styles.tagDealbreaker}>
+                                      <IconX size={12} color="#991b1b" />
+                                      <Text style={styles.tagDealbreakerText}>
+                                        {d}
+                                      </Text>
+                                    </View>
+                                  ),
+                                )}
+                              </View>
+                            </View>
+                          )}
 
                       {/* TODO: Must-Haves and Dealbreakers sections are temporarily hidden.
                           These need to be refactored to use a predefined list of structured
@@ -1818,19 +2128,21 @@ export default function MatchesScreen() {
                         theirName={match.user.name?.split(" ")[0] || "Them"}
                       /> */}
 
-                      {/* Watch Out For */}
-                      <WatchOutSection
-                        frictions={getFrictionPoints(
-                          myProfile,
-                          match.profile,
-                          match.compatibility.categoryScores,
-                        )}
-                      />
+                          {/* Watch Out For */}
+                          <WatchOutSection
+                            frictions={getFrictionPoints(
+                              myProfile,
+                              match.profile,
+                              match.compatibility.categoryScores,
+                            )}
+                          />
+                        </>
+                      )}
                     </View>
                   )}
 
                   {/* Full Profile Tab */}
-                  {activeTab[match.user._id] === "profile" && (
+                  {(activeTab[match.user._id] || "profile") === "profile" && (
                     <FullProfileView
                       profile={match.profile}
                       userName={match.user.name || "User"}
@@ -1843,11 +2155,20 @@ export default function MatchesScreen() {
                 {isExpanded ? "Tap to collapse" : "Tap for details"}
               </Text>
             </Pressable>
+            </View>
           );
         })}
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {fullscreenPhotos && (
+        <FullscreenPhotoViewer
+          photos={fullscreenPhotos.urls}
+          startIndex={fullscreenPhotos.startIndex}
+          onClose={() => setFullscreenPhotos(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -1900,6 +2221,29 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.sm,
   },
+  completeProfileButton: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+  completeProfileButtonText: {
+    color: "#FFFFFF",
+    fontSize: fontSizes.base,
+    fontWeight: "600",
+  },
+  processingContainer: {
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  processingText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
   emptyText: {
     fontSize: fontSizes.base,
     color: colors.textSecondary,
@@ -1911,13 +2255,21 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     backgroundColor: colors.surface,
   },
-  myProfileCard: {
+  cardShadow: {
     margin: spacing.lg,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+    backgroundColor: colors.surface,
+  },
+  myProfileCard: {
     padding: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.text,
+    overflow: "hidden",
   },
   myProfileHeader: {
     flexDirection: "row",
@@ -1963,12 +2315,20 @@ const styles = StyleSheet.create({
   },
   matchCard: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.md * 2,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+    backgroundColor: colors.surface,
+  },
+  matchCardInner: {
     padding: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    overflow: "hidden",
   },
   matchHeader: {
     flexDirection: "row",
@@ -2000,11 +2360,11 @@ const styles = StyleSheet.create({
   },
   matchName: {
     fontFamily: fonts.serifBold,
-    fontSize: fontSizes.lg,
+    fontSize: fontSizes["3xl"],
     color: colors.text,
   },
   matchLocation: {
-    fontSize: fontSizes.sm,
+    fontSize: fontSizes.base,
     color: colors.textSecondary,
     marginTop: 2,
   },

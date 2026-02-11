@@ -7,7 +7,7 @@ import { IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useMutation, useQuery } from "convex/react";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -22,6 +22,8 @@ import {
 export default function LocationScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
+  const { editing } = useLocalSearchParams<{ editing?: string }>();
+  const isEditing = editing === "true";
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
@@ -91,8 +93,8 @@ export default function LocationScreen() {
     setLoading(true);
     try {
       await updateBasics({ clerkId: userId, location });
-      await setOnboardingStep({ clerkId: userId, step: "birthday" });
-      goToNextStep(router, "location");
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "birthday" });
+      goToNextStep(router, "location", isEditing);
     } catch (err) {
       setLoading(false);
     }

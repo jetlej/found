@@ -124,8 +124,8 @@ Respond with JSON in this exact format:
     "passions": ["passion1", ...]
   },
   "keywords": ["keyword1", "keyword2", ...],
-  "generatedBio": "<150-200 word bio paragraph>",
-  "shortBio": "<single sentence bio>",
+  "generatedBio": "<150-200 word third-person bio written as a professional matchmaker selling this person as an amazing potential partner. Warm, specific, compelling. Use their name and he/she/they pronouns. Highlight what makes them special and why someone would be lucky to date them.>",
+  "shortBio": "<single punchy sentence, third-person, written like a matchmaker's pitch. Start with 'A' or 'An' followed by their role, e.g. 'A startup founder who...' Make it memorable and intriguing.>",
   "confidence": <0-1>
 }
 
@@ -296,7 +296,6 @@ export const parseVoiceProfile = internalAction({
       const result = await extractStructuredDataWithUsage<any>(
         VOICE_PROFILE_EXTRACTION_PROMPT,
         formattedTranscripts,
-        { maxTokens: 4000 }
       );
       extractedProfile = result.data;
       costs.push({
@@ -329,6 +328,7 @@ export const parseVoiceProfile = internalAction({
     console.log("===========================================================\n");
 
     // Build the profile object matching the userProfiles schema
+    // Use structured onboarding answers from the users table when available
     const profile = {
       userId: args.userId,
       // Matching fields
@@ -361,9 +361,11 @@ export const parseVoiceProfile = internalAction({
         financialApproach: extractedProfile.relationshipStyle?.financialApproach || "unknown",
         aloneTimeNeed: extractedProfile.relationshipStyle?.aloneTimeNeed ?? 5,
       },
-      // Family plans
+      // Family plans - prefer structured onboarding answer over AI extraction
       familyPlans: {
-        wantsKids: extractedProfile.familyPlans?.wantsKids || "unknown",
+        wantsKids: user.wantsChildren
+          ? ({ yes: "yes", no: "no", open: "open", not_sure: "maybe" }[user.wantsChildren] ?? "unknown")
+          : (extractedProfile.familyPlans?.wantsKids || "unknown"),
         kidsTimeline: extractedProfile.familyPlans?.kidsTimeline ?? undefined,
         familyCloseness: extractedProfile.familyPlans?.familyCloseness ?? 5,
         parentingStyle: extractedProfile.familyPlans?.parentingStyle ?? undefined,
@@ -441,6 +443,17 @@ export const parseVoiceProfile = internalAction({
             uniqueQuirks: extractedProfile.bioElements.uniqueQuirks || [],
             passions: extractedProfile.bioElements.passions || [],
             whatTheySek: undefined,
+          }
+        : undefined,
+      // Demographics from structured onboarding answers
+      demographics: (user.religion || user.politicalLeaning || user.hasChildren)
+        ? {
+            ethnicity: undefined,
+            religion: user.religion ?? undefined,
+            religiosity: user.religionImportance ?? 5,
+            politicalLeaning: user.politicalLeaning ?? undefined,
+            politicalIntensity: user.politicalImportance ?? 5,
+            hasKids: user.hasChildren === "yes",
           }
         : undefined,
       // Generated content

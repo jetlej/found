@@ -8,12 +8,26 @@ import { Router } from "expo-router";
 export const ONBOARDING_FLOW = [
   "referral",
   "name",
+  "pronouns",
   "gender",
   "sexuality",
   "location",
   "birthday",
   "height",
   "photos",
+  "relationship-goals",
+  "relationship-type",
+  "kids",
+  "wants-kids",
+  "ethnicity",
+  "hometown",
+  "religion",
+  "politics",
+  "pets",
+  "drinking",
+  "smoking",
+  "marijuana",
+  "drugs",
 ] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_FLOW)[number];
@@ -37,10 +51,13 @@ export function getPrevStep(current: OnboardingStep): OnboardingStep | null {
 }
 
 // Navigate forward in the flow using router.push() for natural history
-export function goToNextStep(router: Router, current: OnboardingStep): void {
+export function goToNextStep(router: Router, current: OnboardingStep, editing?: boolean): void {
   const next = getNextStep(current);
   if (next) {
-    router.push(`/(onboarding)/${next}`);
+    router.push({
+      pathname: `/(onboarding)/${next}`,
+      params: editing ? { editing: "true" } : undefined,
+    });
   } else {
     // End of onboarding - go to main app
     router.replace("/(tabs)");

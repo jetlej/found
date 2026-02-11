@@ -97,64 +97,66 @@ export default function HomeScreen() {
         <AppHeader />
 
         <View style={styles.content}>
-          <Text style={styles.title}>You're on the waitlist</Text>
-          <Text style={styles.subtitle}>You have two options:</Text>
+          <View style={styles.card}>
+            <Text style={styles.title}>You're on the waitlist</Text>
+            <Text style={styles.subtitle}>You have two options:</Text>
 
-          {/* Option A: Refer */}
-          <View style={styles.optionSection}>
-            <View style={styles.optionHeader}>
-              <View style={styles.optionBadge}>
-                <Text style={styles.optionBadgeText}>A</Text>
+            {/* Option A: Refer */}
+            <View style={styles.optionSection}>
+              <View style={styles.optionHeader}>
+                <View style={styles.optionBadge}>
+                  <Text style={styles.optionBadgeText}>A</Text>
+                </View>
+                <Text style={styles.optionTitle}>
+                  Refer a friend to skip the wait
+                </Text>
               </View>
-              <Text style={styles.optionTitle}>
-                Refer a friend to skip the wait
-              </Text>
+              <Pressable style={styles.shareButton} onPress={handleShare}>
+                <Text style={styles.shareButtonText}>Share referral code</Text>
+              </Pressable>
             </View>
-            <Pressable style={styles.shareButton} onPress={handleShare}>
-              <Text style={styles.shareButtonText}>Share referral code</Text>
-            </Pressable>
-          </View>
 
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Option B: Wait */}
-          <View style={styles.optionSection}>
-            <View style={styles.optionHeader}>
-              <View style={styles.optionBadge}>
-                <Text style={styles.optionBadgeText}>B</Text>
-              </View>
-              <Text style={styles.optionTitle}>Wait your turn</Text>
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
             </View>
-            <View style={styles.countdownRow}>
-              <View style={styles.countdownItem}>
-                <Text style={styles.countdownNumber}>{countdown.days}</Text>
-                <Text style={styles.countdownUnit}>days</Text>
+
+            {/* Option B: Wait */}
+            <View style={styles.optionSection}>
+              <View style={styles.optionHeader}>
+                <View style={styles.optionBadge}>
+                  <Text style={styles.optionBadgeText}>B</Text>
+                </View>
+                <Text style={styles.optionTitle}>Wait your turn</Text>
               </View>
-              <Text style={styles.countdownSeparator}>:</Text>
-              <View style={styles.countdownItem}>
-                <Text style={styles.countdownNumber}>
-                  {countdown.hours.toString().padStart(2, "0")}
-                </Text>
-                <Text style={styles.countdownUnit}>hours</Text>
-              </View>
-              <Text style={styles.countdownSeparator}>:</Text>
-              <View style={styles.countdownItem}>
-                <Text style={styles.countdownNumber}>
-                  {countdown.minutes.toString().padStart(2, "0")}
-                </Text>
-                <Text style={styles.countdownUnit}>min</Text>
-              </View>
-              <Text style={styles.countdownSeparator}>:</Text>
-              <View style={styles.countdownItem}>
-                <Text style={styles.countdownNumber}>
-                  {countdown.seconds.toString().padStart(2, "0")}
-                </Text>
-                <Text style={styles.countdownUnit}>sec</Text>
+              <View style={styles.countdownRow}>
+                <View style={styles.countdownItem}>
+                  <Text style={styles.countdownNumber}>{countdown.days}</Text>
+                  <Text style={styles.countdownUnit}>days</Text>
+                </View>
+                <Text style={styles.countdownSeparator}>:</Text>
+                <View style={styles.countdownItem}>
+                  <Text style={styles.countdownNumber}>
+                    {countdown.hours.toString().padStart(2, "0")}
+                  </Text>
+                  <Text style={styles.countdownUnit}>hours</Text>
+                </View>
+                <Text style={styles.countdownSeparator}>:</Text>
+                <View style={styles.countdownItem}>
+                  <Text style={styles.countdownNumber}>
+                    {countdown.minutes.toString().padStart(2, "0")}
+                  </Text>
+                  <Text style={styles.countdownUnit}>min</Text>
+                </View>
+                <Text style={styles.countdownSeparator}>:</Text>
+                <View style={styles.countdownItem}>
+                  <Text style={styles.countdownNumber}>
+                    {countdown.seconds.toString().padStart(2, "0")}
+                  </Text>
+                  <Text style={styles.countdownUnit}>sec</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -172,7 +174,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing["3xl"],
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
   },
   title: {
     fontFamily: fonts.logo,

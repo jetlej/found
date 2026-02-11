@@ -110,6 +110,26 @@ export const updateBasics = mutation({
     sexuality: v.optional(v.string()),
     birthdate: v.optional(v.string()),
     heightInches: v.optional(v.number()),
+    relationshipGoal: v.optional(v.string()),
+    hasChildren: v.optional(v.string()),
+    wantsChildren: v.optional(v.string()),
+    religion: v.optional(v.string()),
+    religionImportance: v.optional(v.number()),
+    politicalLeaning: v.optional(v.string()),
+    politicalImportance: v.optional(v.number()),
+    drinking: v.optional(v.string()),
+    smoking: v.optional(v.string()),
+    marijuana: v.optional(v.string()),
+    drugs: v.optional(v.string()),
+    drinkingVisible: v.optional(v.boolean()),
+    smokingVisible: v.optional(v.boolean()),
+    marijuanaVisible: v.optional(v.boolean()),
+    drugsVisible: v.optional(v.boolean()),
+    pronouns: v.optional(v.string()),
+    ethnicity: v.optional(v.string()),
+    hometown: v.optional(v.string()),
+    relationshipType: v.optional(v.string()),
+    pets: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -119,21 +139,11 @@ export const updateBasics = mutation({
 
     if (!user) return;
 
-    const updates: {
-      name?: string;
-      gender?: string;
-      location?: string;
-      sexuality?: string;
-      birthdate?: string;
-      heightInches?: number;
-    } = {};
-
-    if (args.name !== undefined) updates.name = args.name;
-    if (args.gender !== undefined) updates.gender = args.gender;
-    if (args.location !== undefined) updates.location = args.location;
-    if (args.sexuality !== undefined) updates.sexuality = args.sexuality;
-    if (args.birthdate !== undefined) updates.birthdate = args.birthdate;
-    if (args.heightInches !== undefined) updates.heightInches = args.heightInches;
+    const { clerkId, ...fields } = args;
+    const updates: Record<string, string | number | boolean | undefined> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined) updates[key] = value;
+    }
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(user._id, updates);

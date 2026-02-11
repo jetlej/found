@@ -90,7 +90,7 @@ export async function callOpenAIWithUsage<T>(
   const {
     model = DEFAULT_MODEL,
     temperature,
-    maxTokens = 2000,
+    maxTokens,
     responseFormat = "json",
   } = options;
 
@@ -103,7 +103,7 @@ export async function callOpenAIWithUsage<T>(
         model,
         messages,
         ...(temperature !== undefined && { temperature }),
-        max_completion_tokens: maxTokens,
+        ...(maxTokens !== undefined && { max_completion_tokens: maxTokens }),
         response_format:
           responseFormat === "json" ? { type: "json_object" } : { type: "text" },
       });

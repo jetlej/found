@@ -17,6 +17,29 @@ export default defineSchema({
     sexuality: v.optional(v.string()),
     birthdate: v.optional(v.string()), // ISO date string
     heightInches: v.optional(v.number()),
+    // Structured onboarding answers (collected before voice questions)
+    relationshipGoal: v.optional(v.string()), // "marriage", "long_term", "life_partner", "figuring_out"
+    hasChildren: v.optional(v.string()), // "yes", "no"
+    wantsChildren: v.optional(v.string()), // "yes", "no", "open", "not_sure"
+    religion: v.optional(v.string()), // "christian", "catholic", etc.
+    religionImportance: v.optional(v.number()), // 1-10
+    politicalLeaning: v.optional(v.string()), // "liberal", "moderate", "conservative", etc.
+    politicalImportance: v.optional(v.number()), // 1-10
+    drinking: v.optional(v.string()), // "Yes", "Sometimes", "No", "Prefer not to say"
+    smoking: v.optional(v.string()), // "Yes", "Sometimes", "No", "Prefer not to say"
+    marijuana: v.optional(v.string()), // "Yes", "Sometimes", "No", "Prefer not to say"
+    drugs: v.optional(v.string()), // "Yes", "Sometimes", "No", "Prefer not to say"
+    // Substance visibility
+    drinkingVisible: v.optional(v.boolean()),
+    smokingVisible: v.optional(v.boolean()),
+    marijuanaVisible: v.optional(v.boolean()),
+    drugsVisible: v.optional(v.boolean()),
+    // Additional profile fields
+    pronouns: v.optional(v.string()), // "he/him", "she/her", "they/them", etc.
+    ethnicity: v.optional(v.string()),
+    hometown: v.optional(v.string()),
+    relationshipType: v.optional(v.string()), // "Monogamy", "Non-monogamy", etc.
+    pets: v.optional(v.string()), // "Dog", "Cat", "Both", etc.
     // Onboarding state
     onboardingStep: v.optional(v.string()), // "basics", "photos"
     onboardingComplete: v.optional(v.boolean()),

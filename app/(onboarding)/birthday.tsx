@@ -6,7 +6,7 @@ import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Animated,
@@ -19,6 +19,8 @@ import {
 export default function BirthdayScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
+  const { editing } = useLocalSearchParams<{ editing?: string }>();
+  const isEditing = editing === "true";
   const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
@@ -72,8 +74,8 @@ export default function BirthdayScreen() {
     setError("");
     try {
       await updateBasics({ clerkId: userId, birthdate: birthdate.toISOString() });
-      await setOnboardingStep({ clerkId: userId, step: "height" });
-      goToNextStep(router, "birthday");
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "height" });
+      goToNextStep(router, "birthday", isEditing);
     } catch (err) {
       setLoading(false);
     }

@@ -1,16 +1,13 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { useScreenReady } from "@/hooks/useScreenReady";
-import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { IconChevronLeft } from "@tabler/icons-react-native";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,31 +18,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HometownScreen() {
-  const userId = useEffectiveUserId();
-  const router = useRouter();
-  const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
-  const updateBasics = useMutation(api.users.updateBasics);
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
-
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({ stepName: "hometown" });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [hometown, setHometown] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
-  useFocusEffect(useCallback(() => { setLoading(false); }, []));
-
   useEffect(() => {
-    if (currentUser && !hasLoadedData) {
-      if (currentUser.hometown) setHometown(currentUser.hometown);
-      setHasLoadedData(true);
-    }
-  }, [currentUser, hasLoadedData]);
+    if (currentUser?.hometown && !hometown) setHometown(currentUser.hometown);
+  }, [currentUser]);
 
   useEffect(() => { setScreenReady(true); }, []);
 
@@ -66,19 +49,21 @@ export default function HometownScreen() {
 
   const canProceed = hometown.trim().length > 0;
 
-  const handleContinue = async () => {
-    if (!userId || !canProceed) return;
-    setLoading(true);
-    try {
-      await updateBasics({ clerkId: userId, hometown: hometown.trim() });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "religion" });
-      goToNextStep(router, "hometown", isEditing);
-    } catch { setLoading(false); }
+  const handleContinue = () => {
+    if (!hometown.trim()) return;
+    save({ hometown: hometown.trim() });
   };
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        {isEditing && (
+          <View style={styles.closeHeader}>
+            <Pressable style={styles.closeButton} onPress={close}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+        )}
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bounces={false}>
           <Text style={styles.question}>Where's your hometown?</Text>
           <Text style={styles.questionSubtext}>Where did you grow up?</Text>
@@ -100,7 +85,9 @@ export default function HometownScreen() {
             disabled={!canProceed || loading}
             activeOpacity={0.7}
           >
-            <Text style={styles.buttonText}>{loading ? "Saving..." : "Next"}</Text>
+            <Text style={styles.buttonText}>
+              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
+            </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -110,6 +97,15 @@ export default function HometownScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  closeHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  closeButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
+  },
   flex: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"] },

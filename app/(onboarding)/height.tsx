@@ -1,15 +1,12 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { useScreenReady } from "@/hooks/useScreenReady";
-import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { IconChevronLeft } from "@tabler/icons-react-native";
 import { Picker } from "@react-native-picker/picker";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Animated,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,50 +17,39 @@ const FEET = [4, 5, 6, 7];
 const INCHES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 export default function HeightScreen() {
-  const userId = useEffectiveUserId();
-  const router = useRouter();
-  const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
-  const updateBasics = useMutation(api.users.updateBasics);
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
-
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({ stepName: "height" });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [feet, setFeet] = useState(5);
   const [inches, setInches] = useState(8);
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  useFocusEffect(useCallback(() => { setLoading(false); }, []));
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    if (currentUser && !hasLoadedData) {
+    if (currentUser && !hasLoaded) {
       if (currentUser.heightInches) {
         setFeet(Math.floor(currentUser.heightInches / 12));
         setInches(currentUser.heightInches % 12);
       }
-      setHasLoadedData(true);
+      setHasLoaded(true);
     }
-  }, [currentUser, hasLoadedData]);
+  }, [currentUser, hasLoaded]);
 
   useEffect(() => { setScreenReady(true); }, []);
 
-  const totalInches = feet * 12 + inches;
-
-  const handleContinue = async () => {
-    if (!userId) return;
-    setLoading(true);
-    try {
-      await updateBasics({ clerkId: userId, heightInches: totalInches });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "photos" });
-      goToNextStep(router, "height", isEditing);
-    } catch { setLoading(false); }
+  const handleContinue = () => {
+    save({ heightInches: feet * 12 + inches });
   };
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        {isEditing && (
+          <View style={styles.closeHeader}>
+            <Pressable style={styles.closeButton} onPress={close}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+        )}
         <View style={styles.content}>
           <Text style={styles.question}>How tall are you?</Text>
 
@@ -108,7 +94,9 @@ export default function HeightScreen() {
             disabled={loading}
             activeOpacity={0.7}
           >
-            <Text style={styles.buttonText}>{loading ? "Saving..." : "Next"}</Text>
+            <Text style={styles.buttonText}>
+              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
+            </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -118,6 +106,15 @@ export default function HeightScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  closeHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  closeButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
+  },
   flex: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"] },
   question: { fontFamily: fonts.serif, fontSize: fontSizes["3xl"], color: colors.text, marginBottom: spacing.sm },

@@ -239,6 +239,7 @@ export default function QuestionsScreen() {
   const completedCount = recordings?.length ?? 0;
 
   const basicsComplete = !!(
+    currentUser?.ageRangeMin != null &&
     currentUser?.relationshipGoal &&
     currentUser?.wantsChildren &&
     currentUser?.religion &&
@@ -255,6 +256,7 @@ export default function QuestionsScreen() {
       { field: "sexuality", step: "sexuality" },
       { field: "location", step: "location" },
       { field: "birthdate", step: "birthday" },
+      { field: "ageRangeMin", step: "age-range" },
       { field: "heightInches", step: "height" },
       { field: "relationshipGoal", step: "relationship-goals" },
       { field: "relationshipType", step: "relationship-type" },
@@ -331,7 +333,7 @@ export default function QuestionsScreen() {
               ]}
               onPress={() => {
                 if (basicsComplete) {
-                  router.push({ pathname: "/(onboarding)/edit-basics" });
+                  router.push({ pathname: "/(onboarding)/basics-summary" });
                 } else {
                   router.push({
                     pathname: `/(onboarding)/${firstUnansweredBasicsStep}`,

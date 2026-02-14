@@ -1,15 +1,12 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { useScreenReady } from "@/hooks/useScreenReady";
-import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { IconChevronLeft } from "@tabler/icons-react-native";
+import { useEffect, useState } from "react";
 import {
   Animated,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,34 +14,21 @@ import {
 } from "react-native";
 
 export default function BirthdayScreen() {
-  const userId = useEffectiveUserId();
-  const router = useRouter();
-  const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
-  const updateBasics = useMutation(api.users.updateBasics);
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
-
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({
+    stepName: "birthday",
+  });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [birthdate, setBirthdate] = useState<Date>(new Date(2000, 0, 1));
-  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState("");
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  // Reset loading state when screen comes back into focus
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(false);
-    }, [])
-  );
 
   useEffect(() => {
-    if (currentUser && !hasLoadedData) {
+    if (currentUser && !hasLoaded) {
       if (currentUser.birthdate) setBirthdate(new Date(currentUser.birthdate));
-      setHasLoadedData(true);
+      setHasLoaded(true);
     }
-  }, [currentUser, hasLoadedData]);
+  }, [currentUser, hasLoaded]);
 
   useEffect(() => {
     setScreenReady(true);
@@ -62,28 +46,25 @@ export default function BirthdayScreen() {
 
   const canProceed = calculateAge(birthdate) >= 18;
 
-  const handleContinue = async () => {
-    if (!userId) return;
-
+  const handleContinue = () => {
     if (!canProceed) {
       setError("You must be 18 or older to use Found");
       return;
     }
-
-    setLoading(true);
     setError("");
-    try {
-      await updateBasics({ clerkId: userId, birthdate: birthdate.toISOString() });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "age-range" });
-      goToNextStep(router, "birthday", isEditing);
-    } catch (err) {
-      setLoading(false);
-    }
+    save({ birthdate: birthdate.toISOString() });
   };
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        {isEditing && (
+          <View style={styles.closeHeader}>
+            <Pressable style={styles.closeButton} onPress={close}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+        )}
         <View style={styles.content}>
           <Text style={styles.question}>What's your birthday?</Text>
           <Text style={styles.questionSubtext}>
@@ -125,7 +106,7 @@ export default function BirthdayScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Saving..." : "Next"}
+              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -138,6 +119,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  closeHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  closeButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
   },
   flex: {
     flex: 1,

@@ -1,8 +1,10 @@
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useEffect, type ReactNode } from "react";
 import {
   Animated,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +18,10 @@ interface OnboardingScreenProps {
   loading: boolean;
   onNext: () => void;
   onBack?: () => void;
+  submitLabel?: string;
   scrollable?: boolean;
+  /** Shows a back arrow at the top of the screen (used in editing mode) */
+  onClose?: () => void;
   children: ReactNode;
 }
 
@@ -26,7 +31,9 @@ export function OnboardingScreen({
   loading,
   onNext,
   onBack,
+  submitLabel,
   scrollable,
+  onClose,
   children,
 }: OnboardingScreenProps) {
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
@@ -45,6 +52,13 @@ export function OnboardingScreen({
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        {onClose && (
+          <View style={styles.closeHeader}>
+            <Pressable style={styles.closeButton} onPress={onClose}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+        )}
         {scrollable ? (
           <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent}>
             {content}
@@ -72,7 +86,7 @@ export function OnboardingScreen({
               activeOpacity={0.7}
             >
               <Text style={styles.buttonText}>
-                {loading ? "Saving..." : "Next"}
+                {loading ? "Saving..." : submitLabel ?? "Next"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -89,6 +103,15 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  closeHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  closeButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
   },
   content: {
     flex: 1,

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Onboarding Flow
 
-Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> gender -> sexuality -> location -> birthday -> age-range -> height -> photos -> relationship-goals -> kids -> wants-kids -> religion -> politics -> substances.
+Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> pronouns -> gender -> sexuality -> location -> birthday -> age-range -> height -> relationship-goals -> relationship-type -> kids -> wants-kids -> ethnicity -> hometown -> religion -> politics -> pets -> drinking -> smoking -> marijuana -> drugs -> photos.
 
 ## Shared Components
 
@@ -17,7 +17,8 @@ Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> gender
 ## Editing Mode
 
 When entering onboarding from the Questions tab ("The Basics" card), pages receive `editing=true` param. In editing mode:
-- Layout shows "Edit Basics" title + X button (closes to Questions tab) instead of back arrow + progress dots
+- Layout shows X button (closes to Questions tab) instead of back arrow; progress bar still visible
+- When all basics are complete, tapping "The Basics" card navigates to `basics-summary.tsx` (summary/edit page)
 - Footer shows Back + Next buttons (like voice questions)
 - `setOnboardingStep` is skipped (doesn't reset onboarding progress)
 - `goToNextStep(router, step, isEditing)` carries the `editing` param forward
@@ -31,15 +32,15 @@ When entering onboarding from the Questions tab ("The Basics" card), pages recei
 5. **Birthday** (`birthday.tsx`): `@react-native-community/datetimepicker`, 18+ required
 6. **Age Range** (`age-range.tsx`): Dual-handle `MultiSlider` (18-99) + dealbreaker toggle. Defaults to own age +/-5. Stored as `ageRangeMin`, `ageRangeMax`, `ageRangeDealbreaker` on `users` table. When dealbreaker, matches outside range are hard-filtered from the matches page.
 7. **Height** (`height.tsx`): Scrollable list of height options
-8. **Photos** (`photos.tsx`): 6-slot grid, first 4 required
 
 ## Structured Questions (stored in `users` table)
-9. **Relationship Goals** (`relationship-goals.tsx`): Marriage, Long-term partner, etc.
-10. **Kids** (`kids.tsx`): "Do you have children?" Yes/No (row layout)
-11. **Wants Kids** (`wants-kids.tsx`): Yes, No, Open to it, Not sure
-12. **Religion** (`religion.tsx`): 2-column grid + ImportanceSlider
-13. **Politics** (`politics.tsx`): Column options + ImportanceSlider
-14. **Substances** (`substances.tsx`): Drinking/Smoking/Marijuana pill selectors. Last step -- calls `completeCategory` during initial onboarding.
+8. **Relationship Goals** (`relationship-goals.tsx`): Marriage, Long-term partner, etc.
+9. **Kids** (`kids.tsx`): "Do you have children?" Yes/No (row layout)
+10. **Wants Kids** (`wants-kids.tsx`): Yes, No, Open to it, Not sure
+11. **Religion** (`religion.tsx`): 2-column grid + ImportanceSlider
+12. **Politics** (`politics.tsx`): Column options + ImportanceSlider
+13. **Substances**: Drinking/Smoking/Marijuana/Drugs screens with visibility toggles
+14. **Photos** (`photos.tsx`): 6-slot grid, first 4 required. Last step -- the last item in `ONBOARDING_FLOW` auto-triggers `completeCategory("the_basics")`.
 
 ## Voice Questions Screen (`voice-questions.tsx`)
 - Full-screen recording interface for 10 open-ended questions

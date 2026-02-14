@@ -15,7 +15,6 @@ export const ONBOARDING_FLOW = [
   "birthday",
   "age-range",
   "height",
-  "photos",
   "relationship-goals",
   "relationship-type",
   "kids",
@@ -29,6 +28,7 @@ export const ONBOARDING_FLOW = [
   "smoking",
   "marijuana",
   "drugs",
+  "photos",
 ] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_FLOW)[number];

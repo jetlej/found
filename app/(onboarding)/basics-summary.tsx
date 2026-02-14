@@ -38,6 +38,11 @@ function formatRelationshipGoal(goal: string | undefined): string {
   return map[goal] || goal;
 }
 
+function formatAgeRange(min: number | undefined, max: number | undefined, dealbreaker: boolean | undefined): string {
+  if (min == null || max == null) return "None";
+  return `${min} – ${max}${dealbreaker ? " (dealbreaker)" : ""}`;
+}
+
 function formatChildren(val: string | undefined): string {
   if (!val) return "None";
   return val === "yes" ? "Have children" : "Don't have children";
@@ -116,6 +121,7 @@ export default function EditBasicsScreen() {
         <SectionHeader title="My Vitals" />
         <ProfileRow label="Name" value={user.name || "None"} onPress={() => navigateTo("name")} />
         <ProfileRow label="Age" value={calculateAge(user.birthdate)} onPress={() => navigateTo("birthday")} />
+        <ProfileRow label="Age Preference" value={formatAgeRange(user.ageRangeMin, user.ageRangeMax, user.ageRangeDealbreaker)} onPress={() => navigateTo("age-range")} />
         <ProfileRow label="Height" value={formatHeight(user.heightInches)} onPress={() => navigateTo("height")} />
         <ProfileRow label="Location" value={user.location || "None"} onPress={() => navigateTo("location")} />
         <ProfileRow label="Ethnicity" value={user.ethnicity || "None"} onPress={() => navigateTo("ethnicity")} />

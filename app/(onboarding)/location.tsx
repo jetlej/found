@@ -1,14 +1,9 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { useScreenReady } from "@/hooks/useScreenReady";
-import { goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
+import { IconChevronLeft, IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
 import * as Location from "expo-location";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -20,35 +15,19 @@ import {
 } from "react-native";
 
 export default function LocationScreen() {
-  const userId = useEffectiveUserId();
-  const router = useRouter();
-  const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
-  const updateBasics = useMutation(api.users.updateBasics);
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
-
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({
+    stepName: "location",
+  });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [location, setLocation] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  // Reset loading state when screen comes back into focus
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(false);
-    }, [])
-  );
 
   useEffect(() => {
-    if (currentUser && !hasLoadedData) {
-      if (currentUser.location) setLocation(currentUser.location);
-      setHasLoadedData(true);
-    }
-  }, [currentUser, hasLoadedData]);
+    if (currentUser?.location && location === null)
+      setLocation(currentUser.location);
+  }, [currentUser]);
 
   useEffect(() => {
     setScreenReady(true);
@@ -87,22 +66,21 @@ export default function LocationScreen() {
     setLocationLoading(false);
   };
 
-  const handleContinue = async () => {
-    if (!userId || !canProceed) return;
-
-    setLoading(true);
-    try {
-      await updateBasics({ clerkId: userId, location });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "birthday" });
-      goToNextStep(router, "location", isEditing);
-    } catch (err) {
-      setLoading(false);
-    }
+  const handleContinue = () => {
+    if (!canProceed) return;
+    save({ location });
   };
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        {isEditing && (
+          <View style={styles.closeHeader}>
+            <Pressable style={styles.closeButton} onPress={close}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+        )}
         <View style={styles.content}>
           <Text style={styles.question}>Where are you located?</Text>
           <Text style={styles.questionSubtext}>
@@ -142,7 +120,7 @@ export default function LocationScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Saving..." : "Next"}
+              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -155,6 +133,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  closeHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  closeButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
   },
   flex: {
     flex: 1,

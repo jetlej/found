@@ -1,60 +1,7 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { goToNextStep } from "@/lib/onboarding-flow";
-import { spacing } from "@/lib/theme";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { OnboardingScreen } from "@/components/OnboardingScreen";
-import { OptionButton } from "@/components/OptionButton";
+import { BasicOptionScreen } from "@/components/BasicOptionScreen";
 
-const INTERESTED_IN = ["Men", "Women", "Everyone"];
+const OPTIONS = ["Men", "Women", "Everyone"];
 
 export default function SexualityScreen() {
-  const userId = useEffectiveUserId();
-  const router = useRouter();
-  const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
-  const updateBasics = useMutation(api.users.updateBasics);
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
-
-  const [interestedIn, setInterestedIn] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  useFocusEffect(useCallback(() => { setLoading(false); }, []));
-
-  useEffect(() => {
-    if (currentUser && !hasLoadedData) {
-      if (currentUser.sexuality) setInterestedIn(currentUser.sexuality);
-      setHasLoadedData(true);
-    }
-  }, [currentUser, hasLoadedData]);
-
-  const handleContinue = async () => {
-    if (!userId || !interestedIn) return;
-    setLoading(true);
-    try {
-      await updateBasics({ clerkId: userId, sexuality: interestedIn });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "location" });
-      goToNextStep(router, "sexuality", isEditing);
-    } catch { setLoading(false); }
-  };
-
-  return (
-    <OnboardingScreen question="I'm interested in..." canProceed={!!interestedIn} loading={loading} onNext={handleContinue} onBack={isEditing ? () => router.back() : undefined}>
-      <View style={styles.options}>
-        {INTERESTED_IN.map((opt) => (
-          <OptionButton key={opt} label={opt} selected={interestedIn === opt} onPress={() => setInterestedIn(opt)} />
-        ))}
-      </View>
-    </OnboardingScreen>
-  );
+  return <BasicOptionScreen stepName="sexuality" field="sexuality" question="I'm interested in..." options={OPTIONS} />;
 }
-
-const styles = StyleSheet.create({
-  options: { gap: spacing.md, marginTop: spacing.lg },
-});

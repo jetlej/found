@@ -2,8 +2,9 @@ import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { useScreenReady } from "@/hooks/useScreenReady";
-import { goToNextStep } from "@/lib/onboarding-flow";
+import { getNextStep, goToNextStep } from "@/lib/onboarding-flow";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -32,6 +33,7 @@ export default function PhotosScreen() {
   );
 
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
+  const completeCategory = useMutation(api.users.completeCategory);
 
   // Screen ready state for smooth fade-in from splash
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
@@ -50,8 +52,19 @@ export default function PhotosScreen() {
 
     setIsSubmitting(true);
     try {
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "relationship-goals" });
-      goToNextStep(router, "photos", isEditing);
+      if (isEditing) {
+        router.back();
+      } else {
+        const nextStep = getNextStep("photos");
+        if (nextStep) {
+          await setOnboardingStep({ clerkId: userId, step: nextStep });
+          goToNextStep(router, "photos");
+        } else {
+          // Last step — complete the basics category and exit
+          await completeCategory({ clerkId: userId, categoryId: "the_basics" });
+          router.replace("/(tabs)/questions");
+        }
+      }
     } catch (error) {
       console.error("Error continuing onboarding:", error);
       setIsSubmitting(false);
@@ -65,6 +78,13 @@ export default function PhotosScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.flex, { opacity: fadeAnim }]}>
+        {isEditing && (
+          <View style={styles.closeHeader}>
+            <Pressable style={styles.closeButton} onPress={() => router.back()}>
+              <IconChevronLeft size={28} color={colors.text} />
+            </Pressable>
+          </View>
+        )}
         <View style={styles.content}>
           <View style={styles.stepContent}>
             <Text style={styles.title}>Add your photos</Text>
@@ -93,7 +113,9 @@ export default function PhotosScreen() {
             {isSubmitting ? (
               <ActivityIndicator color={colors.primaryText} />
             ) : (
-              <Text style={styles.buttonText}>Continue</Text>
+              <Text style={styles.buttonText}>
+                {isEditing ? "Save" : "Continue"}
+              </Text>
             )}
           </Pressable>
         </View>
@@ -106,6 +128,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  closeHeader: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  closeButton: {
+    alignSelf: "flex-start",
+    padding: spacing.xs,
   },
   flex: {
     flex: 1,

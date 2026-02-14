@@ -1,14 +1,9 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { goToNextStep } from "@/lib/onboarding-flow";
+import { OnboardingScreen } from "@/components/OnboardingScreen";
+import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { colors, fontSizes, spacing } from "@/lib/theme";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Dimensions, StyleSheet, Switch, Text, View } from "react-native";
-import { OnboardingScreen } from "@/components/OnboardingScreen";
 
 const SLIDER_LENGTH = Dimensions.get("window").width - spacing.xl * 2;
 
@@ -22,53 +17,36 @@ function calculateAge(birthdate: string): number {
 }
 
 export default function AgeRangeScreen() {
-  const userId = useEffectiveUserId();
-  const router = useRouter();
-  const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
-  const updateBasics = useMutation(api.users.updateBasics);
-  const setOnboardingStep = useMutation(api.users.setOnboardingStep);
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({
+    stepName: "age-range",
+  });
 
   const [minAge, setMinAge] = useState(23);
   const [maxAge, setMaxAge] = useState(33);
   const [isDealbreaker, setIsDealbreaker] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  useFocusEffect(useCallback(() => { setLoading(false); }, []));
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    if (currentUser && !hasLoadedData) {
+    if (currentUser && !hasLoaded) {
       if (currentUser.ageRangeMin != null && currentUser.ageRangeMax != null) {
         setMinAge(currentUser.ageRangeMin);
         setMaxAge(currentUser.ageRangeMax);
         setIsDealbreaker(currentUser.ageRangeDealbreaker ?? false);
       } else if (currentUser.birthdate) {
-        // Default: own age -5 to +5, clamped to 18-99
         const myAge = calculateAge(currentUser.birthdate);
         setMinAge(Math.max(18, myAge - 5));
         setMaxAge(Math.min(99, myAge + 5));
       }
-      setHasLoadedData(true);
+      setHasLoaded(true);
     }
-  }, [currentUser, hasLoadedData]);
+  }, [currentUser, hasLoaded]);
 
-  const handleContinue = async () => {
-    if (!userId) return;
-    setLoading(true);
-    try {
-      await updateBasics({
-        clerkId: userId,
-        ageRangeMin: minAge,
-        ageRangeMax: maxAge,
-        ageRangeDealbreaker: isDealbreaker,
-      });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "height" });
-      goToNextStep(router, "age-range", isEditing);
-    } catch {
-      setLoading(false);
-    }
+  const handleContinue = () => {
+    save({
+      ageRangeMin: minAge,
+      ageRangeMax: maxAge,
+      ageRangeDealbreaker: isDealbreaker,
+    });
   };
 
   return (
@@ -77,7 +55,8 @@ export default function AgeRangeScreen() {
       canProceed={true}
       loading={loading}
       onNext={handleContinue}
-      onBack={isEditing ? () => router.back() : undefined}
+      submitLabel={isEditing ? "Save" : undefined}
+      onClose={isEditing ? close : undefined}
     >
       <Text style={styles.rangeDisplay}>
         {minAge} – {maxAge} years old

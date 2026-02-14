@@ -1,0 +1,25 @@
+---
+description: Checklist of files to update when adding, removing, or changing basics or voice questions
+globs: app/(tabs)/questions.tsx, app/(onboarding)/basics-summary.tsx, lib/onboarding-flow.ts, lib/voice-questions.ts, convex/schema.ts
+alwaysApply: false
+---
+
+# Question Change Checklist
+
+## Adding/Removing a Basics Question
+
+- `lib/onboarding-flow.ts` -- Add/remove step in `ONBOARDING_FLOW` array
+- `app/(onboarding)/<step>.tsx` -- Create/remove the screen file
+- `convex/schema.ts` -- Add/remove field(s) on `users` table
+- `convex/users.ts` -- Add/remove field(s) in `updateBasics` mutation
+- `app/(tabs)/questions.tsx` -- Update BOTH `basicsComplete` check AND `firstUnansweredBasicsStep` steps list
+- `app/(onboarding)/basics-summary.tsx` -- Add/remove `ProfileRow` (and formatter if needed)
+- `.cursor/rules/onboarding.mdc` -- Update the Basics Screens list
+
+## Adding/Removing a Voice Question
+
+- `lib/voice-questions.ts` -- Add/remove from questions array
+- `convex/actions/voiceQuestionDefinitions.ts` -- Update definitions
+- `app/(tabs)/questions.tsx` -- Update `TOTAL_VOICE_QUESTIONS` constant if count changes
+- `convex/actions/parseVoiceProfile.ts` -- Update extraction prompt if question changes what's captured
+- `.cursor/rules/voice-questions.mdc` -- Update the questions table

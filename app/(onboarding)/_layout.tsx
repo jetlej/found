@@ -1,17 +1,21 @@
-import { ONBOARDING_FLOW, OnboardingStep, getPrevStep } from "@/lib/onboarding-flow";
-import { colors, spacing } from "@/lib/theme";
+import { ONBOARDING_FLOW, OnboardingStep, getPrevStep, getProgress } from "@/lib/onboarding-flow";
+import { colors, fontSizes, spacing } from "@/lib/theme";
 import { IconChevronLeft } from "@tabler/icons-react-native";
-import { Stack, useLocalSearchParams, usePathname, useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Stack, useGlobalSearchParams, usePathname, useRouter } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OnboardingLayout() {
   const pathname = usePathname();
   const router = useRouter();
+  const { editing } = useGlobalSearchParams<{ editing?: string }>();
+  const isEditing = editing === "true";
 
   const screenName = pathname.split("/").pop() as OnboardingStep;
   const isInFlow = ONBOARDING_FLOW.includes(screenName);
   const showBack = isInFlow && screenName !== "referral";
+  const stepIndex = ONBOARDING_FLOW.indexOf(screenName);
+  const totalSteps = ONBOARDING_FLOW.length;
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -29,15 +33,23 @@ export default function OnboardingLayout() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {isInFlow && (
+      {isInFlow && !isEditing && (
         <View style={styles.header}>
           {showBack ? (
-            <Pressable style={styles.backArrow} onPress={handleBack}>
+            <Pressable style={styles.iconButton} onPress={handleBack}>
               <IconChevronLeft size={28} color={colors.text} />
             </Pressable>
           ) : (
-            <View style={styles.headerPlaceholder} />
+            <View style={styles.iconButton} />
           )}
+          <View style={styles.progressWrapper}>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { flex: getProgress(screenName) }]} />
+              <View style={{ flex: 1 - getProgress(screenName) }} />
+            </View>
+            <Text style={styles.stepText}>{stepIndex + 1} of {totalSteps}</Text>
+          </View>
+          <View style={styles.iconButton} />
         </View>
       )}
       <Stack
@@ -74,7 +86,7 @@ export default function OnboardingLayout() {
         <Stack.Screen name="smoking" />
         <Stack.Screen name="marijuana" />
         <Stack.Screen name="drugs" />
-        <Stack.Screen name="edit-basics" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="basics-summary" options={{ animation: "slide_from_right" }} />
         <Stack.Screen
           name="questions"
           options={{
@@ -106,10 +118,30 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  backArrow: {
-    padding: spacing.xs,
-  },
-  headerPlaceholder: {
+  iconButton: {
+    width: 40,
     height: 28,
+    justifyContent: "center",
+  },
+  progressWrapper: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  progressTrack: {
+    width: 120,
+    height: 3,
+    backgroundColor: colors.border,
+    borderRadius: 1.5,
+    flexDirection: "row",
+  },
+  progressFill: {
+    height: 3,
+    backgroundColor: colors.text,
+    borderRadius: 1.5,
+  },
+  stepText: {
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
   },
 });

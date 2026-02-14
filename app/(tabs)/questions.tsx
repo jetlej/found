@@ -9,6 +9,7 @@ import {
 } from "@/lib/voice-questions";
 import {
   IconBook,
+  IconAlertTriangle,
   IconCheck,
   IconDiamond,
   IconHeart,
@@ -248,6 +249,9 @@ export default function QuestionsScreen() {
     currentUser?.drugs
   );
 
+  const basicsStarted = currentUser?.completedCategories?.includes("the_basics") ?? false;
+  const hasUnanswered = basicsStarted && !basicsComplete;
+
   const firstUnansweredBasicsStep = useMemo(() => {
     if (!currentUser) return "pronouns";
     const steps: { field: string; step: string }[] = [
@@ -323,16 +327,16 @@ export default function QuestionsScreen() {
             <View
               style={[
                 styles.connector,
-                basicsComplete && styles.connectorCompleted,
+                (basicsComplete || hasUnanswered) && styles.connectorCompleted,
               ]}
             />
             <Pressable
               style={[
                 styles.node,
-                basicsComplete ? styles.nodeCompleted : styles.nodeCurrent,
+                basicsComplete || hasUnanswered ? styles.nodeCompleted : styles.nodeCurrent,
               ]}
               onPress={() => {
-                if (basicsComplete) {
+                if (basicsComplete || hasUnanswered) {
                   router.push({ pathname: "/(onboarding)/basics-summary" });
                 } else {
                   router.push({
@@ -347,13 +351,13 @@ export default function QuestionsScreen() {
                   <View style={styles.iconWrapper}>
                     <IconListCheck
                       size={21}
-                      color={basicsComplete ? colors.text : "#FFFFFF"}
+                      color={basicsComplete || hasUnanswered ? colors.text : "#FFFFFF"}
                     />
                   </View>
                   <Text
                     style={[
                       styles.nodeName,
-                      !basicsComplete && styles.nodeNameCurrent,
+                      !basicsComplete && !hasUnanswered && styles.nodeNameCurrent,
                     ]}
                   >
                     The Basics
@@ -363,6 +367,11 @@ export default function QuestionsScreen() {
                   <View style={styles.completedBadge}>
                     <IconCheck size={14} color={colors.success} />
                     <Text style={styles.durationText}>Edit</Text>
+                  </View>
+                ) : hasUnanswered ? (
+                  <View style={styles.completedBadge}>
+                    <IconAlertTriangle size={14} color={colors.error} />
+                    <Text style={[styles.durationText, { color: colors.error }]}>Update</Text>
                   </View>
                 ) : (
                   <View style={styles.answerButton}>

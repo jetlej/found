@@ -2,7 +2,7 @@ import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react-native";
+import { IconAlertCircle, IconChevronLeft, IconChevronRight } from "@tabler/icons-react-native";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, Text, Pressable, View } from "react-native";
@@ -63,16 +63,22 @@ interface ProfileRowProps {
   label: string;
   value: string;
   onPress: () => void;
+  unanswered?: boolean;
 }
 
-function ProfileRow({ label, value, onPress }: ProfileRowProps) {
+function ProfileRow({ label, value, onPress, unanswered }: ProfileRowProps) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={[styles.row, unanswered && styles.rowUnanswered]} onPress={onPress}>
       <View style={styles.rowLeft}>
         <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowValue}>{value || "None"}</Text>
+        <View style={styles.rowValueRow}>
+          {unanswered && <IconAlertCircle size={14} color={colors.error} />}
+          <Text style={[styles.rowValue, unanswered && styles.rowValueUnanswered]}>
+            {unanswered ? "Answer this" : value}
+          </Text>
+        </View>
       </View>
-      <IconChevronRight size={18} color={colors.textMuted} />
+      <IconChevronRight size={18} color={unanswered ? colors.error : colors.textMuted} />
     </Pressable>
   );
 }
@@ -110,37 +116,37 @@ export default function EditBasicsScreen() {
         </View>
 
         <SectionHeader title="Identity" />
-        <ProfileRow label="Pronouns" value={user.pronouns || "None"} onPress={() => navigateTo("pronouns")} />
-        <ProfileRow label="Gender" value={user.gender || "None"} onPress={() => navigateTo("gender")} />
-        <ProfileRow label="Sexuality" value={user.sexuality || "None"} onPress={() => navigateTo("sexuality")} />
+        <ProfileRow label="Pronouns" value={user.pronouns || "None"} unanswered={!user.pronouns} onPress={() => navigateTo("pronouns")} />
+        <ProfileRow label="Gender" value={user.gender || "None"} unanswered={!user.gender} onPress={() => navigateTo("gender")} />
+        <ProfileRow label="Sexuality" value={user.sexuality || "None"} unanswered={!user.sexuality} onPress={() => navigateTo("sexuality")} />
 
         <SectionHeader title="Relationship" />
-        <ProfileRow label="Dating Intentions" value={formatRelationshipGoal(user.relationshipGoal)} onPress={() => navigateTo("relationship-goals")} />
-        <ProfileRow label="Relationship Type" value={user.relationshipType || "None"} onPress={() => navigateTo("relationship-type")} />
+        <ProfileRow label="Dating Intentions" value={formatRelationshipGoal(user.relationshipGoal)} unanswered={!user.relationshipGoal} onPress={() => navigateTo("relationship-goals")} />
+        <ProfileRow label="Relationship Type" value={user.relationshipType || "None"} unanswered={!user.relationshipType} onPress={() => navigateTo("relationship-type")} />
 
         <SectionHeader title="My Vitals" />
-        <ProfileRow label="Name" value={user.name || "None"} onPress={() => navigateTo("name")} />
-        <ProfileRow label="Age" value={calculateAge(user.birthdate)} onPress={() => navigateTo("birthday")} />
-        <ProfileRow label="Age Preference" value={formatAgeRange(user.ageRangeMin, user.ageRangeMax, user.ageRangeDealbreaker)} onPress={() => navigateTo("age-range")} />
-        <ProfileRow label="Height" value={formatHeight(user.heightInches)} onPress={() => navigateTo("height")} />
-        <ProfileRow label="Location" value={user.location || "None"} onPress={() => navigateTo("location")} />
-        <ProfileRow label="Ethnicity" value={user.ethnicity || "None"} onPress={() => navigateTo("ethnicity")} />
-        <ProfileRow label="Hometown" value={user.hometown || "None"} onPress={() => navigateTo("hometown")} />
-        <ProfileRow label="Children" value={formatChildren(user.hasChildren)} onPress={() => navigateTo("kids")} />
-        <ProfileRow label="Family Plans" value={formatWantsChildren(user.wantsChildren)} onPress={() => navigateTo("wants-kids")} />
+        <ProfileRow label="Name" value={user.name || "None"} unanswered={!user.name} onPress={() => navigateTo("name")} />
+        <ProfileRow label="Age" value={calculateAge(user.birthdate)} unanswered={!user.birthdate} onPress={() => navigateTo("birthday")} />
+        <ProfileRow label="Age Preference" value={formatAgeRange(user.ageRangeMin, user.ageRangeMax, user.ageRangeDealbreaker)} unanswered={user.ageRangeMin == null} onPress={() => navigateTo("age-range")} />
+        <ProfileRow label="Height" value={formatHeight(user.heightInches)} unanswered={!user.heightInches} onPress={() => navigateTo("height")} />
+        <ProfileRow label="Location" value={user.location || "None"} unanswered={!user.location} onPress={() => navigateTo("location")} />
+        <ProfileRow label="Ethnicity" value={user.ethnicity || "None"} unanswered={!user.ethnicity} onPress={() => navigateTo("ethnicity")} />
+        <ProfileRow label="Hometown" value={user.hometown || "None"} unanswered={!user.hometown} onPress={() => navigateTo("hometown")} />
+        <ProfileRow label="Children" value={formatChildren(user.hasChildren)} unanswered={!user.hasChildren} onPress={() => navigateTo("kids")} />
+        <ProfileRow label="Family Plans" value={formatWantsChildren(user.wantsChildren)} unanswered={!user.wantsChildren} onPress={() => navigateTo("wants-kids")} />
 
         <SectionHeader title="Beliefs" />
-        <ProfileRow label="Religious Beliefs" value={user.religion || "None"} onPress={() => navigateTo("religion")} />
-        <ProfileRow label="Politics" value={user.politicalLeaning || "None"} onPress={() => navigateTo("politics")} />
+        <ProfileRow label="Religious Beliefs" value={user.religion || "None"} unanswered={!user.religion} onPress={() => navigateTo("religion")} />
+        <ProfileRow label="Politics" value={user.politicalLeaning || "None"} unanswered={!user.politicalLeaning} onPress={() => navigateTo("politics")} />
 
         <SectionHeader title="Pets" />
-        <ProfileRow label="Pets" value={user.pets || "None"} onPress={() => navigateTo("pets")} />
+        <ProfileRow label="Pets" value={user.pets || "None"} unanswered={!user.pets} onPress={() => navigateTo("pets")} />
 
         <SectionHeader title="My Vices" />
-        <ProfileRow label="Drinking" value={user.drinking || "None"} onPress={() => navigateTo("drinking")} />
-        <ProfileRow label="Smoking" value={user.smoking || "None"} onPress={() => navigateTo("smoking")} />
-        <ProfileRow label="Marijuana" value={user.marijuana || "None"} onPress={() => navigateTo("marijuana")} />
-        <ProfileRow label="Drugs" value={user.drugs || "None"} onPress={() => navigateTo("drugs")} />
+        <ProfileRow label="Drinking" value={user.drinking || "None"} unanswered={!user.drinking} onPress={() => navigateTo("drinking")} />
+        <ProfileRow label="Smoking" value={user.smoking || "None"} unanswered={!user.smoking} onPress={() => navigateTo("smoking")} />
+        <ProfileRow label="Marijuana" value={user.marijuana || "None"} unanswered={!user.marijuana} onPress={() => navigateTo("marijuana")} />
+        <ProfileRow label="Drugs" value={user.drugs || "None"} unanswered={!user.drugs} onPress={() => navigateTo("drugs")} />
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -193,16 +199,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  rowUnanswered: {
+    backgroundColor: "#FEF2F2",
+  },
   rowLeft: { flex: 1 },
   rowLabel: {
     fontSize: fontSizes.base,
     fontWeight: "600",
     color: colors.text,
   },
+  rowValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
   rowValue: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
-    marginTop: 2,
+  },
+  rowValueUnanswered: {
+    color: colors.error,
+    fontWeight: "500",
   },
   bottomPadding: { height: spacing["2xl"] },
 });

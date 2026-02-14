@@ -1,3 +1,20 @@
+// ============================================================================
+// LEGACY — Written-answer seeding (91-question path)
+//
+// This file uses the old written-answer onboarding flow. The active seeding
+// pipeline is in seedVoiceTestUsers.ts which uses the voice-first flow.
+//
+// These actions still work but:
+//   - Use parseProfile (not parseVoiceProfile) — a different parser
+//   - Do NOT trigger compatibility analysis after profile creation
+//   - Do NOT generate varied basics (sexuality, birthdate, etc.)
+//
+// For seeding test users, use instead:
+//   bunx convex run actions/seedVoiceTestUsers:seedVoiceProfilesForTestUsers
+//   bunx convex run actions/seedVoiceTestUsers:seedCelebProfiles
+//   bunx convex run actions/seedVoiceTestUsers:seedHighCompatUsers
+// ============================================================================
+
 "use node";
 
 import { v } from "convex/values";
@@ -6,7 +23,7 @@ import { internal } from "../_generated/api";
 import { extractStructuredData, generateImage } from "../lib/openai";
 import { QUESTIONS } from "../seedQuestions";
 
-// 10 extreme/interesting persona archetypes for testing
+// @deprecated — Use personas in seedVoiceTestUsers.ts instead
 const PERSONAS = [
   {
     name: "Jade Monroe",
@@ -294,7 +311,7 @@ Extract and return JSON with:
   }
 }`;
 
-// Main action to seed all test users
+// @deprecated — Use seedVoiceProfilesForTestUsers in seedVoiceTestUsers.ts
 export const seedTestUsers = action({
   args: {},
   handler: async (ctx) => {
@@ -431,7 +448,7 @@ export const seedTestUsers = action({
   },
 });
 
-// Action to seed a single test user by name
+// @deprecated — Use seedSingleVoiceTestUser in seedVoiceTestUsers.ts
 export const seedSingleUser = action({
   args: { personaName: v.string() },
   handler: async (ctx, args) => {
@@ -505,7 +522,7 @@ export const seedSingleUser = action({
   },
 });
 
-// Action to add photos to existing test users
+// @deprecated — Use seedTestPhotos or seedCelebPhotos in seedTestPhotos.ts
 export const addPhotosToTestUsers = action({
   args: {},
   handler: async (ctx) => {
@@ -566,7 +583,7 @@ export const addPhotosToTestUsers = action({
   },
 });
 
-// Action to seed answers for an existing user
+// @deprecated — Uses written-answer parser, not voice pipeline
 export const seedMyAnswers = action({
   args: {
     userId: v.id("users"),

@@ -1,6 +1,6 @@
 ---
 description: Checklist of files to update when adding, removing, or changing basics or voice questions
-globs: app/(tabs)/questions.tsx, app/(onboarding)/basics-summary.tsx, lib/onboarding-flow.ts, lib/voice-questions.ts, convex/schema.ts
+globs: app/(tabs)/questions.tsx, app/(onboarding)/basics-summary.tsx, components/BasicOptionScreen.tsx, hooks/useBasicsStep.ts, lib/onboarding-flow.ts, lib/voice-questions.ts, convex/schema.ts
 alwaysApply: false
 ---
 
@@ -9,12 +9,12 @@ alwaysApply: false
 ## Adding/Removing a Basics Question
 
 - `lib/onboarding-flow.ts` -- Add/remove step in `ONBOARDING_FLOW` array
-- `app/(onboarding)/<step>.tsx` -- Create/remove the screen file
+- `app/(onboarding)/<step>.tsx` -- Create/remove the screen file (use `BasicOptionScreen` for option-select, or `useBasicsStep` hook for custom UI)
 - `convex/schema.ts` -- Add/remove field(s) on `users` table
 - `convex/users.ts` -- Add/remove field(s) in `updateBasics` mutation
 - `app/(tabs)/questions.tsx` -- Update BOTH `basicsComplete` check AND `firstUnansweredBasicsStep` steps list
-- `app/(onboarding)/basics-summary.tsx` -- Add/remove `ProfileRow` (and formatter if needed)
-- `.cursor/rules/onboarding.mdc` -- Update the Basics Screens list
+- `app/(onboarding)/basics-summary.tsx` -- Add/remove `ProfileRow` (with `unanswered` prop and formatter if needed)
+- `.cursor/rules/onboarding.mdc` -- Update the screen lists
 
 ## Adding/Removing a Voice Question
 

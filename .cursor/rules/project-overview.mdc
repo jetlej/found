@@ -23,7 +23,7 @@ app/                    # Expo Router screens
 ├── index.tsx           # Landing page (pre-auth)
 ├── _layout.tsx         # Root layout with AuthGate, fonts, splash
 ├── (auth)/             # sign-in.tsx, verify.tsx
-├── (onboarding)/       # gender.tsx, sexuality.tsx, location.tsx, birthday.tsx, height.tsx, photos.tsx, relationship-goals.tsx, kids.tsx, wants-kids.tsx, religion.tsx, politics.tsx, substances.tsx, voice-questions.tsx
+├── (onboarding)/       # basics screens (use BasicOptionScreen or useBasicsStep), basics-summary.tsx, voice-questions.tsx
 ├── (tabs)/             # index.tsx, questions.tsx, matches.tsx, journey.tsx (hidden)
 └── profile.tsx
 convex/                 # Backend: schema, mutations, queries, actions
@@ -46,4 +46,15 @@ stores/                 # Zustand stores
 bun install
 bunx convex dev          # Run once after any convex/ changes to push
 bun start                # Press 'i' for iOS simulator
+```
+
+## Seeding Test Users
+
+Use the voice pipeline in `convex/actions/seedVoiceTestUsers.ts` (not the legacy `seedTestUsers.ts`):
+
+```bash
+bunx convex run actions/seedVoiceTestUsers:seedCelebProfiles       # 10 celebs
+bunx convex run actions/seedVoiceTestUsers:seedHighCompatUsers     # 3 high-compat
+bunx convex run actions/seedTestPhotos:seedCelebPhotos             # Photos (separate step)
+bunx convex run seedTestUsers:deleteAllBots                        # Wipe all bots
 ```

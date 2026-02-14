@@ -14,6 +14,98 @@ type Persona = {
   description: string;
 };
 
+// ── Basics generation (shared by all seeding paths) ──────────────────────────
+
+type BasicsResult = {
+  pronouns: string;
+  sexuality: string;
+  birthdate: string;
+  heightInches: number;
+  ethnicity: string;
+  hometown: string;
+  relationshipGoal: string;
+  relationshipType: string;
+  hasChildren: string;
+  wantsChildren: string;
+  religion: string;
+  religionImportance: number;
+  politicalLeaning: string;
+  politicalImportance: number;
+  drinking: string;
+  smoking: string;
+  marijuana: string;
+  drugs: string;
+  pets: string;
+  ageRangeMin: number;
+  ageRangeMax: number;
+  ageRangeDealbreaker: boolean;
+};
+
+const BASICS_PROMPT = `You are generating realistic dating profile data for a test user.
+
+User info:
+- Name: {name}
+- Gender: {gender}
+- Description: {description}
+
+Generate realistic, varied profile fields for this person. Be consistent with their description and personality. Make each user feel distinct.
+
+IMPORTANT: You MUST include ALL 22 fields listed below. Do not omit any field.
+
+Return JSON with EXACTLY these 22 fields and allowed values:
+{
+  "pronouns": "he/him" | "she/her" | "they/them",
+  "sexuality": "Straight" | "Gay" | "Lesbian" | "Bisexual" | "Queer" | "Pansexual",
+  "birthdate": "YYYY-MM-DD" (between 1990-01-01 and 2000-12-31, varied),
+  "ageRangeMin": number (18-60, typically their age minus 3-8),
+  "ageRangeMax": number (20-99, typically their age plus 3-8),
+  "ageRangeDealbreaker": true or false (true ~40% of the time),
+  "heightInches": number (58-78, realistic for gender),
+  "ethnicity": "White" | "Black" | "Hispanic/Latino" | "Asian" | "Middle Eastern" | "South Asian" | "Mixed" | "Other",
+  "hometown": "City, State" (a real US city),
+  "relationshipGoal": "marriage" | "long_term" | "life_partner" | "figuring_out",
+  "relationshipType": "Monogamy" | "Non-monogamy" | "Open to either",
+  "hasChildren": "yes" | "no",
+  "wantsChildren": "yes" | "no" | "open" | "not_sure",
+  "religion": "Christian" | "Catholic" | "Jewish" | "Muslim" | "Hindu" | "Buddhist" | "Agnostic" | "Atheist" | "Spiritual" | "None",
+  "religionImportance": number (1-10),
+  "politicalLeaning": "Liberal" | "Moderate" | "Conservative" | "Apolitical",
+  "politicalImportance": number (1-10),
+  "drinking": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "smoking": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "marijuana": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "drugs": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "pets": "Dog" | "Cat" | "Both" | "Fish" | "None" | "Other"
+}`;
+
+async function generateBasics(persona: Persona): Promise<BasicsResult> {
+  const prompt = BASICS_PROMPT
+    .replace("{name}", persona.name)
+    .replace("{gender}", persona.gender)
+    .replace("{description}", persona.description);
+
+  const data = await extractStructuredData<BasicsResult>(
+    prompt,
+    `Generate the profile fields for ${persona.name} now. Return ALL 22 fields.`,
+    { maxTokens: 1500 },
+  );
+
+  // Ensure age range fields are always present (fallback if GPT omits them)
+  if (!data.ageRangeMin || !data.ageRangeMax) {
+    const birthYear = parseInt(data.birthdate?.split("-")[0] || "1995");
+    const age = new Date().getFullYear() - birthYear;
+    data.ageRangeMin = Math.max(18, age - 5);
+    data.ageRangeMax = Math.min(99, age + 5);
+  }
+  if (data.ageRangeDealbreaker === undefined) {
+    data.ageRangeDealbreaker = Math.random() < 0.4;
+  }
+
+  return data;
+}
+
+// ── Voice answer generation ──────────────────────────────────────────────────
+
 const PERSONA_BATCH_PROMPT = `Create 10 totally unique fictional dating personas for test users.
 
 Requirements:
@@ -69,6 +161,109 @@ Return JSON with EXACTLY 8 answers (one per question, no more, no less):
 }`;
 }
 
+// ── Main seeding pipeline ────────────────────────────────────────────────────
+// Complete flow for a single test user:
+//   1. Generate basics (GPT) -> create user with real demographics
+//   2. Generate voice answers (GPT) -> save fake recordings
+//   3. Parse voice profile -> triggers compatibility analysis
+// This ensures compatibility analysis runs against a fully-populated user.
+
+export const seedSingleVoiceTestUser = internalAction({
+  args: {
+    persona: v.object({
+      name: v.string(),
+      gender: v.union(v.literal("Man"), v.literal("Woman"), v.literal("Non-binary")),
+      description: v.string(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const persona: Persona = args.persona;
+    console.log(`\n=== ${persona.name} ===`);
+
+    // Step 1: Generate basics + voice answers in parallel (two GPT calls)
+    console.log(`  Generating basics + voice answers...`);
+    const [basics, answerPayload] = await Promise.all([
+      generateBasics(persona),
+      extractStructuredData<{ answers: string[] }>(
+        buildAnswersPrompt(persona),
+        "Generate exactly 8 voice answers now, one per question.",
+        { maxTokens: 12000 },
+      ),
+    ]);
+
+    const answers = answerPayload.answers || [];
+    if (answers.length !== VOICE_QUESTIONS.length) {
+      throw new Error(
+        `Expected ${VOICE_QUESTIONS.length} answers, got ${answers.length}`,
+      );
+    }
+
+    // Step 2: Create user with real demographics (not placeholder defaults)
+    const recordings = await Promise.all(
+      answers.map(async (transcription, questionIndex) => {
+        const wordCount = transcription.trim().split(/\s+/).filter(Boolean).length;
+        const durationSeconds = Math.max(30, Math.round(wordCount / 2.5));
+        const storageId = await ctx.storage.store(
+          new Blob([`seed voice answer ${questionIndex}`], {
+            type: "text/plain",
+          }),
+        );
+        return { questionIndex, storageId, durationSeconds, transcription };
+      }),
+    );
+
+    const userId = await ctx.runMutation(internal.seedTestUsers.createTestUser, {
+      name: persona.name,
+      gender: persona.gender,
+      answers: {},
+      // Pass all generated basics so the user is complete before profile parsing
+      sexuality: basics.sexuality,
+      birthdate: basics.birthdate,
+      heightInches: basics.heightInches,
+      location: basics.hometown,
+      pronouns: basics.pronouns,
+      ethnicity: basics.ethnicity,
+      hometown: basics.hometown,
+      relationshipGoal: basics.relationshipGoal,
+      relationshipType: basics.relationshipType,
+      hasChildren: basics.hasChildren,
+      wantsChildren: basics.wantsChildren,
+      religion: basics.religion,
+      religionImportance: basics.religionImportance,
+      politicalLeaning: basics.politicalLeaning,
+      politicalImportance: basics.politicalImportance,
+      drinking: basics.drinking,
+      smoking: basics.smoking,
+      marijuana: basics.marijuana,
+      drugs: basics.drugs,
+      pets: basics.pets,
+      ageRangeMin: basics.ageRangeMin,
+      ageRangeMax: basics.ageRangeMax,
+      ageRangeDealbreaker: basics.ageRangeDealbreaker,
+    });
+    console.log(`  Created user ${userId}`);
+
+    // Step 3: Save voice recordings
+    await ctx.runMutation(internal.voiceRecordings.replaceSeedRecordings, {
+      userId,
+      recordings,
+    });
+
+    // Step 4: Schedule voice profile parsing as a separate action to avoid timeout.
+    // parseVoiceProfile triggers compatibility analysis when it completes.
+    await ctx.scheduler.runAfter(
+      0,
+      internal.actions.parseVoiceProfile.parseVoiceProfile,
+      { userId },
+    );
+
+    console.log(`  ✓ ${persona.name} created (profile parsing scheduled)`);
+    return { success: true, userId, name: persona.name };
+  },
+});
+
+// ── Batch entry points ───────────────────────────────────────────────────────
+
 export const seedVoiceProfilesForTestUsers = action({
   args: {},
   handler: async (ctx) => {
@@ -100,8 +295,8 @@ export const seedVoiceProfilesForTestUsers = action({
   },
 });
 
-// Backfill all missing bio fields for existing test users using GPT
-// Schedules one action per user to avoid timeout
+// Backfill basics for existing test users that were seeded before this fix.
+// For NEW seeds, basics are generated inline — this is only needed for old data.
 export const backfillTestUserBasics = action({
   args: {},
   handler: async (ctx) => {
@@ -110,7 +305,7 @@ export const backfillTestUserBasics = action({
 
     for (const [i, user] of testUsers.entries()) {
       await ctx.scheduler.runAfter(
-        i * 3000, // stagger by 3s
+        i * 3000,
         internal.actions.seedVoiceTestUsers.backfillSingleUser,
         { userId: user._id, name: user.name || "Unknown", gender: user.gender || "Unknown" },
       );
@@ -120,31 +315,6 @@ export const backfillTestUserBasics = action({
   },
 });
 
-type BackfillResult = {
-  pronouns: string;
-  sexuality: string;
-  birthdate: string;
-  heightInches: number;
-  ethnicity: string;
-  hometown: string;
-  relationshipGoal: string;
-  relationshipType: string;
-  hasChildren: string;
-  wantsChildren: string;
-  religion: string;
-  religionImportance: number;
-  politicalLeaning: string;
-  politicalImportance: number;
-  drinking: string;
-  smoking: string;
-  marijuana: string;
-  drugs: string;
-  pets: string;
-  ageRangeMin: number;
-  ageRangeMax: number;
-  ageRangeDealbreaker: boolean;
-};
-
 export const backfillSingleUser = internalAction({
   args: {
     userId: v.id("users"),
@@ -152,76 +322,23 @@ export const backfillSingleUser = internalAction({
     gender: v.string(),
   },
   handler: async (ctx, args) => {
+    // Use profile data for context if available (for backfilling old users)
     const profile = await ctx.runQuery(
       internal.userProfiles.getByUserInternal,
       { userId: args.userId },
     );
 
-    const bio = profile?.generatedBio || "";
-    const values = profile?.values?.join(", ") || "";
-    const interests = profile?.interests?.join(", ") || "";
-    const lifestyle = profile?.lifestyle
-      ? `Sleep: ${profile.lifestyle.sleepSchedule}, Exercise: ${profile.lifestyle.exerciseLevel}, Alcohol: ${profile.lifestyle.alcoholUse}, Drugs: ${profile.lifestyle.drugUse}, Pets: ${profile.lifestyle.petPreference}, Location: ${profile.lifestyle.locationPreference}`
-      : "";
-    const wantsKids = profile?.familyPlans?.wantsKids || "unknown";
+    const description = [
+      profile?.generatedBio || "",
+      profile?.values?.length ? `Values: ${profile.values.join(", ")}` : "",
+      profile?.interests?.length ? `Interests: ${profile.interests.join(", ")}` : "",
+    ].filter(Boolean).join(". ");
 
-    const prompt = `You are generating realistic dating profile data for a test user.
-
-User info:
-- Name: ${args.name}
-- Gender: ${args.gender}
-- Bio: ${bio}
-- Values: ${values}
-- Interests: ${interests}
-- Lifestyle: ${lifestyle}
-- Wants kids (from voice profile): ${wantsKids}
-
-Generate realistic, varied profile fields for this person. Be consistent with their bio and personality. Make each user feel distinct.
-
-IMPORTANT: You MUST include ALL 22 fields listed below. Do not omit any field. Every single field is required.
-
-Return JSON with EXACTLY these 22 fields and allowed values:
-{
-  "pronouns": "he/him" | "she/her" | "they/them",
-  "sexuality": "Straight" | "Gay" | "Lesbian" | "Bisexual" | "Queer" | "Pansexual",
-  "birthdate": "YYYY-MM-DD" (between 1990-01-01 and 2000-12-31, varied),
-  "ageRangeMin": number (18-60, typically their age minus 3-8),
-  "ageRangeMax": number (20-99, typically their age plus 3-8),
-  "ageRangeDealbreaker": true or false (true ~40% of the time),
-  "heightInches": number (58-78, realistic for gender),
-  "ethnicity": "White" | "Black" | "Hispanic/Latino" | "Asian" | "Middle Eastern" | "South Asian" | "Mixed" | "Other",
-  "hometown": "City, State" (a real US city),
-  "relationshipGoal": "marriage" | "long_term" | "life_partner" | "figuring_out",
-  "relationshipType": "Monogamy" | "Non-monogamy" | "Open to either",
-  "hasChildren": "yes" | "no",
-  "wantsChildren": "yes" | "no" | "open" | "not_sure",
-  "religion": "Christian" | "Catholic" | "Jewish" | "Muslim" | "Hindu" | "Buddhist" | "Agnostic" | "Atheist" | "Spiritual" | "None",
-  "religionImportance": number (1-10),
-  "politicalLeaning": "Liberal" | "Moderate" | "Conservative" | "Apolitical",
-  "politicalImportance": number (1-10),
-  "drinking": "Yes" | "Sometimes" | "No" | "Prefer not to say",
-  "smoking": "Yes" | "Sometimes" | "No" | "Prefer not to say",
-  "marijuana": "Yes" | "Sometimes" | "No" | "Prefer not to say",
-  "drugs": "Yes" | "Sometimes" | "No" | "Prefer not to say",
-  "pets": "Dog" | "Cat" | "Both" | "Fish" | "None" | "Other"
-}`;
-
-    const data = await extractStructuredData<BackfillResult>(
-      prompt,
-      `Generate the profile fields for ${args.name} now. Return ALL 22 fields.`,
-      { maxTokens: 1500 },
-    );
-
-    // Ensure age range fields are always present (fallback if GPT omits them)
-    if (!data.ageRangeMin || !data.ageRangeMax) {
-      const birthYear = parseInt(data.birthdate?.split("-")[0] || "1995");
-      const age = new Date().getFullYear() - birthYear;
-      data.ageRangeMin = Math.max(18, age - 5);
-      data.ageRangeMax = Math.min(99, age + 5);
-    }
-    if (data.ageRangeDealbreaker === undefined) {
-      data.ageRangeDealbreaker = Math.random() < 0.4;
-    }
+    const data = await generateBasics({
+      name: args.name,
+      gender: args.gender as Persona["gender"],
+      description: description || `A ${args.gender} looking for a meaningful relationship.`,
+    });
 
     await ctx.runMutation(internal.seedTestUsers.patchTestUserBasics, {
       userId: args.userId,
@@ -255,68 +372,6 @@ Return JSON with EXACTLY these 22 fields and allowed values:
 
     console.log(`✓ ${args.name} backfilled`);
     return { success: true, name: args.name };
-  },
-});
-
-export const seedSingleVoiceTestUser = internalAction({
-  args: {
-    persona: v.object({
-      name: v.string(),
-      gender: v.union(v.literal("Man"), v.literal("Woman"), v.literal("Non-binary")),
-      description: v.string(),
-    }),
-  },
-  handler: async (ctx, args) => {
-    const persona: Persona = args.persona;
-    console.log(`\n=== ${persona.name} ===`);
-
-    const answerPayload = await extractStructuredData<{ answers: string[] }>(
-      buildAnswersPrompt(persona),
-      "Generate exactly 8 voice answers now, one per question.",
-      { maxTokens: 12000 },
-    );
-
-    const answers = answerPayload.answers || [];
-    if (answers.length !== VOICE_QUESTIONS.length) {
-      throw new Error(
-        `Expected ${VOICE_QUESTIONS.length} answers, got ${answers.length}`,
-      );
-    }
-
-    const recordings = await Promise.all(
-      answers.map(async (transcription, questionIndex) => {
-        const wordCount = transcription.trim().split(/\s+/).filter(Boolean).length;
-        const durationSeconds = Math.max(30, Math.round(wordCount / 2.5));
-        const storageId = await ctx.storage.store(
-          new Blob([`seed voice answer ${questionIndex}`], {
-            type: "text/plain",
-          }),
-        );
-        return {
-          questionIndex,
-          storageId,
-          durationSeconds,
-          transcription,
-        };
-      }),
-    );
-
-    const userId = await ctx.runMutation(internal.seedTestUsers.createTestUser, {
-      name: persona.name,
-      gender: persona.gender,
-      answers: {},
-    });
-
-    await ctx.runMutation(internal.voiceRecordings.replaceSeedRecordings, {
-      userId,
-      recordings,
-    });
-
-    await ctx.runAction(internal.actions.parseVoiceProfile.parseVoiceProfile, {
-      userId,
-    });
-
-    return { success: true, userId, name: persona.name };
   },
 });
 

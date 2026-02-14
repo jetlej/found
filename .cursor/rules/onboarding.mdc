@@ -1,51 +1,65 @@
 ---
 description: Onboarding flow details and screen behavior
-globs: app/(onboarding)/**, components/OnboardingScreen.tsx, components/OptionButton.tsx, components/ImportanceSlider.tsx, lib/onboarding-flow.ts
+globs: app/(onboarding)/**, components/OnboardingScreen.tsx, components/BasicOptionScreen.tsx, components/OptionButton.tsx, components/ImportanceSlider.tsx, hooks/useBasicsStep.ts, lib/onboarding-flow.ts
 alwaysApply: false
 ---
 
 # Onboarding Flow
 
-Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> pronouns -> gender -> sexuality -> location -> birthday -> age-range -> height -> relationship-goals -> relationship-type -> kids -> wants-kids -> ethnicity -> hometown -> religion -> politics -> pets -> drinking -> smoking -> marijuana -> drugs -> photos.
+Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> pronouns -> gender -> sexuality -> location -> birthday -> age-range -> height -> photos -> relationship-goals -> relationship-type -> kids -> wants-kids -> ethnicity -> hometown -> religion -> politics -> pets -> drinking -> smoking -> marijuana -> drugs.
 
-## Shared Components
+## Component Architecture
 
-- **`OnboardingScreen`** (`components/OnboardingScreen.tsx`): Wrapper for all question pages. Handles fade animation, layout (scrollable or fixed), question heading, and footer with Next button. Accepts optional `onBack` prop to show a Back + Next button row (used in editing mode).
-- **`OptionButton`** (`components/OptionButton.tsx`): Selectable option with `shadows.sm`, no border. Variants: `default` (full-width), `compact` (2-col grid), `pill` (rounded inline), `row` (equal-width side-by-side).
-- **`ImportanceSlider`** (`components/ImportanceSlider.tsx`): "How important is it that your partner aligns with you here?" subquestion + 1-10 slider. Used by religion and politics pages.
+- **`useBasicsStep`** (`hooks/useBasicsStep.ts`): Shared hook for ALL basics screens. Provides `userId`, `currentUser`, `isEditing`, `loading`, `save(data)`, `close()`. Handles editing-mode navigation (router.back), onboarding navigation (goToNextStep + setOnboardingStep), and last-step completion (completeCategory) automatically. Also exports `useSavedValue` helper for loading saved data from the user record.
+- **`BasicOptionScreen`** (`components/BasicOptionScreen.tsx`): Config-driven component for option-select screens. Built on `OnboardingScreen` + `useBasicsStep`. Supports `visibilityField` (toggle), `importanceField` (slider), `optionVariant` (chip/row/default). Auto-advances on first selection during initial onboarding (single-question screens only, no prior answer).
+- **`OnboardingScreen`** (`components/OnboardingScreen.tsx`): Shared shell for all question pages. Provides question heading (top), footer with Save/Next button (bottom), and optional `onClose` back arrow header (editing mode). Props: `submitLabel` (defaults to "Next"), `onClose` (shows back arrow at top).
+- **`OptionButton`** (`components/OptionButton.tsx`): Selectable option. Variants: `default`, `compact`, `pill`, `chip`, `row`.
+- **`ImportanceSlider`** (`components/ImportanceSlider.tsx`): "How important is it that your partner aligns with you here?" 1-10 slider. Used by religion and politics.
+
+## Screen Types
+
+**Config-driven (via `BasicOptionScreen`, ~7-10 lines each):**
+pronouns, gender, sexuality, relationship-goals, relationship-type, kids, wants-kids, ethnicity, pets, religion, politics, drinking, smoking, marijuana, drugs
+
+**Custom layout (use `useBasicsStep` hook directly):**
+name, location, birthday, age-range, height, hometown
+
+**Fully custom:**
+photos (own layout, no `useBasicsStep`)
+
+## Layout Header (`_layout.tsx`)
+
+- **Initial onboarding**: Back chevron (left) + centered progress bar (120px) + step counter ("5 of 22")
+- **Editing mode / basics-summary**: No layout header. Each screen renders its own back arrow via `onClose` prop.
 
 ## Editing Mode
 
-When entering onboarding from the Questions tab ("The Basics" card), pages receive `editing=true` param. In editing mode:
-- Layout shows X button (closes to Questions tab) instead of back arrow; progress bar still visible
-- When all basics are complete, tapping "The Basics" card navigates to `basics-summary.tsx` (summary/edit page)
-- Footer shows Back + Next buttons (like voice questions)
+When entering from the Questions tab or basics-summary, screens receive `editing=true` param. In editing mode:
+- Screen shows a back arrow at top (via `onClose` on `OnboardingScreen`, or custom `closeHeader` on custom screens)
+- Footer shows a single "Save" button (no Back/Next row)
+- `save()` calls `router.back()` instead of advancing to next step
 - `setOnboardingStep` is skipped (doesn't reset onboarding progress)
-- `goToNextStep(router, step, isEditing)` carries the `editing` param forward
-- The Basics card navigates to the first unanswered step (computed in `questions.tsx`)
+- Layout progress bar is hidden
 
-## Basics Screens (one question per page)
-1. **Name** (`name.tsx`): Text input
-2. **Gender** (`gender.tsx`): "Woman", "Man", "Non-binary"
-3. **Sexuality** (`sexuality.tsx`): "Men", "Women", "Everyone"
-4. **Location** (`location.tsx`): `expo-location` auto-detect city/state
-5. **Birthday** (`birthday.tsx`): `@react-native-community/datetimepicker`, 18+ required
-6. **Age Range** (`age-range.tsx`): Dual-handle `MultiSlider` (18-99) + dealbreaker toggle. Defaults to own age +/-5. Stored as `ageRangeMin`, `ageRangeMax`, `ageRangeDealbreaker` on `users` table. When dealbreaker, matches outside range are hard-filtered from the matches page.
-7. **Height** (`height.tsx`): Scrollable list of height options
+## Basics Summary (`basics-summary.tsx`)
 
-## Structured Questions (stored in `users` table)
-8. **Relationship Goals** (`relationship-goals.tsx`): Marriage, Long-term partner, etc.
-9. **Kids** (`kids.tsx`): "Do you have children?" Yes/No (row layout)
-10. **Wants Kids** (`wants-kids.tsx`): Yes, No, Open to it, Not sure
-11. **Religion** (`religion.tsx`): 2-column grid + ImportanceSlider
-12. **Politics** (`politics.tsx`): Column options + ImportanceSlider
-13. **Substances**: Drinking/Smoking/Marijuana/Drugs screens with visibility toggles
-14. **Photos** (`photos.tsx`): 6-slot grid, first 4 required. Last step -- the last item in `ONBOARDING_FLOW` auto-triggers `completeCategory("the_basics")`.
+Summary/edit page showing all basics fields organized by section. Each row shows the current value and navigates to the corresponding screen with `editing=true`. Unanswered fields show a red warning icon + "Answer this" text with highlighted row background.
+
+## Three-State Basics Card (`questions.tsx`)
+
+The Basics card on the Questions tab has three states:
+- **Complete** (`basicsComplete`): Green check + "Edit" -> basics-summary
+- **Has unanswered** (`completedCategories` includes `"the_basics"` but `basicsComplete` is false): Warning triangle + "Update" -> basics-summary (never forces back into linear onboarding)
+- **First time** (never completed onboarding): "Answer" button -> first unanswered step in linear flow
+
+## Auto-Advance
+
+During initial onboarding, single-question screens (no visibility toggle, no importance slider) with no prior answer auto-advance instantly on selection. Controlled in `BasicOptionScreen` via `canAutoAdvance`.
 
 ## Voice Questions Screen (`voice-questions.tsx`)
-- Full-screen recording interface for 10 open-ended questions
+- Full-screen recording interface for 8 open-ended questions
 - States: idle -> recording (waveform) -> preview
 - Haptic feedback on start/stop/save/delete
 - Auto-saves recordings to Convex storage
-- All 10 complete -> auto-triggers `parseVoiceProfile` action
+- All 8 complete -> auto-triggers `parseVoiceProfile` action
 - Re-recording any question re-triggers full parsing

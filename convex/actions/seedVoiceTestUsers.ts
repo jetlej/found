@@ -342,6 +342,91 @@ const HIGH_COMPAT_PERSONAS: Persona[] = [
   },
 ];
 
+const CELEB_PERSONAS: Persona[] = [
+  // Female
+  {
+    name: "Dolly Parton",
+    gender: "Woman",
+    description:
+      "Warm, generous, deeply loyal. Small-town Tennessee roots, self-made businesswoman and legendary musician. Christian faith is central to her life. Values authenticity, humor, and kindness above all. Philanthropist who started the Imagination Library to give books to children. Would prioritize loyalty, humor, and someone comfortable letting her shine.",
+  },
+  {
+    name: "Oprah Winfrey",
+    gender: "Woman",
+    description:
+      "Spiritual but not traditionally religious. Overcame severe childhood trauma to become a media mogul and one of the most influential people in the world. Values personal growth, deep conversation, and emotional intelligence. Prioritizes independence, intellectual connection, and someone secure in themselves. Believes in the power of vulnerability and lifelong learning.",
+  },
+  {
+    name: "Zendaya",
+    gender: "Woman",
+    description:
+      "Grounded, private, ambitious Gen-Z icon and acclaimed actress. Very close to her family. Health-conscious — doesn't drink or do drugs. Values creativity, loyalty, and keeping life low-key despite fame. Would want someone who respects her privacy, shares her work ethic, and has a playful side.",
+  },
+  {
+    name: "Alexandria Ocasio-Cortez",
+    gender: "Woman",
+    description:
+      "Passionate progressive activist and congresswoman from the Bronx. Puerto Rican heritage is central to her identity. Values community, justice, and direct communication. Would prioritize shared values, intellectual sparring, emotional vulnerability, and someone who can handle public scrutiny.",
+  },
+  {
+    name: "Rihanna",
+    gender: "Woman",
+    description:
+      "Bold, independent, unapologetically herself. Barbadian roots. Built a beauty and fashion empire from the ground up. Values confidence, humor, and loyalty. Would want someone creative, secure in themselves, who matches her energy and doesn't try to tame her.",
+  },
+  // Male
+  {
+    name: "Keanu Reeves",
+    gender: "Man",
+    description:
+      "Quiet, introspective, deeply kind. Has experienced profound personal loss that shaped his worldview. Values simplicity, loyalty, and genuine human connection. Buddhist-leaning philosophy. Not materialistic despite wealth. Would want someone grounded, emotionally present, who appreciates quiet moments together.",
+  },
+  {
+    name: "Dwayne Johnson",
+    gender: "Man",
+    description:
+      "Family-first, disciplined, optimistic. Samoan heritage is central to his identity. Overcame depression and a difficult early life through sheer determination. Extremely driven work ethic — up at 4am every day. Values humor, loyalty, and showing up consistently. Would want someone who values family, can handle his schedule, and keeps things fun.",
+  },
+  {
+    name: "Harry Styles",
+    gender: "Man",
+    description:
+      "Open-minded, emotionally expressive, gender-fluid in style. British charm and warmth. Values kindness, creativity, and treating people with respect. Comfortable with vulnerability and breaking traditional masculine norms. Would want someone who is open-minded, creative, emotionally available, and doesn't take life too seriously.",
+  },
+  {
+    name: "Barack Obama",
+    gender: "Man",
+    description:
+      "Intellectual, measured, deeply principled. Values community service, family, and partnership as equals. Former president who believes in the power of empathy and civic engagement. Prioritizes emotional intelligence, shared purpose, humor, and someone who challenges him intellectually.",
+  },
+  {
+    name: "Bad Bunny",
+    gender: "Man",
+    description:
+      "Puerto Rican pride, boundary-breaking artist who challenges traditional masculinity in Latin culture. Values authenticity, cultural roots, and creative freedom. Deeply connected to his community and homeland. Would want someone who respects his culture, is confident and independent, and doesn't need the spotlight.",
+  },
+];
+
+export const seedCelebProfiles = action({
+  args: {},
+  handler: async (ctx) => {
+    console.log("Seeding 10 celebrity personas...");
+
+    for (const [index, persona] of CELEB_PERSONAS.entries()) {
+      await ctx.scheduler.runAfter(
+        index * 2000,
+        internal.actions.seedVoiceTestUsers.seedSingleVoiceTestUser,
+        { persona },
+      );
+    }
+
+    return {
+      scheduled: CELEB_PERSONAS.length,
+      personas: CELEB_PERSONAS.map((p) => p.name),
+    };
+  },
+});
+
 // Seed the 3 high-compatibility test users
 export const seedHighCompatUsers = action({
   args: {},

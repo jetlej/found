@@ -1688,7 +1688,6 @@ export default function MatchesScreen() {
                     {currentUser.location || ""}
                   </Text>
                 </View>
-                <Text style={styles.myProfileBadge}>YOU</Text>
               </View>
 
               <PhotoStrip
@@ -1740,7 +1739,6 @@ export default function MatchesScreen() {
                   {currentUser.location || ""}
                 </Text>
               </View>
-              <Text style={styles.myProfileBadge}>YOU</Text>
             </View>
             <PhotoStrip
               photos={getUserPhotos(currentUser._id)}
@@ -1833,7 +1831,7 @@ export default function MatchesScreen() {
               {/* Bio - always visible */}
               {match.profile.generatedBio && (
                 <Text style={styles.shortBio}>
-                  {match.profile.generatedBio.length > 375
+                  {!isExpanded && match.profile.generatedBio.length > 375
                     ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, "") + "..."
                     : match.profile.generatedBio}
                 </Text>
@@ -2170,12 +2168,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-  },
-  myProfileBadge: {
-    fontSize: fontSizes.xs,
-    fontFamily: fonts.serif,
-    color: colors.textSecondary,
-    letterSpacing: 1,
   },
   shortBio: {
     fontSize: fontSizes.sm,

@@ -167,6 +167,84 @@ export const seedPhotosForUser = internalAction({
   },
 });
 
+// Celebrity name -> Wikimedia Commons photo URLs (public domain / CC licensed)
+// Hash paths verified from actual file pages on commons.wikimedia.org
+const CELEB_PHOTOS: Record<string, string[]> = {
+  "Dolly Parton": [
+    "https://upload.wikimedia.org/wikipedia/commons/9/96/Dolly_%284303061978%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/d/dc/Dolly_Parton_with_Larry_Mathis_and_Bud_Brewster.jpg",
+  ],
+  "Oprah Winfrey": [
+    "https://upload.wikimedia.org/wikipedia/commons/1/1a/Oprah_Winfrey_%284226311468%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/6/67/Oprah_Winfrey_1997.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/b/bf/Oprah_in_2014.jpg",
+  ],
+  "Zendaya": [
+    "https://upload.wikimedia.org/wikipedia/commons/2/28/Zendaya_-_2019_by_Glenn_Francis.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/e/eb/Zendaya_by_Gage_Skidmore.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/9/96/Zendaya_MTV_Awards_2.jpg",
+  ],
+  "Alexandria Ocasio-Cortez": [
+    "https://upload.wikimedia.org/wikipedia/commons/4/4a/Alexandria_Ocasio-Cortez_Official_Portrait.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/4/48/Alexandria_Ocasio-Cortez_Official_Portrait_%28cropped%29.jpg",
+  ],
+  "Rihanna": [
+    "https://upload.wikimedia.org/wikipedia/commons/1/14/Rihanna_2012_%28Cropped%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/a/af/Rihanna2012.jpg",
+  ],
+  "Keanu Reeves": [
+    "https://upload.wikimedia.org/wikipedia/commons/5/59/Keanu_Reeves_2019_%28cropped%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/d/d3/Keanu_Reeves_2019.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/6/68/Keanu_Reeves_Grand_Rex_2023.jpg",
+  ],
+  "Dwayne Johnson": [
+    "https://upload.wikimedia.org/wikipedia/commons/1/1f/Dwayne_Johnson_2014_%28cropped%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/6/6f/Dwayne_Johnson_Hercules_2014_%28cropped%29.jpg",
+  ],
+  "Harry Styles": [
+    "https://upload.wikimedia.org/wikipedia/commons/9/9c/Harry_Styles_%2852357941232%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/4/4d/Harry-Styles-en-Barcelona%2C-Love-On-Tour.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/d/da/Harry_Styles_Wembley_June_2022_%28cropped%29.jpg",
+  ],
+  "Barack Obama": [
+    "https://upload.wikimedia.org/wikipedia/commons/8/8d/President_Barack_Obama.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/e/e9/Official_portrait_of_Barack_Obama.jpg",
+  ],
+  "Bad Bunny": [
+    "https://upload.wikimedia.org/wikipedia/commons/c/c9/Bad_Bunny_Performs_%28cropped%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg",
+  ],
+};
+
+// Seed photos for celebrity test users (looks up user IDs by name at runtime)
+export const seedCelebPhotos = action({
+  args: {},
+  handler: async (ctx) => {
+    const testUsers = await ctx.runQuery(internal.seedTestUsers.getTestUsers);
+    const nameToId = new Map(testUsers.map((u: any) => [u.name, u._id]));
+
+    const celebNames = Object.keys(CELEB_PHOTOS);
+    let scheduled = 0;
+
+    for (const [index, name] of celebNames.entries()) {
+      const userId = nameToId.get(name);
+      if (!userId) {
+        console.warn(`No test user found for "${name}", skipping`);
+        continue;
+      }
+      await ctx.scheduler.runAfter(
+        index * 5000, // 5s stagger to avoid Wikimedia rate limits
+        internal.actions.seedTestPhotos.seedPhotosForUser,
+        { userId, urls: CELEB_PHOTOS[name] },
+      );
+      scheduled++;
+    }
+
+    console.log(`Scheduled photo seeds for ${scheduled}/${celebNames.length} celebs`);
+    return { scheduled, total: celebNames.length };
+  },
+});
+
 // Main action: schedules one job per user to avoid timeouts
 export const seedTestPhotos = action({
   args: {},

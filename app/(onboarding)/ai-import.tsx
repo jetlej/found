@@ -48,7 +48,7 @@ export default function AIImportScreen() {
     // Clear any stored AI answers since they're skipping
     setAiAnsweredQuestions([]);
     if (userId) {
-      await setOnboardingStep({ clerkId: userId, step: "questions" });
+      await setOnboardingStep({ step: "questions" });
     }
     router.push("/(onboarding)/questions");
   };

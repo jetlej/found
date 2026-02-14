@@ -1494,7 +1494,7 @@ export default function MatchesScreen() {
   // Get current user
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
 
   // Get current user's profile

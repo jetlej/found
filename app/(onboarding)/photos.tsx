@@ -25,7 +25,7 @@ export default function PhotosScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
   const existingPhotos = useQuery(
     api.photos.getByUser,
@@ -57,11 +57,11 @@ export default function PhotosScreen() {
       } else {
         const nextStep = getNextStep("photos");
         if (nextStep) {
-          await setOnboardingStep({ clerkId: userId, step: nextStep });
+          await setOnboardingStep({ step: nextStep });
           goToNextStep(router, "photos");
         } else {
           // Last step — complete the basics category and exit
-          await completeCategory({ clerkId: userId, categoryId: "the_basics" });
+          await completeCategory({ categoryId: "the_basics" });
           router.replace("/(tabs)/questions");
         }
       }

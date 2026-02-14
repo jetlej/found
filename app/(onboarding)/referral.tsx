@@ -77,7 +77,6 @@ export default function ReferralScreen() {
 
     try {
       const result = await applyReferralCode({
-        clerkId: userId,
         code: code.trim(),
       });
 
@@ -103,14 +102,14 @@ export default function ReferralScreen() {
 
   const continueToNext = async () => {
     if (userId) {
-      await setOnboardingStep({ clerkId: userId, step: "name" });
+      await setOnboardingStep({ step: "name" });
     }
     goToNextStep(router, "referral");
   };
 
   const handleSkip = async () => {
     if (userId) {
-      setOnboardingStep({ clerkId: userId, step: "name" });
+      setOnboardingStep({ step: "name" });
     }
     goToNextStep(router, "referral");
   };

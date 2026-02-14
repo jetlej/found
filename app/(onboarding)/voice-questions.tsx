@@ -169,7 +169,7 @@ export default function VoiceQuestionsScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,

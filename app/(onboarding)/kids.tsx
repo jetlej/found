@@ -6,5 +6,13 @@ const OPTIONS = [
 ];
 
 export default function KidsScreen() {
-  return <BasicOptionScreen stepName="kids" field="hasChildren" question="Do you have children?" options={OPTIONS} optionVariant="row" />;
+  return (
+    <BasicOptionScreen
+      stepName="kids"
+      field="hasChildren"
+      question="Do you have children?"
+      options={OPTIONS}
+      optionVariant="row"
+    />
+  );
 }

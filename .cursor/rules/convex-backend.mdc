@@ -12,8 +12,9 @@ alwaysApply: false
 - `useMutation()` for writes
 - Pass `"skip"` to conditionally skip queries:
   ```typescript
-  const data = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  const data = useQuery(api.users.current, userId ? {} : "skip");
   ```
+- Auth is server-side: `ctx.auth.getUserIdentity()` provides the Clerk identity. Do NOT pass `clerkId` as a function argument.
 
 ## Background Actions
 

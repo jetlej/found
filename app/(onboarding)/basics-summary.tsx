@@ -90,7 +90,7 @@ function SectionHeader({ title }: { title: string }) {
 export default function EditBasicsScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
-  const user = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  const user = useQuery(api.users.current, userId ? {} : "skip");
   const photos = useQuery(api.photos.getByUser, user?._id ? { userId: user._id } : "skip");
 
   const navigateTo = (screen: string) => {

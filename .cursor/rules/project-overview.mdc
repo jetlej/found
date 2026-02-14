@@ -36,9 +36,10 @@ stores/                 # Zustand stores
 ## Critical Conventions
 
 - **Convex does NOT auto-sync.** After ANY change to `convex/` files, the AI must run `bunx convex dev` once to push. `convex dev` is not kept running in a separate terminal -- just run it once after changes and let it complete.
+- **Auth is server-side.** Convex functions use `ctx.auth.getUserIdentity()` to identify the caller. Do NOT pass `clerkId` as a function argument. Client queries use `userId ? {} : "skip"` to gate on sign-in state.
 - Always reference questions by `questionKey`, never by `order` number.
-- All screens use `useEffectiveUserId()` instead of `useAuth()` directly (supports dev impersonation).
-- Env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CONVEX_URL` in `.env.local`; `OPENAI_API_KEY` set via `bunx convex env set`.
+- All screens use `useEffectiveUserId()` instead of `useAuth()` directly (gates query skipping).
+- Env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CONVEX_URL` in `.env.local`; `OPENAI_API_KEY`, `CLERK_JWT_ISSUER_DOMAIN` set via `bunx convex env set`.
 
 ## Running the App
 

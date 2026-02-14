@@ -8,5 +8,12 @@ const OPTIONS = [
 ];
 
 export default function RelationshipGoalsScreen() {
-  return <BasicOptionScreen stepName="relationship-goals" field="relationshipGoal" question="What are you looking for?" options={OPTIONS} />;
+  return (
+    <BasicOptionScreen
+      stepName="relationship-goals"
+      field="relationshipGoal"
+      question="What are you looking for?"
+      options={OPTIONS}
+    />
+  );
 }

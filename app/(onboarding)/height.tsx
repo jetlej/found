@@ -1,8 +1,8 @@
 import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft } from "@tabler/icons-react-native";
 import { Picker } from "@react-native-picker/picker";
+import { IconChevronLeft } from "@tabler/icons-react-native";
 import { useEffect, useState } from "react";
 import {
   Animated,
@@ -17,7 +17,9 @@ const FEET = [4, 5, 6, 7];
 const INCHES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 export default function HeightScreen() {
-  const { currentUser, isEditing, loading, save, close } = useBasicsStep({ stepName: "height" });
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({
+    stepName: "height",
+  });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [feet, setFeet] = useState(5);
@@ -34,7 +36,9 @@ export default function HeightScreen() {
     }
   }, [currentUser, hasLoaded]);
 
-  useEffect(() => { setScreenReady(true); }, []);
+  useEffect(() => {
+    setScreenReady(true);
+  }, []);
 
   const handleContinue = () => {
     save({ heightInches: feet * 12 + inches });
@@ -83,7 +87,9 @@ export default function HeightScreen() {
           </View>
 
           <View style={styles.heightDisplay}>
-            <Text style={styles.heightText}>{feet}'{inches}"</Text>
+            <Text style={styles.heightText}>
+              {feet}'{inches}"
+            </Text>
           </View>
         </View>
 
@@ -116,17 +122,54 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   flex: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"] },
-  question: { fontFamily: fonts.serif, fontSize: fontSizes["3xl"], color: colors.text, marginBottom: spacing.sm },
-  pickerRow: { flexDirection: "row", justifyContent: "center", marginTop: spacing.lg },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing["2xl"],
+  },
+  question: {
+    fontFamily: fonts.serif,
+    fontSize: fontSizes["3xl"],
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: spacing.lg,
+  },
   pickerColumn: { alignItems: "center", flex: 1 },
-  pickerLabel: { fontSize: fontSizes.base, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs },
+  pickerLabel: {
+    fontSize: fontSizes.base,
+    fontWeight: "600",
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
   picker: { height: 200, width: "100%" },
   pickerItem: { fontSize: fontSizes["2xl"], color: colors.text },
-  heightDisplay: { alignItems: "center", marginTop: spacing.lg, paddingVertical: spacing.md },
+  heightDisplay: {
+    alignItems: "center",
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   heightText: { fontSize: fontSizes.xl, fontWeight: "600", color: colors.text },
-  footer: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },
-  button: { backgroundColor: colors.primary, borderRadius: 12, padding: spacing.lg, alignItems: "center" },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
+    alignItems: "center",
+  },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primaryText },
+  buttonText: {
+    fontSize: fontSizes.base,
+    fontWeight: "600",
+    color: colors.primaryText,
+  },
 });

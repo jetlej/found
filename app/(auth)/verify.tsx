@@ -65,7 +65,6 @@ export default function Verify() {
         if (result?.status === "complete") {
           try {
             await createUser({
-              clerkId: result.createdUserId!,
               phone: phone!,
             });
           } catch (convexErr) {
@@ -80,7 +79,6 @@ export default function Verify() {
             if (result.createdUserId) {
               try {
                 await createUser({
-                  clerkId: result.createdUserId,
                   phone: phone!,
                 });
               } catch (e) {

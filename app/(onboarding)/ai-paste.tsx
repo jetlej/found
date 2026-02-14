@@ -37,7 +37,7 @@ export default function AIPasteScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
   const questions = useQuery(api.questions.getAll);
   const upsertAnswer = useMutation(api.answers.upsert);
@@ -129,7 +129,7 @@ export default function AIPasteScreen() {
 
   const handleContinue = async () => {
     if (userId) {
-      await setOnboardingStep({ clerkId: userId, step: "questions" });
+      await setOnboardingStep({ step: "questions" });
     }
     router.push("/(onboarding)/questions");
   };

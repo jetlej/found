@@ -18,7 +18,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function NameScreen() {
-  const { currentUser, isEditing, loading, save, close } = useBasicsStep({ stepName: "name" });
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({
+    stepName: "name",
+  });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [firstName, setFirstName] = useState("");
@@ -44,8 +46,10 @@ export default function NameScreen() {
 
   // Listen for keyboard events to get actual keyboard height
   useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       // Subtract bottom safe area since parent SafeAreaView already accounts for it
@@ -100,9 +104,17 @@ export default function NameScreen() {
           />
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: spacing.lg + keyboardHeight }]}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: spacing.lg + keyboardHeight },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (!canProceed || loading) && styles.buttonDisabled,
+            ]}
             onPress={handleContinue}
             disabled={!canProceed || loading}
             activeOpacity={0.7}

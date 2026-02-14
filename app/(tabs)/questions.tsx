@@ -197,7 +197,7 @@ export default function QuestionsScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
 
   const recordings = useQuery(

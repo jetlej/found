@@ -49,7 +49,7 @@ export default function ProfileScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
 
   const updateProfile = useMutation(api.users.updateProfile);
@@ -76,7 +76,6 @@ export default function ProfileScreen() {
       const hasPermission = await hasNotificationPermission();
       if (!hasPermission) {
         await updateNotifications({
-          clerkId: userId,
           notificationsEnabled: false,
         });
         await cancelDailyReminder();
@@ -94,7 +93,7 @@ export default function ProfileScreen() {
     if (!userId || !editedName.trim()) return;
     setIsSaving(true);
     try {
-      await updateProfile({ clerkId: userId, name: editedName.trim() });
+      await updateProfile({ name: editedName.trim() });
       setIsEditingName(false);
     } finally {
       setIsSaving(false);
@@ -117,14 +116,12 @@ export default function ProfileScreen() {
         if (hasPermission) {
           await scheduleDailyReminder(reminderHour, reminderMinute);
           await updateNotifications({
-            clerkId: userId,
             notificationsEnabled: true,
           });
         } else {
           const { granted, token } = await promptForNotifications();
           if (granted) {
             await updateNotifications({
-              clerkId: userId,
               notificationsEnabled: true,
               pushToken: token ?? undefined,
               reminderHour: 12,
@@ -147,7 +144,6 @@ export default function ProfileScreen() {
       } else {
         await cancelDailyReminder();
         await updateNotifications({
-          clerkId: userId,
           notificationsEnabled: false,
         });
       }
@@ -179,7 +175,6 @@ export default function ProfileScreen() {
         }
 
         await updateNotifications({
-          clerkId: userId,
           reminderHour: hour,
           reminderMinute: minute,
         });

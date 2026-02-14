@@ -27,7 +27,7 @@ export default function QuestionsScreen() {
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
   const questions = useQuery(api.questions.getAll);
   const userAnswers = useQuery(
@@ -160,7 +160,7 @@ export default function QuestionsScreen() {
     if (!userId || !categoryId) return;
 
     try {
-      await completeCategory({ clerkId: userId, categoryId });
+      await completeCategory({ categoryId });
       // Navigate back to journey tab with completed category for animation
       router.replace(`/(tabs)/journey?completed=${categoryId}`);
     } catch (err) {

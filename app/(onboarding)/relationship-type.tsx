@@ -8,5 +8,12 @@ const OPTIONS = [
 ];
 
 export default function RelationshipTypeScreen() {
-  return <BasicOptionScreen stepName="relationship-type" field="relationshipType" question="What type of relationship?" options={OPTIONS} />;
+  return (
+    <BasicOptionScreen
+      stepName="relationship-type"
+      field="relationshipType"
+      question="What type of relationship?"
+      options={OPTIONS}
+    />
+  );
 }

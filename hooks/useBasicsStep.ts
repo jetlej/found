@@ -16,7 +16,7 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
   const { editing } = useLocalSearchParams<{ editing?: string }>();
   const isEditing = editing === "true";
 
-  const currentUser = useQuery(api.users.current, userId ? { clerkId: userId } : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
   const completeCategory = useMutation(api.users.completeCategory);
@@ -35,18 +35,18 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
     if (!userId) return;
     setLoading(true);
     try {
-      await updateBasics({ clerkId: userId, ...data });
+      await updateBasics(data);
 
       if (isEditing) {
         router.back();
       } else {
         const nextStep = getNextStep(stepName);
         if (nextStep) {
-          await setOnboardingStep({ clerkId: userId, step: nextStep });
+          await setOnboardingStep({ step: nextStep });
           goToNextStep(router, stepName);
         } else {
           // Last step — complete the basics category and exit
-          await completeCategory({ clerkId: userId, categoryId: "the_basics" });
+          await completeCategory({ categoryId: "the_basics" });
           router.replace("/(tabs)/questions");
         }
       }

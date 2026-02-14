@@ -54,24 +54,24 @@ export default function JourneyScreen() {
 
   const handleTestComplete = async (categoryId: string) => {
     if (!userId) return;
-    await completeCategory({ clerkId: userId, categoryId });
+    await completeCategory({ categoryId });
     setJustCompletedCategoryId(categoryId);
   };
 
   const handleTestUncomplete = async (categoryId: string) => {
     if (!userId) return;
-    await uncompleteCategory({ clerkId: userId, categoryId });
+    await uncompleteCategory({ categoryId });
   };
 
   const handleResetJourney = async () => {
     if (!userId) return;
-    await resetJourney({ clerkId: userId });
+    await resetJourney({});
     setJustCompletedCategoryId(null);
   };
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
 
   const level = currentUser?.level ?? 1;

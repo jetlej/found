@@ -38,7 +38,10 @@ export default function BirthdayScreen() {
     const today = new Date();
     let age = today.getFullYear() - date.getFullYear();
     const monthDiff = today.getMonth() - date.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < date.getDate())
+    ) {
       age--;
     }
     return age;
@@ -100,7 +103,10 @@ export default function BirthdayScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (!canProceed || loading) && styles.buttonDisabled,
+            ]}
             onPress={handleContinue}
             disabled={!canProceed || loading}
             activeOpacity={0.7}

@@ -21,7 +21,7 @@ import {
     Figtree_700Bold,
 } from "@expo-google-fonts/figtree";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import * as Application from "expo-application";
 import { useFonts } from "expo-font";
 import * as Linking from "expo-linking";
@@ -76,6 +76,7 @@ function getOnboardingRoute(user: any): string {
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
@@ -140,10 +141,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       ? userId
       : userId || cachedUserId;
 
-  // Query current user from Convex (skip if offline and no network)
+  // Query current user from Convex (skip until Convex has validated the JWT)
   const currentUser = useQuery(
     api.users.current,
-    effectiveUserId ? { clerkId: effectiveUserId } : "skip"
+    effectiveUserId && isConvexAuthenticated ? {} : "skip"
   );
 
   // Get cached user from offline store
@@ -179,6 +180,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       : isOnline
         ? isLoaded
         : isLoaded || offlineAuthLoaded;
+
     if (!authReady || !navigationState?.key) return;
 
     const inAuthGroup = segments[0] === "(auth)";
@@ -206,8 +208,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
             router.replace("/(onboarding)/referral");
           }
           setHasRouted(true);
-        } else if (currentUser === undefined && isOnline) {
-          // Still loading user data - don't mark as routed yet
+        } else if (currentUser === undefined && isOnline && isConvexAuthenticated) {
+          // Convex auth is ready but user data still loading - wait
           return;
         } else if (!userData?.onboardingComplete) {
           // Determine which onboarding step to resume from
@@ -236,6 +238,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [
     isLoaded,
     effectiveIsSignedIn,
+    isConvexAuthenticated,
     segments,
     navigationState?.key,
     currentUser,

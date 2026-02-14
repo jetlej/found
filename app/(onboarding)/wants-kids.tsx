@@ -8,5 +8,12 @@ const OPTIONS = [
 ];
 
 export default function WantsKidsScreen() {
-  return <BasicOptionScreen stepName="wants-kids" field="wantsChildren" question="Do you want children?" options={OPTIONS} />;
+  return (
+    <BasicOptionScreen
+      stepName="wants-kids"
+      field="wantsChildren"
+      question="Do you want children?"
+      options={OPTIONS}
+    />
+  );
 }

@@ -18,7 +18,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HometownScreen() {
-  const { currentUser, isEditing, loading, save, close } = useBasicsStep({ stepName: "hometown" });
+  const { currentUser, isEditing, loading, save, close } = useBasicsStep({
+    stepName: "hometown",
+  });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [hometown, setHometown] = useState("");
@@ -30,21 +32,32 @@ export default function HometownScreen() {
     if (currentUser?.hometown && !hometown) setHometown(currentUser.hometown);
   }, [currentUser]);
 
-  useEffect(() => { setScreenReady(true); }, []);
+  useEffect(() => {
+    setScreenReady(true);
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => { inputRef.current?.focus(); }, 400);
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 400);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const showSub = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height - insets.bottom);
     });
-    const hideSub = Keyboard.addListener(hideEvent, () => { setKeyboardHeight(0); });
-    return () => { showSub.remove(); hideSub.remove(); };
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, [insets.bottom]);
 
   const canProceed = hometown.trim().length > 0;
@@ -64,7 +77,12 @@ export default function HometownScreen() {
             </Pressable>
           </View>
         )}
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bounces={false}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
           <Text style={styles.question}>Where's your hometown?</Text>
           <Text style={styles.questionSubtext}>Where did you grow up?</Text>
           <TextInput
@@ -78,9 +96,17 @@ export default function HometownScreen() {
             autoCorrect={false}
           />
         </ScrollView>
-        <View style={[styles.footer, { paddingBottom: spacing.lg + keyboardHeight }]}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: spacing.lg + keyboardHeight },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (!canProceed || loading) && styles.buttonDisabled,
+            ]}
             onPress={handleContinue}
             disabled={!canProceed || loading}
             activeOpacity={0.7}
@@ -109,11 +135,42 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing["2xl"] },
-  question: { fontFamily: fonts.serif, fontSize: fontSizes["3xl"], color: colors.text, marginBottom: spacing.sm },
-  questionSubtext: { fontSize: fontSizes.base, color: colors.textSecondary, marginBottom: spacing.xl },
-  input: { fontSize: fontSizes.xl, color: colors.text, borderBottomWidth: 2, borderBottomColor: colors.border, paddingVertical: spacing.md, marginTop: spacing.lg },
-  footer: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },
-  button: { backgroundColor: colors.primary, borderRadius: 12, padding: spacing.lg, alignItems: "center" },
+  question: {
+    fontFamily: fonts.serif,
+    fontSize: fontSizes["3xl"],
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  questionSubtext: {
+    fontSize: fontSizes.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
+  },
+  input: {
+    fontSize: fontSizes.xl,
+    color: colors.text,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+    paddingVertical: spacing.md,
+    marginTop: spacing.lg,
+  },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
+    alignItems: "center",
+  },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primaryText },
+  buttonText: {
+    fontSize: fontSizes.base,
+    fontWeight: "600",
+    color: colors.primaryText,
+  },
 });

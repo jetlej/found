@@ -1,18 +1,42 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalQuery, mutation, query } from "./_generated/server";
+import {
+  internalQuery,
+  mutation,
+  query,
+  QueryCtx,
+  MutationCtx,
+} from "./_generated/server";
+
+/** Get the authenticated user from ctx.auth, or throw. */
+async function getAuthUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
+
+/** Get the authenticated Clerk ID from ctx.auth, or throw. */
+async function getAuthClerkId(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return identity.subject;
+}
 
 export const getOrCreate = mutation({
   args: {
-    clerkId: v.string(),
     phone: v.string(),
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const clerkId = await getAuthClerkId(ctx);
+
     // First check by clerkId
     const existingByClerk = await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
       .first();
 
     if (existingByClerk) {
@@ -28,13 +52,13 @@ export const getOrCreate = mutation({
 
     if (existingByPhone) {
       // Update the existing user with the new clerkId
-      await ctx.db.patch(existingByPhone._id, { clerkId: args.clerkId });
+      await ctx.db.patch(existingByPhone._id, { clerkId });
       return existingByPhone._id;
     }
 
     // No existing user - create new
     return await ctx.db.insert("users", {
-      clerkId: args.clerkId,
+      clerkId,
       phone: args.phone,
       name: args.name,
       type: "human",
@@ -43,26 +67,23 @@ export const getOrCreate = mutation({
 });
 
 export const current = query({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
     return await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .first();
   },
 });
 
 export const updatePushToken = mutation({
   args: {
-    clerkId: v.string(),
     pushToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (user) {
       await ctx.db.patch(user._id, { pushToken: args.pushToken });
     }
@@ -71,16 +92,11 @@ export const updatePushToken = mutation({
 
 export const updateProfile = mutation({
   args: {
-    clerkId: v.string(),
     name: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     const updates: { name?: string; avatarUrl?: string } = {};
@@ -104,7 +120,6 @@ export const updateProfile = mutation({
 
 export const updateBasics = mutation({
   args: {
-    clerkId: v.string(),
     name: v.optional(v.string()),
     gender: v.optional(v.string()),
     location: v.optional(v.string()),
@@ -137,16 +152,11 @@ export const updateBasics = mutation({
     tattoos: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
-    const { clerkId, ...fields } = args;
     const updates: Record<string, string | number | boolean | undefined> = {};
-    for (const [key, value] of Object.entries(fields)) {
+    for (const [key, value] of Object.entries(args)) {
       if (value !== undefined) updates[key] = value;
     }
 
@@ -167,13 +177,9 @@ function generateReferralCode(): string {
 }
 
 export const completeOnboarding = mutation({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     // Generate unique referral code
@@ -227,15 +233,10 @@ export const completeOnboarding = mutation({
 
 export const applyReferralCode = mutation({
   args: {
-    clerkId: v.string(),
     code: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return { success: false, error: "User not found" };
 
     // Can't use your own code
@@ -269,15 +270,10 @@ export const applyReferralCode = mutation({
 
 export const setOnboardingStep = mutation({
   args: {
-    clerkId: v.string(),
     step: v.string(), // "basics", "photos", "ai-import", "questions", "complete"
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     await ctx.db.patch(user._id, { onboardingStep: args.step });
@@ -286,18 +282,13 @@ export const setOnboardingStep = mutation({
 
 export const updateNotificationSettings = mutation({
   args: {
-    clerkId: v.string(),
     notificationsEnabled: v.optional(v.boolean()),
     pushToken: v.optional(v.string()),
     reminderHour: v.optional(v.number()),
     reminderMinute: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     const updates: {
@@ -345,15 +336,10 @@ export const getById = internalQuery({
 // Complete a category and level up
 export const completeCategory = mutation({
   args: {
-    clerkId: v.string(),
     categoryId: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     const completedCategories = user.completedCategories ?? [];
@@ -419,15 +405,10 @@ export const completeCategory = mutation({
 // Uncomplete a category (for testing)
 export const uncompleteCategory = mutation({
   args: {
-    clerkId: v.string(),
     categoryId: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     const completedCategories = user.completedCategories ?? [];
@@ -447,15 +428,9 @@ export const uncompleteCategory = mutation({
 
 // Reset journey progress (for testing)
 export const resetJourney = mutation({
-  args: {
-    clerkId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
     if (!user) return;
 
     await ctx.db.patch(user._id, {

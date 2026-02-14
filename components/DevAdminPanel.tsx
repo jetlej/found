@@ -30,12 +30,6 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
     searchQuery.length > 0 ? { query: searchQuery } : "skip",
   );
 
-  // Get current impersonated user details
-  const impersonatedUser = useQuery(
-    api.users.current,
-    devClerkId ? { clerkId: devClerkId } : "skip",
-  );
-
   const createDevTestUser = useMutation(api.users.createDevTestUser);
 
   const handleCreateFresh = async () => {
@@ -71,7 +65,7 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
       {devClerkId && (
         <View style={styles.impersonatingBanner}>
           <Text style={styles.impersonatingText}>
-            Impersonating: {impersonatedUser?.name || "Loading..."}
+            Impersonating: {devClerkId}
           </Text>
           <Pressable style={styles.returnButton} onPress={handleReturnToReal}>
             <Text style={styles.returnButtonText}>Return to Real Account</Text>

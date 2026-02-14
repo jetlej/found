@@ -1,7 +1,11 @@
 import { useBasicsStep } from "@/hooks/useBasicsStep";
 import { useScreenReady } from "@/hooks/useScreenReady";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft, IconMapPin, IconMapPinSearch } from "@tabler/icons-react-native";
+import {
+  IconChevronLeft,
+  IconMapPin,
+  IconMapPinSearch,
+} from "@tabler/icons-react-native";
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import {
@@ -114,7 +118,10 @@ export default function LocationScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (!canProceed || loading) && styles.buttonDisabled,
+            ]}
             onPress={handleContinue}
             disabled={!canProceed || loading}
             activeOpacity={0.7}

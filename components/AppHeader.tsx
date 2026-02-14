@@ -20,7 +20,7 @@ export function AppHeader({
 
   const currentUser = useQuery(
     api.users.current,
-    userId ? { clerkId: userId } : "skip",
+    userId ? {} : "skip",
   );
 
   const userPhotos = useQuery(

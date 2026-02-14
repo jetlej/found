@@ -18,6 +18,6 @@ alwaysApply: false
 
 - Long-press center-top of any screen for 3 seconds to open
 - `components/DevTrigger.tsx` + `components/DevAdminPanel.tsx`
-- Supports user search, impersonation, fresh test user creation
-- `stores/offline.ts`: `devClerkId` persists impersonation
-- `hooks/useEffectiveUserId.ts`: returns `devClerkId` when impersonating, otherwise real Clerk userId
+- Supports user search and fresh test user creation
+- Dev impersonation is **read-only**: `devClerkId` in `stores/offline.ts` swaps which user the UI displays, but Convex mutations always act as the real authenticated user (identity comes from the JWT)
+- `hooks/useEffectiveUserId.ts`: returns `devClerkId` when impersonating (for query gating), otherwise real Clerk userId

@@ -246,7 +246,8 @@ export default function QuestionsScreen() {
     currentUser?.religion &&
     currentUser?.politicalLeaning &&
     currentUser?.drinking &&
-    currentUser?.drugs
+    currentUser?.drugs &&
+    currentUser?.tattoos
   );
 
   const basicsStarted = currentUser?.completedCategories?.includes("the_basics") ?? false;
@@ -275,6 +276,7 @@ export default function QuestionsScreen() {
       { field: "smoking", step: "smoking" },
       { field: "marijuana", step: "marijuana" },
       { field: "drugs", step: "drugs" },
+      { field: "tattoos", step: "tattoos" },
     ];
     for (const { field, step } of steps) {
       if (!(currentUser as any)[field]) return step;

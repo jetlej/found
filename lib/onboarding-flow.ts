@@ -28,6 +28,7 @@ export const ONBOARDING_FLOW = [
   "smoking",
   "marijuana",
   "drugs",
+  "tattoos",
   "photos",
 ] as const;
 

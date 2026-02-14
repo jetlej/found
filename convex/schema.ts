@@ -43,6 +43,7 @@ export default defineSchema({
     hometown: v.optional(v.string()),
     relationshipType: v.optional(v.string()), // "Monogamy", "Non-monogamy", etc.
     pets: v.optional(v.string()), // "Dog", "Cat", "Both", etc.
+    tattoos: v.optional(v.string()), // "Yes", "No", "Prefer not to say"
     // Onboarding state
     onboardingStep: v.optional(v.string()), // "basics", "photos"
     onboardingComplete: v.optional(v.boolean()),

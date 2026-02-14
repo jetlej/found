@@ -145,6 +145,7 @@ export const seedPhotosForUser = internalAction({
         const response = await fetch(url, {
           headers: {
             "User-Agent": "FoundDatingApp/1.0 (dev seed script; not a bot)",
+            "Referer": "https://commons.wikimedia.org/",
           },
         });
         if (!response.ok) {
@@ -214,6 +215,20 @@ const CELEB_PHOTOS: Record<string, string[]> = {
   "Bad Bunny": [
     "https://upload.wikimedia.org/wikipedia/commons/c/c9/Bad_Bunny_Performs_%28cropped%29.jpg",
     "https://upload.wikimedia.org/wikipedia/commons/7/76/Bad_Bunny_Performs.jpg",
+  ],
+  // High-compat personas (matched by ethnicity)
+  "Mia Torres": [
+    "https://upload.wikimedia.org/wikipedia/commons/0/07/Eiza_Gonz%C3%A1lez_SXSW_2025.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/0/01/Eiza_Gonz%C3%A1lez_SXSW_2025_%28cropped%29.jpg",
+  ],
+  "Sasha Kim": [
+    "https://upload.wikimedia.org/wikipedia/commons/0/07/Jamie_Chung_2012_Shankbone.JPG",
+    "https://upload.wikimedia.org/wikipedia/commons/a/a0/Jamie_Chung_at_New_York_Comic_Con_2017_%28cropped%29.jpg",
+  ],
+  "Ava Chen": [
+    "https://upload.wikimedia.org/wikipedia/commons/b/bf/Constance_Wu_at_the_2024_New_York_Film_Festival.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/b/b2/Constance_Wu_%28cropped%29.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/0/02/TIFF_2019_hustlers_%281_of_1%29_%2848696841647%29_%28cropped%29.jpg",
   ],
 };
 

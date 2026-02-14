@@ -134,6 +134,7 @@ export const updateBasics = mutation({
     hometown: v.optional(v.string()),
     relationshipType: v.optional(v.string()),
     pets: v.optional(v.string()),
+    tattoos: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Onboarding Flow
 
-Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> pronouns -> gender -> sexuality -> location -> birthday -> age-range -> height -> photos -> relationship-goals -> relationship-type -> kids -> wants-kids -> ethnicity -> hometown -> religion -> politics -> pets -> drinking -> smoking -> marijuana -> drugs.
+Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> pronouns -> gender -> sexuality -> location -> birthday -> age-range -> height -> photos -> relationship-goals -> relationship-type -> kids -> wants-kids -> ethnicity -> hometown -> religion -> politics -> pets -> drinking -> smoking -> marijuana -> drugs -> tattoos.
 
 ## Component Architecture
 
@@ -19,7 +19,7 @@ Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> pronou
 ## Screen Types
 
 **Config-driven (via `BasicOptionScreen`, ~7-10 lines each):**
-pronouns, gender, sexuality, relationship-goals, relationship-type, kids, wants-kids, ethnicity, pets, religion, politics, drinking, smoking, marijuana, drugs
+pronouns, gender, sexuality, relationship-goals, relationship-type, kids, wants-kids, ethnicity, pets, religion, politics, drinking, smoking, marijuana, drugs, tattoos
 
 **Custom layout (use `useBasicsStep` hook directly):**
 name, location, birthday, age-range, height, hometown

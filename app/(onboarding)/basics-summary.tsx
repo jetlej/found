@@ -148,6 +148,9 @@ export default function EditBasicsScreen() {
         <ProfileRow label="Marijuana" value={user.marijuana || "None"} unanswered={!user.marijuana} onPress={() => navigateTo("marijuana")} />
         <ProfileRow label="Drugs" value={user.drugs || "None"} unanswered={!user.drugs} onPress={() => navigateTo("drugs")} />
 
+        <SectionHeader title="Other" />
+        <ProfileRow label="Tattoos" value={user.tattoos || "None"} unanswered={!user.tattoos} onPress={() => navigateTo("tattoos")} />
+
         <View style={styles.bottomPadding} />
       </ScrollView>
     </View>

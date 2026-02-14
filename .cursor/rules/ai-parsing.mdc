@@ -6,30 +6,30 @@ alwaysApply: false
 
 # AI Profile Parsing System
 
-## Architecture Flow
-1. User completes onboarding -> `completeOnboarding` mutation runs
-2. Mutation schedules `parseUserProfile` action via `ctx.scheduler.runAfter(0, ...)`
-3. Action fetches all answers with question details (uses `questionKey` for lookups)
-4. Extracts: preferences from checklist pairs (no AI), selected interests (no AI), canonical values from essays (AI), personality traits from scales + AI
-5. Results saved to `userProfiles` table
+## Architecture Flow (Voice-First)
+1. User records 10 voice answers -> `saveRecording` mutation triggers `parseVoiceProfile` when count reaches 10
+2. Action transcribes audio with Whisper (parallel, reuses existing transcriptions)
+3. Single GPT call extracts all structured data from combined transcripts
+4. Results saved to `userProfiles` table
 
 ## OpenAI Integration (`convex/lib/openai.ts`)
-- Model: `gpt-5-mini-2025-08-07` (~$0.01 per full parse)
+- Model: `gpt-5-mini-2025-08-07` (~$0.03 per profile extraction)
 - Retry logic with exponential backoff (3 retries)
 - JSON response format enforced
 - Token usage and cost tracking logged
 
-## Key Prompts (`convex/lib/prompts.ts`)
-- `CANONICAL_VALUES_PROMPT`: Maps essays to ~30 canonical values
-- `VALUES_INTERESTS_PROMPT`: Legacy raw values/interests extraction (display only)
-- `PERSONALITY_TRAITS_PROMPT`: Rates 11 personality dimensions (1-10 scale)
-- Bio generation prompts (150-200 word paragraph + one-sentence)
-- `EXTRACTION_QUESTION_GROUPS`: Maps extraction types to `questionKey` arrays
+## Voice Extraction Prompt (`convex/actions/parseVoiceProfile.ts`)
+Single comprehensive prompt extracts all fields from 10 voice transcripts. Only fields well-supported by the questions are displayed in the UI.
 
 ## userProfiles Structured Data
-- **Matching fields**: `selectedInterests`, `canonicalValues`, `preferences` (12 categories with self/openTo/isDealbreaker)
-- **Personality**: 11 traits on 1-10 scale (introversion, adventurousness, ambition, etc.)
-- **Relationship style**: loveLanguage, conflictStyle, communicationFrequency, financialApproach, aloneTimeNeed
-- **Family**: wantsKids, kidsTimeline, familyCloseness, parentingStyle
-- **Lifestyle**: sleepSchedule, exerciseLevel, dietType, alcoholUse, drugUse, petPreference, locationPreference
-- **Generated**: generatedBio, shortBio, keywords (15-25), processedAt, openaiModel, confidence
+- **Core**: `canonicalValues[]`, `values[]`, `interests[]`, `dealbreakers[]`, `keywords[]`
+- **Personality**: 11 traits on 1-10 scale (introversion, adventurousness, ambition, emotionalOpenness, traditionalValues, independenceNeed, romanticStyle, socialEnergy, communicationStyle, attachmentStyle, planningStyle)
+- **Relationship style**: loveLanguage (Q1), conflictStyle (Q6), aloneTimeNeed (Q1) — displayed; communicationFrequency, financialApproach — extracted but not displayed (weak question support)
+- **Family**: familyCloseness (Q4), kidsTimeline (Q4 conditional) — displayed; wantsKids, parentingStyle — extracted but not displayed
+- **Life story**: proudestAchievement, definingHardship, biggestRisk, dreams, fears (Q2+Q8)
+- **Love philosophy**: loveDefinition, healthyRelationshipVision (Q1 conditional)
+- **Partner preferences**: mustHaves, niceToHaves, redFlags, dealbreakersInPartner (Q5)
+- **Bio elements**: conversationStarters, uniqueQuirks, passions (Q7+Q9)
+- **Extracted but NOT displayed** (weak/no question support): socialProfile, intimacyProfile (except connectionTriggers), lifestyle, health, demographics
+- **Generated**: generatedBio, shortBio, processedAt, openaiModel, confidence
+- **Utility**: `formatLabel()` converts snake_case enum values to Title Case for display

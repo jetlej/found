@@ -250,3 +250,20 @@ export const replaceSeedRecordings = internalMutation({
     await ctx.db.patch(args.userId, { onboardingType: "voice" });
   },
 });
+
+// Get all user IDs that have exactly 10 voice recordings (complete)
+export const getUsersWithCompleteRecordings = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const allRecordings = await ctx.db.query("voiceRecordings").collect();
+    const countByUser = new Map<string, number>();
+    for (const r of allRecordings) {
+      countByUser.set(r.userId, (countByUser.get(r.userId) || 0) + 1);
+    }
+    const completeUsers: string[] = [];
+    for (const [userId, count] of countByUser) {
+      if (count >= 10) completeUsers.push(userId);
+    }
+    return completeUsers;
+  },
+});

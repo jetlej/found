@@ -7,24 +7,28 @@ alwaysApply: false
 # Compatibility Scoring Algorithm
 
 ## Data Sources
-- **Structured onboarding answers** (from `users` table): relationshipGoal, hasChildren, wantsChildren, religion, religionImportance, politicalLeaning, politicalImportance, drinking, smoking, marijuana
+- **Structured onboarding answers** (from `users` table): relationshipGoal, hasChildren, wantsChildren, religion, religionImportance, politicalLeaning, politicalImportance, drinking, smoking, marijuana, drugs, relationshipType, ethnicity, pets, gender, sexuality, heightInches, hometown, pronouns
 - **Voice-parsed profile** (from `userProfiles` table): traits, values, interests, dealbreakers, partnerPreferences, relationshipStyle, familyPlans, lifestyle, etc.
 - `calculateCompatibility(p1, p2, u1?, u2?)` accepts both profile and user docs
+
+## Pre-filtering
+- **Gender/sexuality hard filter**: matches are filtered by gender/sexuality compatibility before scoring. Incompatible matches (e.g., straight man seeing other men) are hidden entirely. Incomplete profiles pass through.
 
 ## 6 Category Scores
 
 | Category | Weight | Data Sources |
 |----------|--------|--------------|
-| The Basics | 25% | Structured onboarding (relationship goals, kids, substances) + voice dealbreakers |
+| The Basics | 25% | Relationship goals, kids, substances (drinking/smoking/marijuana/drugs), relationship type + voice dealbreakers |
 | Who You Are | 20% | Personality traits + canonical values + broader values overlap |
-| Relationship Style | 20% | Love language, conflict, communication, finances, intimacy |
-| Lifestyle | 15% | Sleep, exercise, social, substances, location, pets |
-| Life & Future | 10% | Family closeness, kids, religion/politics (weighted by importance) |
+| Relationship Style | 20% | Love language, conflict, communication, finances, alone time, intimacy (scoring uses all; display shows only love language, conflict style, alone time) |
+| Lifestyle | 15% | Sleep, exercise, social, substances, location, pets (with users table fallback) |
+| Life & Future | 10% | Family closeness, kids, religion/politics (weighted by importance), ethnicity (with users table fallback) |
 | The Deeper Stuff | 10% | Voice-extracted interests + passions + philosophy |
 
 ## Dealbreaker System
 - Voice-extracted `dealbreakers[]` and `partnerPreferences.dealbreakersInPartner[]` cross-checked against other user's keywords/values
 - Kids mismatch (yes vs no) triggers dealbreaker
+- Relationship type mismatch (monogamy vs non-monogamy) triggers warning
 - Legacy: checklist preferences with `isDealbreaker` flag (fallback for old users)
 
 ## Interest Matching
@@ -36,6 +40,18 @@ alwaysApply: false
 honesty, loyalty, family, growth, adventure, independence, security, creativity, ambition, kindness, humor, faith, authenticity, empathy, respect, integrity, balance, passion, curiosity, optimism, resilience, patience, generosity, compassion, courage, wisdom, freedom, tradition, equality, justice
 
 ## Matches Screen (`app/(tabs)/matches.tsx`)
+- **Gender/sexuality filter** applied before scoring
 - Overall score badge: green 80+, yellow 60+, red <40
-- Expandable cards with Compatibility tab (6 bars, shared values/interests, dealbreaker alerts) and Full Profile tab
-- "Watch Out For" section for friction points
+- **Your Profile card**: same layout as match cards (name, age, location, photos, basics, bio) with "YOU" badge instead of score
+- **Basics at a glance**: collapsed cards show two scrollable rows — top row (height, hometown, kids, pets, substances) and detail row (ethnicity, religion, politics, relationship goal/type) with icons
+- **All 6 compatibility categories unlocked** — no locked/gated categories
+- Expandable cards with Full Profile tab and Compatibility tab (6 bars, shared values/interests, dealbreaker alerts, "Watch Out For" friction points)
+- **Full Profile sections** (only voice-question-backed data, no duplicates with BasicsAtAGlance):
+  1. Values, Interests, Dealbreakers (tags)
+  2. Personality (11 trait bars)
+  3. Life Story (achievements, challenges, risks, dreams, fears)
+  4. Love Philosophy (conditional: love definition, healthy relationship vision)
+  5. Partner Preferences (must-haves, nice-to-haves, red flags, connection triggers)
+  6. Fun Facts (conversation starters, quirks, passions)
+  7. Relationship Style (love language, conflict style, alone time need)
+  8. Family & Future (family closeness bar, conditional kids timeline)

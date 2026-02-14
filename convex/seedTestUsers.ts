@@ -225,6 +225,55 @@ export const createTestProfile = internalMutation({
   },
 });
 
+// Internal query to get all test users (waitlistPosition === 999)
+export const getTestUsers = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.filter((u) => u.waitlistPosition === 999);
+  },
+});
+
+// Internal mutation to patch bio fields on a test user
+export const patchTestUserBasics = internalMutation({
+  args: {
+    userId: v.id("users"),
+    pronouns: v.optional(v.string()),
+    sexuality: v.optional(v.string()),
+    birthdate: v.optional(v.string()),
+    heightInches: v.optional(v.number()),
+    ethnicity: v.optional(v.string()),
+    hometown: v.optional(v.string()),
+    relationshipGoal: v.optional(v.string()),
+    relationshipType: v.optional(v.string()),
+    hasChildren: v.optional(v.string()),
+    wantsChildren: v.optional(v.string()),
+    religion: v.optional(v.string()),
+    religionImportance: v.optional(v.number()),
+    politicalLeaning: v.optional(v.string()),
+    politicalImportance: v.optional(v.number()),
+    drinking: v.optional(v.string()),
+    smoking: v.optional(v.string()),
+    marijuana: v.optional(v.string()),
+    drugs: v.optional(v.string()),
+    pets: v.optional(v.string()),
+    drinkingVisible: v.optional(v.boolean()),
+    smokingVisible: v.optional(v.boolean()),
+    marijuanaVisible: v.optional(v.boolean()),
+    drugsVisible: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...fields } = args;
+    const updates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined) updates[key] = value;
+    }
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(userId, updates);
+    }
+  },
+});
+
 // Internal mutation to save a photo record for a test user (called from action after storage)
 export const saveTestUserPhoto = internalMutation({
   args: {

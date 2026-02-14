@@ -331,6 +331,38 @@ export default defineSchema({
     confidence: v.number(), // 0-1 confidence score
   }).index("by_user", ["userId"]),
 
+  // AI-generated compatibility analyses (secondary score)
+  compatibilityAnalyses: defineTable({
+    userIdPair: v.string(), // sorted "id1_id2" for dedup
+    user1Id: v.id("users"),
+    user2Id: v.id("users"),
+    // AI-generated content
+    summary: v.string(),
+    greenFlags: v.array(v.string()),
+    yellowFlags: v.array(v.string()),
+    redFlags: v.array(v.string()),
+    // 10 scored categories (0-10 each, summed for overall score)
+    categoryScores: v.object({
+      coreValues: v.number(),
+      lifestyleAlignment: v.number(),
+      relationshipGoals: v.number(),
+      communicationStyle: v.number(),
+      emotionalCompatibility: v.number(),
+      familyPlanning: v.number(),
+      socialLifestyle: v.number(),
+      conflictResolution: v.number(),
+      intimacyAlignment: v.number(),
+      growthMindset: v.number(),
+    }),
+    overallScore: v.number(),
+    // Metadata
+    generatedAt: v.number(),
+    openaiModel: v.string(),
+  })
+    .index("by_pair", ["userIdPair"])
+    .index("by_user1", ["user1Id"])
+    .index("by_user2", ["user2Id"]),
+
   config: defineTable({
     key: v.string(),
     value: v.string(),

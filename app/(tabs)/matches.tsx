@@ -3,27 +3,49 @@ import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import {
-  calculateCompatibility,
-  CATEGORY_NAMES,
   type CategoryScores,
 } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
+  IconAlertTriangle,
+  IconBabyCarriage,
   IconBookFilled,
-  IconChevronRight,
+  IconBottle,
+  IconBrain,
+  IconBuildingChurch,
+  IconBuildingCommunity,
+  IconCake,
+  IconCannabis,
+  IconCheck,
   IconDiamondFilled,
+  IconFlag,
+  IconFlame,
+  IconGlass,
   IconHeartFilled,
-  IconLock,
-  IconLockFilled,
+  IconHome,
+  IconMapPin,
+  IconMessageCircle,
+  IconMoodSmile,
+  IconPaw,
+  IconPill,
+  IconHeart,
+  IconPlant,
+  IconRocket,
+  IconRuler,
   IconSeedlingFilled,
+  IconShield,
+  IconSmokingNo,
   IconStarFilled,
+  IconTarget,
+  IconUser,
   IconUserFilled,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react-native";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -99,7 +121,7 @@ function PhotoStrip({
 const photoStripStyles = StyleSheet.create({
   container: {
     marginTop: spacing.md - PHOTO_HEIGHT * 0.1,
-    marginBottom: spacing.xs,
+    marginBottom: -spacing.md,
     paddingVertical: 20,
     overflow: "visible",
   },
@@ -225,7 +247,7 @@ const fullscreenStyles = StyleSheet.create({
   },
 });
 
-// Category icons (filled versions)
+// Category icons (filled versions) - old 6-category system
 const CATEGORY_ICONS: Record<
   string,
   React.ComponentType<{ size: number; color: string }>
@@ -248,26 +270,152 @@ const SCORE_KEY_TO_CATEGORY_ID: Record<keyof CategoryScores, string> = {
   theDeeperStuff: "deeper_stuff",
 };
 
+// AI compatibility analysis - 10 category system
+type AICategoryKey = "coreValues" | "lifestyleAlignment" | "relationshipGoals" | "communicationStyle" | "emotionalCompatibility" | "familyPlanning" | "socialLifestyle" | "conflictResolution" | "intimacyAlignment" | "growthMindset";
+
+const AI_CATEGORIES: { key: AICategoryKey; label: string; icon: React.ComponentType<{ size: number; color: string }> }[] = [
+  { key: "coreValues", label: "Core Values", icon: IconDiamondFilled },
+  { key: "lifestyleAlignment", label: "Lifestyle", icon: IconSeedlingFilled },
+  { key: "relationshipGoals", label: "Relationship Goals", icon: IconTarget },
+  { key: "communicationStyle", label: "Communication", icon: IconMessageCircle },
+  { key: "emotionalCompatibility", label: "Emotional", icon: IconMoodSmile },
+  { key: "familyPlanning", label: "Family Planning", icon: IconBabyCarriage },
+  { key: "socialLifestyle", label: "Social Life", icon: IconUsers },
+  { key: "conflictResolution", label: "Conflict Style", icon: IconShield },
+  { key: "intimacyAlignment", label: "Intimacy", icon: IconFlame },
+  { key: "growthMindset", label: "Growth Mindset", icon: IconRocket },
+];
+
 // Types for compatibility calculation
 type UserProfile = Doc<"userProfiles">;
-const EMPTY_COMPATIBILITY = {
-  overallScore: 0,
-  categoryScores: {
-    theBasics: 0,
-    whoYouAre: 0,
-    relationshipStyle: 0,
-    lifestyle: 0,
-    lifeFuture: 0,
-    theDeeperStuff: 0,
+
+// Format height from inches to ft'in" display
+function formatHeight(inches?: number): string | null {
+  if (!inches) return null;
+  const ft = Math.floor(inches / 12);
+  const inn = inches % 12;
+  return inn > 0 ? `${ft}'${inn}"` : `${ft}'`;
+}
+
+// Convert snake_case enum values to readable labels
+// e.g. "words_of_affirmation" -> "Words of Affirmation", "split_50_50" -> "Split 50/50"
+function formatLabel(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Hinge-style basics display
+const ICON_SIZE = 20;
+const ICON_COLOR = colors.text;
+
+type BasicRow = { icon: React.ComponentType<{ size: number; color: string }>; label: string };
+
+function getBasicsData(user: Doc<"users">) {
+  // Top row: quick-glance items (horizontal scroll)
+  const topRow: BasicRow[] = [];
+  if (user.heightInches) topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches)! });
+  if (user.hometown) topRow.push({ icon: IconHome, label: user.hometown });
+  if (user.wantsChildren) {
+    const kidsLabels: Record<string, string> = {
+      yes: "Wants children", no: "Doesn't want children",
+      open: "Open to children", not_sure: "Not sure about children",
+    };
+    topRow.push({ icon: IconBabyCarriage, label: kidsLabels[user.wantsChildren] || user.wantsChildren });
+  }
+  if (user.pets) topRow.push({ icon: IconPaw, label: user.pets });
+  if (user.drinkingVisible !== false && user.drinking)
+    topRow.push({ icon: IconGlass, label: user.drinking });
+  if (user.smokingVisible !== false && user.smoking)
+    topRow.push({ icon: IconSmokingNo, label: user.smoking });
+  if (user.marijuanaVisible !== false && user.marijuana)
+    topRow.push({ icon: IconCannabis, label: user.marijuana });
+  if (user.drugsVisible !== false && user.drugs)
+    topRow.push({ icon: IconPill, label: user.drugs });
+
+  // Detail rows (important compatibility fields)
+  const detailRows: BasicRow[] = [];
+  if (user.ethnicity) detailRows.push({ icon: IconFlag, label: user.ethnicity });
+  if (user.religion) detailRows.push({ icon: IconBuildingChurch, label: user.religion });
+  if (user.politicalLeaning) detailRows.push({ icon: IconBuildingCommunity, label: user.politicalLeaning });
+  // Combine relationship goal + type into one line
+  const goalParts: string[] = [];
+  if (user.relationshipGoal) {
+    const goal = user.relationshipGoal.replace(/_/g, " ");
+    goalParts.push(goal.charAt(0).toUpperCase() + goal.slice(1));
+  }
+  if (user.relationshipType) goalParts.push(user.relationshipType);
+  if (goalParts.length > 0) detailRows.push({ icon: IconHeart, label: goalParts.join(" / ") });
+
+  return { topRow, detailRows };
+}
+
+function ScrollableRow({ items }: { items: BasicRow[] }) {
+  if (items.length === 0) return null;
+  return (
+    <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
+      <View style={basicsStyles.topRow}>
+        {items.map((item, i) => (
+          <View key={i} style={basicsStyles.topItem}>
+            {i > 0 && <View style={basicsStyles.topDivider} />}
+            <item.icon size={ICON_SIZE} color={ICON_COLOR} />
+            <Text style={basicsStyles.topLabel}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+function BasicsAtAGlance({ user }: { user: Doc<"users"> }) {
+  const { topRow, detailRows } = getBasicsData(user);
+  if (topRow.length === 0 && detailRows.length === 0) return null;
+
+  return (
+    <View style={basicsStyles.container}>
+      <ScrollableRow items={topRow} />
+      {detailRows.length > 0 && topRow.length > 0 && (
+        <View style={basicsStyles.dividerLine} />
+      )}
+      <ScrollableRow items={detailRows} />
+    </View>
+  );
+}
+
+const basicsStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    marginBottom: spacing.xs,
   },
-  dealbreakers: {
-    triggered: [] as string[],
-    warnings: [] as string[],
-    passed: true,
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
   },
-  sharedInterests: [] as string[],
-  sharedValues: [] as string[],
-};
+  topItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  topDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.sm,
+  },
+  topLabel: {
+    fontSize: fontSizes.sm,
+    color: colors.text,
+    fontFamily: fonts.serif,
+  },
+  dividerLine: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.md,
+  },
+});
 
 // ===== MUST-HAVE AND DEALBREAKER MATCHING =====
 
@@ -1050,9 +1198,11 @@ function TraitBar({
 // Full profile view component
 function FullProfileView({
   profile,
+  user,
   userName,
 }: {
   profile: UserProfile;
+  user?: Doc<"users">;
   userName?: string;
 }) {
   return (
@@ -1163,57 +1313,9 @@ function FullProfileView({
         </ProfileSection>
       )}
 
-      {/* Social Profile */}
-      {profile.socialProfile && (
-        <ProfileSection title="Social Life">
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Social Style</Text>
-              <Text style={styles.infoValue}>
-                {profile.socialProfile.socialStyle}
-              </Text>
-            </View>
-            {profile.socialProfile.weekendStyle && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Weekend Style</Text>
-                <Text style={styles.infoValue}>
-                  {profile.socialProfile.weekendStyle}
-                </Text>
-              </View>
-            )}
-            {profile.socialProfile.idealFridayNight && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Ideal Friday Night</Text>
-                <Text style={styles.infoValue}>
-                  {profile.socialProfile.idealFridayNight}
-                </Text>
-              </View>
-            )}
-          </View>
-          <TraitBar
-            name="Goes Out"
-            value={profile.socialProfile.goOutFrequency}
-            lowLabel="Rarely"
-            highLabel="Always"
-          />
-          <TraitBar
-            name="Friend Approval"
-            value={profile.socialProfile.friendApprovalImportance}
-            lowLabel="Not important"
-            highLabel="Very important"
-          />
-        </ProfileSection>
-      )}
-
       {/* Love Philosophy */}
-      {profile.lovePhilosophy && (
+      {profile.lovePhilosophy && (profile.lovePhilosophy.loveDefinition || profile.lovePhilosophy.healthyRelationshipVision) && (
         <ProfileSection title="Love Philosophy">
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Believes in Soulmates</Text>
-            <Text style={styles.infoValue}>
-              {profile.lovePhilosophy.believesInSoulmates ? "Yes 💕" : "No"}
-            </Text>
-          </View>
           {profile.lovePhilosophy.loveDefinition && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>What is Love?</Text>
@@ -1222,60 +1324,12 @@ function FullProfileView({
               </Text>
             </View>
           )}
-          {profile.lovePhilosophy.romanticGestures.length > 0 && (
+          {profile.lovePhilosophy.healthyRelationshipVision && (
             <View style={styles.storyItem}>
-              <Text style={styles.storyLabel}>Romantic Gestures They Love</Text>
-              <View style={styles.tagsRow}>
-                {profile.lovePhilosophy.romanticGestures.map((g, i) => (
-                  <View key={i} style={styles.tagSmall}>
-                    <Text style={styles.tagSmallText}>{g}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-          {profile.lovePhilosophy.bestAdviceReceived && (
-            <View style={styles.storyItem}>
-              <Text style={styles.storyLabel}>Best Relationship Advice</Text>
+              <Text style={styles.storyLabel}>Healthy Relationship</Text>
               <Text style={styles.storyText}>
-                "{profile.lovePhilosophy.bestAdviceReceived}"
+                {profile.lovePhilosophy.healthyRelationshipVision}
               </Text>
-            </View>
-          )}
-        </ProfileSection>
-      )}
-
-      {/* Intimacy Profile */}
-      {profile.intimacyProfile && (
-        <ProfileSection title="Intimacy">
-          <TraitBar
-            name="Physical Intimacy Importance"
-            value={profile.intimacyProfile.physicalIntimacyImportance}
-            lowLabel="Less important"
-            highLabel="Very important"
-          />
-          <TraitBar
-            name="Physical Attraction Importance"
-            value={profile.intimacyProfile.physicalAttractionImportance}
-            lowLabel="Less important"
-            highLabel="Very important"
-          />
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>PDA Comfort</Text>
-            <Text style={styles.infoValue}>
-              {profile.intimacyProfile.pdaComfort}
-            </Text>
-          </View>
-          {profile.intimacyProfile.connectionTriggers.length > 0 && (
-            <View style={styles.storyItem}>
-              <Text style={styles.storyLabel}>What Creates Connection</Text>
-              <View style={styles.tagsRow}>
-                {profile.intimacyProfile.connectionTriggers.map((t, i) => (
-                  <View key={i} style={styles.tagSmall}>
-                    <Text style={styles.tagSmallText}>{t}</Text>
-                  </View>
-                ))}
-              </View>
             </View>
           )}
         </ProfileSection>
@@ -1315,6 +1369,18 @@ function FullProfileView({
                 {profile.partnerPreferences.redFlags.map((r, i) => (
                   <View key={i} style={styles.tagRedFlag}>
                     <Text style={styles.tagRedFlagText}>{r}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+          {profile.intimacyProfile && profile.intimacyProfile.connectionTriggers.length > 0 && (
+            <View style={styles.storyItem}>
+              <Text style={styles.storyLabel}>What Creates Connection</Text>
+              <View style={styles.tagsRow}>
+                {profile.intimacyProfile.connectionTriggers.map((t, i) => (
+                  <View key={i} style={styles.tagSmall}>
+                    <Text style={styles.tagSmallText}>{t}</Text>
                   </View>
                 ))}
               </View>
@@ -1369,25 +1435,13 @@ function FullProfileView({
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Love Language</Text>
             <Text style={styles.infoValue}>
-              {profile.relationshipStyle.loveLanguage}
+              {formatLabel(profile.relationshipStyle.loveLanguage)}
             </Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Conflict Style</Text>
             <Text style={styles.infoValue}>
-              {profile.relationshipStyle.conflictStyle}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Communication</Text>
-            <Text style={styles.infoValue}>
-              {profile.relationshipStyle.communicationFrequency}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Financial Approach</Text>
-            <Text style={styles.infoValue}>
-              {profile.relationshipStyle.financialApproach}
+              {formatLabel(profile.relationshipStyle.conflictStyle)}
             </Text>
           </View>
         </View>
@@ -1399,32 +1453,18 @@ function FullProfileView({
         />
       </ProfileSection>
 
-      {/* Family Plans */}
+      {/* Family & Future */}
       <ProfileSection title="Family & Future">
-        <View style={styles.infoGrid}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Wants Kids</Text>
-            <Text style={styles.infoValue}>
-              {profile.familyPlans.wantsKids}
-            </Text>
-          </View>
-          {profile.familyPlans.kidsTimeline && (
+        {profile.familyPlans.kidsTimeline && (
+          <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Timeline</Text>
+              <Text style={styles.infoLabel}>Kids Timeline</Text>
               <Text style={styles.infoValue}>
                 {profile.familyPlans.kidsTimeline}
               </Text>
             </View>
-          )}
-          {profile.familyPlans.parentingStyle && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Parenting Style</Text>
-              <Text style={styles.infoValue}>
-                {profile.familyPlans.parentingStyle}
-              </Text>
-            </View>
-          )}
-        </View>
+          </View>
+        )}
         <TraitBar
           name="Family Closeness"
           value={profile.familyPlans.familyCloseness}
@@ -1433,141 +1473,6 @@ function FullProfileView({
         />
       </ProfileSection>
 
-      {/* Lifestyle */}
-      <ProfileSection title="Lifestyle">
-        <View style={styles.infoGrid}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Sleep</Text>
-            <Text style={styles.infoValue}>
-              {profile.lifestyle.sleepSchedule}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Exercise</Text>
-            <Text style={styles.infoValue}>
-              {profile.lifestyle.exerciseLevel}
-            </Text>
-          </View>
-          {profile.lifestyle.dietType && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Diet</Text>
-              <Text style={styles.infoValue}>{profile.lifestyle.dietType}</Text>
-            </View>
-          )}
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Alcohol</Text>
-            <Text style={styles.infoValue}>{profile.lifestyle.alcoholUse}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Drugs</Text>
-            <Text style={styles.infoValue}>{profile.lifestyle.drugUse}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Pets</Text>
-            <Text style={styles.infoValue}>
-              {profile.lifestyle.petPreference}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Location</Text>
-            <Text style={styles.infoValue}>
-              {profile.lifestyle.locationPreference}
-            </Text>
-          </View>
-        </View>
-      </ProfileSection>
-
-      {/* Health (if available) */}
-      {profile.health && (
-        <ProfileSection title="Health & Wellness">
-          <TraitBar
-            name="Physical Health"
-            value={profile.health.physicalHealthRating}
-            lowLabel="Working on it"
-            highLabel="Excellent"
-          />
-          <TraitBar
-            name="Mental Health"
-            value={profile.health.mentalHealthRating}
-            lowLabel="Working on it"
-            highLabel="Excellent"
-          />
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Smoking</Text>
-              <Text style={styles.infoValue}>
-                {profile.health.smokingStatus}
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Drinking</Text>
-              <Text style={styles.infoValue}>
-                {profile.health.drinkingFrequency}
-              </Text>
-            </View>
-          </View>
-        </ProfileSection>
-      )}
-
-      {/* Demographics (if available) */}
-      {profile.demographics && (
-        <ProfileSection title="Background">
-          <View style={styles.infoGrid}>
-            {profile.demographics.ethnicity && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Ethnicity</Text>
-                <Text style={styles.infoValue}>
-                  {profile.demographics.ethnicity}
-                </Text>
-              </View>
-            )}
-            {profile.demographics.religion && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Religion</Text>
-                <Text style={styles.infoValue}>
-                  {profile.demographics.religion}
-                </Text>
-              </View>
-            )}
-            {profile.demographics.politicalLeaning && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Political</Text>
-                <Text style={styles.infoValue}>
-                  {profile.demographics.politicalLeaning}
-                </Text>
-              </View>
-            )}
-          </View>
-          {profile.demographics.religiosity > 0 && (
-            <TraitBar
-              name="Religiosity"
-              value={profile.demographics.religiosity}
-              lowLabel="Not religious"
-              highLabel="Very religious"
-            />
-          )}
-        </ProfileSection>
-      )}
-
-      {/* Keywords */}
-      {profile.keywords.length > 0 && (
-        <ProfileSection title="Keywords">
-          <View style={styles.tagsRow}>
-            {profile.keywords.map((k, i) => (
-              <View key={i} style={styles.tagKeyword}>
-                <Text style={styles.tagKeywordText}>{k}</Text>
-              </View>
-            ))}
-          </View>
-        </ProfileSection>
-      )}
-
-      {/* Confidence Score */}
-      <View style={styles.confidenceContainer}>
-        <Text style={styles.confidenceText}>
-          Profile Confidence: {Math.round(profile.confidence * 100)}%
-        </Text>
-      </View>
     </View>
   );
 }
@@ -1614,6 +1519,17 @@ export default function MatchesScreen() {
   // Get all photos to show profile pics
   const allPhotos = useQuery(api.photos.listAll);
 
+  // Get AI compatibility analyses for current user
+  const aiAnalyses = useQuery(
+    api.compatibilityAnalyses.listForUser,
+    currentUser?._id ? { userId: currentUser._id } : "skip",
+  );
+
+  // Action to trigger AI analysis
+  const runAnalysis = useAction(api.actions.analyzeCompatibility.analyzeCompatibility);
+  const [analyzingCount, setAnalyzingCount] = useState(0);
+  const triggeredPairsRef = useRef(new Set<string>());
+
   // Helper to get first photo URL for a user
   const getFirstPhotoUrl = (uId: string): string | null => {
     if (!allPhotos) return null;
@@ -1638,7 +1554,40 @@ export default function MatchesScreen() {
       .map((p: any) => p.url);
   };
 
-  // Filter to test users (waitlistPosition === 999) and calculate compatibility
+  // Gender/sexuality compatibility check
+  // Returns which genders a person is attracted to, then checks both directions
+  const isGenderCompatible = (me: typeof currentUser, them: typeof currentUser): boolean => {
+    if (!me?.sexuality || !me?.gender || !them?.sexuality || !them?.gender) return true; // pass through incomplete profiles
+    const attractedTo = (sexuality: string, gender: string): string[] => {
+      const s = sexuality.toLowerCase();
+      // Direct gender values from picker: "Women", "Men", "Everyone"
+      if (s === "women") return ["woman"];
+      if (s === "men") return ["man"];
+      if (s === "everyone") return ["man", "woman", "non-binary"];
+      // Orientation labels
+      if (s === "bisexual" || s === "pansexual" || s === "queer") return ["man", "woman", "non-binary"];
+      if (s === "straight" || s === "heterosexual") return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
+      if (s === "gay" || s === "lesbian" || s === "homosexual") return [gender.toLowerCase()];
+      return ["man", "woman", "non-binary"]; // unknown = open to all
+    };
+    const iWant = attractedTo(me.sexuality, me.gender);
+    const theyWant = attractedTo(them.sexuality, them.gender);
+    const imIntoThem = iWant.includes(them.gender.toLowerCase());
+    const theyreIntoMe = theyWant.includes(me.gender.toLowerCase());
+    return imIntoThem && theyreIntoMe;
+  };
+
+  // Helper: find AI analysis for a given user pair
+  const getAnalysis = useCallback((theirUserId: string) => {
+    if (!aiAnalyses || !currentUser?._id) return null;
+    return aiAnalyses.find(
+      (a) =>
+        (a.user1Id === currentUser._id && a.user2Id === theirUserId) ||
+        (a.user2Id === currentUser._id && a.user1Id === theirUserId),
+    ) ?? null;
+  }, [aiAnalyses, currentUser?._id]);
+
+  // Filter to test users (waitlistPosition === 999) and build match list
   const testUserMatches = (() => {
     if (!allProfiles || !allUsers) return null;
 
@@ -1646,7 +1595,8 @@ export default function MatchesScreen() {
       (u) =>
         u.waitlistPosition === 999 &&
         u.onboardingType === "voice" &&
-        u._id !== currentUser?._id,
+        u._id !== currentUser?._id &&
+        isGenderCompatible(currentUser, u),
     );
 
     const matches = testUsers
@@ -1654,31 +1604,84 @@ export default function MatchesScreen() {
         const profile = allProfiles.find((p) => p.userId === user._id);
         if (!profile) return null;
 
-        const compatibility = myProfile
-          ? calculateCompatibility(myProfile, profile, currentUser ?? undefined, user)
-          : EMPTY_COMPATIBILITY;
+        const analysis = getAnalysis(user._id);
+        // Only include matches that have a completed AI analysis
+        if (!analysis) return null;
+
         return {
           user,
           profile,
           photoUrl: getFirstPhotoUrl(user._id),
           photos: getUserPhotos(user._id),
-          compatibility,
+          analysis,
         };
       })
       .filter(Boolean);
 
-    if (myProfile) {
-      return matches.sort(
-        (a, b) =>
-          (b?.compatibility.overallScore ?? 0) -
-          (a?.compatibility.overallScore ?? 0),
-      );
-    }
-
-    return matches.sort((a, b) =>
-      (a?.user.name || "").localeCompare(b?.user.name || ""),
+    // Sort by AI overall score (descending)
+    return matches.sort(
+      (a, b) => (b?.analysis.overallScore ?? 0) - (a?.analysis.overallScore ?? 0),
     );
   })();
+
+  // Count how many test users still need analysis
+  const pendingAnalysisCount = (() => {
+    if (!allProfiles || !allUsers || !myProfile || !currentUser?._id) return 0;
+    const testUsers = allUsers.filter(
+      (u) =>
+        u.waitlistPosition === 999 &&
+        u.onboardingType === "voice" &&
+        u._id !== currentUser?._id &&
+        isGenderCompatible(currentUser, u),
+    );
+    return testUsers.filter((u) => {
+      const hasProfile = allProfiles.some((p) => p.userId === u._id);
+      const hasAnalysis = getAnalysis(u._id);
+      return hasProfile && !hasAnalysis;
+    }).length;
+  })();
+
+  // Trigger AI analyses for test users that don't have one yet (sequential)
+  useEffect(() => {
+    if (!allProfiles || !allUsers || !myProfile || !currentUser?._id) return;
+
+    const testUsers = allUsers.filter(
+      (u) =>
+        u.waitlistPosition === 999 &&
+        u.onboardingType === "voice" &&
+        u._id !== currentUser?._id &&
+        isGenderCompatible(currentUser, u),
+    );
+
+    // Find users needing analysis
+    const needsAnalysis = testUsers.filter((u) => {
+      const hasProfile = allProfiles.some((p) => p.userId === u._id);
+      const hasAnalysis = getAnalysis(u._id);
+      const pairKey = [currentUser._id, u._id].sort().join("_");
+      const alreadyTriggered = triggeredPairsRef.current.has(pairKey);
+      return hasProfile && !hasAnalysis && !alreadyTriggered;
+    });
+
+    if (needsAnalysis.length === 0) return;
+
+    // Trigger sequentially
+    const triggerNext = async () => {
+      for (const user of needsAnalysis) {
+        const pairKey = [currentUser!._id, user._id].sort().join("_");
+        if (triggeredPairsRef.current.has(pairKey)) continue;
+        triggeredPairsRef.current.add(pairKey);
+        setAnalyzingCount((c) => c + 1);
+        try {
+          await runAnalysis({ user1Id: currentUser!._id, user2Id: user._id });
+        } catch (err) {
+          console.error(`Failed to analyze compatibility with ${user.name}:`, err);
+        } finally {
+          setAnalyzingCount((c) => Math.max(0, c - 1));
+        }
+      }
+    };
+    triggerNext();
+  }, [allProfiles, allUsers, myProfile, currentUser?._id, aiAnalyses]);
 
   if (!currentUser) {
     return (
@@ -1700,7 +1703,7 @@ export default function MatchesScreen() {
     );
   }
 
-  if (testUserMatches.length === 0) {
+  if (testUserMatches.length === 0 && pendingAnalysisCount === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <AppHeader />
@@ -1723,80 +1726,76 @@ export default function MatchesScreen() {
       <AppHeader />
 
       <ScrollView style={styles.scrollView}>
-        {/* Your profile card - expandable */}
+        {/* Your profile card - same layout as match cards */}
         {myProfile ? (
-          <View style={styles.cardShadow}>
-          <Pressable
-            style={styles.myProfileCard}
-            onPress={() => setShowMyProfile(!showMyProfile)}
-          >
-            <View style={styles.myProfileHeader}>
-              {getFirstPhotoUrl(currentUser._id) ? (
-                <Image
-                  source={{ uri: getFirstPhotoUrl(currentUser._id)! }}
-                  style={styles.myProfilePhoto}
-                />
-              ) : (
-                <View style={styles.myProfilePhotoPlaceholder}>
-                  <Text style={styles.myProfilePhotoInitial}>
-                    {currentUser.name?.charAt(0) || "?"}
+          <View style={styles.matchCard}>
+            <Pressable
+              style={styles.matchCardInner}
+              onPress={() => setShowMyProfile(!showMyProfile)}
+            >
+              <View style={styles.matchHeader}>
+                <View style={styles.matchInfo}>
+                  <Text style={styles.matchName}>{currentUser.name?.split(" ")[0] || "You"}</Text>
+                  <Text style={styles.matchLocation}>
+                    {currentUser.birthdate
+                      ? `${Math.floor((Date.now() - new Date(currentUser.birthdate).getTime()) / 31557600000)}, `
+                      : ""}
+                    {currentUser.location || ""}
                   </Text>
                 </View>
-              )}
-              <View style={styles.myProfileInfo}>
-                <Text style={styles.myProfileLabel}>YOUR PROFILE</Text>
-                <Text style={styles.myProfileName}>
-                  {currentUser.name || "You"}
-                </Text>
+                <Text style={styles.myProfileBadge}>YOU</Text>
               </View>
-            </View>
 
-            <PhotoStrip
-              photos={getUserPhotos(currentUser._id)}
-              onPhotoPress={(i) => {
-                const p = getUserPhotos(currentUser._id);
-                if (p.length > 0) setFullscreenPhotos({ urls: p, startIndex: i });
-              }}
-            />
-
-            {!showMyProfile && myProfile.shortBio && (
-              <Text style={styles.shortBio}>{myProfile.shortBio}</Text>
-            )}
-
-            {showMyProfile && (
-              <FullProfileView
-                profile={myProfile}
-                userName={currentUser.name || "You"}
+              <PhotoStrip
+                photos={getUserPhotos(currentUser._id)}
+                onPhotoPress={(i) => {
+                  const p = getUserPhotos(currentUser._id);
+                  if (p.length > 0) setFullscreenPhotos({ urls: p, startIndex: i });
+                }}
               />
-            )}
+            </Pressable>
 
-            <Text style={styles.expandHint}>
-              {showMyProfile ? "Tap to collapse" : "Tap to see full profile"}
-            </Text>
-          </Pressable>
+            <BasicsAtAGlance user={currentUser} />
+
+            <Pressable
+              style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
+              onPress={() => setShowMyProfile(!showMyProfile)}
+            >
+              {!showMyProfile && myProfile.generatedBio && (
+                <Text style={styles.shortBio}>
+                  {myProfile.generatedBio.length > 375
+                    ? myProfile.generatedBio.slice(0, 375).replace(/\s+\S*$/, "") + "..."
+                    : myProfile.generatedBio}
+                </Text>
+              )}
+
+              {showMyProfile && (
+                <FullProfileView
+                  profile={myProfile}
+                  user={currentUser}
+                  userName={currentUser.name || "You"}
+                />
+              )}
+
+              <Text style={styles.expandHint}>
+                {showMyProfile ? "Tap to collapse" : "Tap for details"}
+              </Text>
+            </Pressable>
           </View>
         ) : (
-          <View style={styles.cardShadow}>
-          <View style={styles.myProfileCard}>
-            <View style={styles.myProfileHeader}>
-              {getFirstPhotoUrl(currentUser._id) ? (
-                <Image
-                  source={{ uri: getFirstPhotoUrl(currentUser._id)! }}
-                  style={styles.myProfilePhoto}
-                />
-              ) : (
-                <View style={styles.myProfilePhotoPlaceholder}>
-                  <Text style={styles.myProfilePhotoInitial}>
-                    {currentUser.name?.charAt(0) || "?"}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.myProfileInfo}>
-                <Text style={styles.myProfileLabel}>YOUR PROFILE</Text>
-                <Text style={styles.myProfileName}>
-                  {currentUser.name || "You"}
+          <View style={styles.matchCard}>
+          <View style={styles.matchCardInner}>
+            <View style={styles.matchHeader}>
+              <View style={styles.matchInfo}>
+                <Text style={styles.matchName}>{currentUser.name?.split(" ")[0] || "You"}</Text>
+                <Text style={styles.matchLocation}>
+                  {currentUser.birthdate
+                    ? `${Math.floor((Date.now() - new Date(currentUser.birthdate).getTime()) / 31557600000)}, `
+                    : ""}
+                  {currentUser.location || ""}
                 </Text>
               </View>
+              <Text style={styles.myProfileBadge}>YOU</Text>
             </View>
             <PhotoStrip
               photos={getUserPhotos(currentUser._id)}
@@ -1831,6 +1830,16 @@ export default function MatchesScreen() {
           </View>
         )}
 
+        {/* Loading indicator for pending AI analyses */}
+        {pendingAnalysisCount > 0 && (
+          <View style={styles.analyzingBanner}>
+            <ActivityIndicator size="small" color={colors.textSecondary} />
+            <Text style={styles.analyzingText}>
+              Analyzing compatibility{pendingAnalysisCount > 1 ? ` (${pendingAnalysisCount} remaining)` : ""}...
+            </Text>
+          </View>
+        )}
+
         {/* Match list */}
         {testUserMatches.map((match) => {
           if (!match) return null;
@@ -1858,19 +1867,12 @@ export default function MatchesScreen() {
                   style={[
                     styles.scoreBadge,
                     {
-                      backgroundColor: myProfile
-                        ? getScoreColor(match.compatibility.overallScore)
-                        : colors.border,
+                      backgroundColor: getScoreColor(match.analysis.overallScore),
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.scoreText,
-                      !myProfile && { color: colors.textSecondary },
-                    ]}
-                  >
-                    {myProfile ? match.compatibility.overallScore : "--"}
+                  <Text style={styles.scoreText}>
+                    {match.analysis.overallScore}
                   </Text>
                 </View>
               </View>
@@ -1882,12 +1884,22 @@ export default function MatchesScreen() {
                     setFullscreenPhotos({ urls: match.photos, startIndex: i });
                 }}
               />
+            </Pressable>
 
+            {/* Basics at a glance - outside Pressable so scroll works */}
+            <BasicsAtAGlance user={match.user} />
+
+            <Pressable
+              style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
+              onPress={() =>
+                setExpandedUser(isExpanded ? null : match.user._id)
+              }
+            >
               {/* Bio - always visible */}
               {match.profile.generatedBio && (
                 <Text style={styles.shortBio}>
-                  {match.profile.generatedBio.length > 500
-                    ? match.profile.generatedBio.slice(0, 500).trimEnd() + "..."
+                  {match.profile.generatedBio.length > 375
+                    ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, "") + "..."
                     : match.profile.generatedBio}
                 </Text>
               )}
@@ -1895,37 +1907,14 @@ export default function MatchesScreen() {
               {/* Expanded view with tabs */}
               {isExpanded && (
                 <View style={styles.breakdown}>
-                  {/* Toggle tabs */}
+                  {/* Toggle tabs - Compatibility first (default) */}
                   <View style={styles.toggleContainer}>
                     <View style={styles.toggleTrack}>
                       <Pressable
                         style={[
                           styles.toggleOption,
-                          (activeTab[match.user._id] || "profile") ===
-                            "profile" && styles.toggleOptionActive,
-                        ]}
-                        onPress={() =>
-                          setActiveTab({
-                            ...activeTab,
-                            [match.user._id]: "profile",
-                          })
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.toggleText,
-                            (activeTab[match.user._id] || "profile") ===
-                              "profile" && styles.toggleTextActive,
-                          ]}
-                        >
-                          Full Profile
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.toggleOption,
-                          activeTab[match.user._id] === "compatibility" &&
-                            styles.toggleOptionActive,
+                          (activeTab[match.user._id] || "compatibility") ===
+                            "compatibility" && styles.toggleOptionActive,
                         ]}
                         onPress={() =>
                           setActiveTab({
@@ -1937,214 +1926,144 @@ export default function MatchesScreen() {
                         <Text
                           style={[
                             styles.toggleText,
-                            activeTab[match.user._id] === "compatibility" &&
-                              styles.toggleTextActive,
+                            (activeTab[match.user._id] || "compatibility") ===
+                              "compatibility" && styles.toggleTextActive,
                           ]}
                         >
                           Compatibility
                         </Text>
                       </Pressable>
+                      <Pressable
+                        style={[
+                          styles.toggleOption,
+                          activeTab[match.user._id] === "profile" &&
+                            styles.toggleOptionActive,
+                        ]}
+                        onPress={() =>
+                          setActiveTab({
+                            ...activeTab,
+                            [match.user._id]: "profile",
+                          })
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.toggleText,
+                            activeTab[match.user._id] === "profile" &&
+                              styles.toggleTextActive,
+                          ]}
+                        >
+                          Full Profile
+                        </Text>
+                      </Pressable>
                     </View>
                   </View>
 
-                  {/* Compatibility Tab */}
-                  {activeTab[match.user._id] === "compatibility" && (
+                  {/* Compatibility Tab (AI-powered) */}
+                  {(activeTab[match.user._id] || "compatibility") === "compatibility" && (
                     <View>
-                      {!myProfile ? (
-                        <Text style={styles.emptyText}>
-                          Complete your profile to see compatibility insights.
-                        </Text>
-                      ) : (
-                        <>
-                          {/* All 6 categories */}
-                          {[
-                            { key: "theBasics", label: CATEGORY_NAMES.theBasics },
-                            { key: "whoYouAre", label: CATEGORY_NAMES.whoYouAre },
-                            {
-                              key: "relationshipStyle",
-                              label: CATEGORY_NAMES.relationshipStyle,
-                            },
-                            { key: "lifestyle", label: CATEGORY_NAMES.lifestyle },
-                            { key: "lifeFuture", label: CATEGORY_NAMES.lifeFuture },
-                            {
-                              key: "theDeeperStuff",
-                              label: CATEGORY_NAMES.theDeeperStuff,
-                            },
-                          ].map(({ key, label }) => {
-                            const categoryId =
-                              SCORE_KEY_TO_CATEGORY_ID[key as keyof CategoryScores];
-                            const CategoryIcon = CATEGORY_ICONS[categoryId];
-                            // TEMP: Hardcode last two categories as locked for testing
-                            const lockedCategoryIds = [
-                              "life_future",
-                              "deeper_stuff",
-                            ];
-                            const isLocked = lockedCategoryIds.includes(categoryId);
-                            const score =
-                              match.compatibility.categoryScores[
-                                key as keyof CategoryScores
-                              ];
+                      {/* AI Summary */}
+                      <Text style={styles.aiSummary}>
+                        {match.analysis.summary}
+                      </Text>
 
-                            if (isLocked) {
-                              return (
-                                <View key={key} style={styles.categoryBarLocked}>
-                                  <View style={styles.categoryBarContentLocked}>
-                                    <IconLockFilled size={20} color="#E8C547" />
-                                    <Text style={styles.categoryBarLabelLocked}>
-                                      {label}
-                                    </Text>
-                                    <Pressable
-                                      style={styles.unlockButton}
-                                      onPress={() =>
-                                        router.push(
-                                          `/(onboarding)/questions?categoryId=${categoryId}`,
-                                        )
-                                      }
-                                    >
-                                      <Text style={styles.unlockButtonText}>
-                                        Unlock
-                                      </Text>
-                                      <IconChevronRight
-                                        size={14}
-                                        color={colors.text}
-                                      />
-                                    </Pressable>
-                                  </View>
-                                </View>
-                              );
-                            }
-
-                            const scoreColor = getScoreColor(score);
-                            const isFull = score === 100;
-                            return (
-                              <View key={key} style={styles.categoryBar}>
-                                {/* Gradient fill: 30% opacity left -> 60% right, with 100% border if not full */}
+                      {/* 10 AI Category Bars */}
+                      {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
+                        const score = match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
+                        const scoreColor = getScoreColor(score);
+                        const isFull = score === 100;
+                        return (
+                          <View key={key} style={styles.categoryBar}>
+                            <View
+                              style={[
+                                styles.categoryBarFill,
+                                {
+                                  width: `${score}%`,
+                                  borderTopRightRadius: isFull ? 10 : 0,
+                                  borderBottomRightRadius: isFull ? 10 : 0,
+                                },
+                              ]}
+                            >
+                              <LinearGradient
+                                colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.categoryBarGradient}
+                              />
+                              {!isFull && (
                                 <View
                                   style={[
-                                    styles.categoryBarFill,
-                                    {
-                                      width: `${score}%`,
-                                      borderTopRightRadius: isFull ? 10 : 0,
-                                      borderBottomRightRadius: isFull ? 10 : 0,
-                                    },
+                                    styles.categoryBarEdge,
+                                    { backgroundColor: scoreColor },
                                   ]}
-                                >
-                                  <LinearGradient
-                                    colors={[`${scoreColor}4D`, `${scoreColor}99`]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.categoryBarGradient}
-                                  />
-                                  {!isFull && (
-                                    <View
-                                      style={[
-                                        styles.categoryBarEdge,
-                                        { backgroundColor: scoreColor },
-                                      ]}
-                                    />
-                                  )}
-                                </View>
-                                <View style={styles.categoryBarContent}>
-                                  <CategoryIcon size={20} color={colors.text} />
-                                  <Text style={styles.categoryBarLabel}>
-                                    {label}
-                                  </Text>
-                                  <Text style={styles.categoryBarScore}>
-                                    {score}%
-                                  </Text>
-                                </View>
-                              </View>
-                            );
-                          })}
-
-                          {/* Shared values */}
-                          {match.compatibility.sharedValues.length > 0 && (
-                            <View style={styles.sharedSection}>
-                              <Text style={styles.sharedTitleBold}>
-                                Shared Values
-                              </Text>
-                              <View style={styles.tagsRow}>
-                                {match.compatibility.sharedValues.map((v, i) => (
-                                  <View key={i} style={styles.tagShared}>
-                                    <Text style={styles.tagSharedText}>{v}</Text>
-                                  </View>
-                                ))}
-                              </View>
+                                />
+                              )}
                             </View>
-                          )}
-
-                          {/* Shared interests */}
-                          {match.compatibility.sharedInterests.length > 0 && (
-                            <View style={styles.sharedSection}>
-                              <Text style={styles.sharedTitleBold}>
-                                Shared Interests
+                            <View style={styles.categoryBarContent}>
+                              <CatIcon size={20} color={colors.text} />
+                              <Text style={styles.categoryBarLabel}>
+                                {label}
                               </Text>
-                              <View style={styles.tagsRow}>
-                                {match.compatibility.sharedInterests.map((v, i) => (
-                                  <View key={i} style={styles.tagShared}>
-                                    <Text style={styles.tagSharedText}>{v}</Text>
-                                  </View>
-                                ))}
-                              </View>
-                            </View>
-                          )}
-
-                          {/* Dealbreakers */}
-                          {match.compatibility.dealbreakers.triggered.length >
-                            0 && (
-                            <View style={styles.sharedSection}>
-                              <Text style={styles.sharedTitleBold}>
-                                Dealbreakers
+                              <Text style={styles.categoryBarScore}>
+                                {match.analysis.categoryScores[key]}/10
                               </Text>
-                              <View style={styles.tagsRow}>
-                                {match.compatibility.dealbreakers.triggered.map(
-                                  (d, i) => (
-                                    <View key={i} style={styles.tagDealbreaker}>
-                                      <IconX size={12} color="#991b1b" />
-                                      <Text style={styles.tagDealbreakerText}>
-                                        {d}
-                                      </Text>
-                                    </View>
-                                  ),
-                                )}
-                              </View>
                             </View>
-                          )}
+                          </View>
+                        );
+                      })}
 
-                      {/* TODO: Must-Haves and Dealbreakers sections are temporarily hidden.
-                          These need to be refactored to use a predefined list of structured
-                          dealbreakers (not free-form text) so we can reliably determine
-                          yes/no/maybe for each one. See plan: Structured Dealbreakers System */}
-                      {/* <MustHavesSection
-                        myProfile={myProfile}
-                        theirProfile={match.profile}
-                        myName="You"
-                        theirName={match.user.name?.split(" ")[0] || "Them"}
-                      />
-                      <DealbreakersSection
-                        myProfile={myProfile}
-                        theirProfile={match.profile}
-                        myName="You"
-                        theirName={match.user.name?.split(" ")[0] || "Them"}
-                      /> */}
+                      {/* Green Flags */}
+                      {match.analysis.greenFlags.length > 0 && (
+                        <View style={styles.flagSection}>
+                          <Text style={styles.flagTitle}>Green Flags</Text>
+                          <View style={styles.tagsRow}>
+                            {match.analysis.greenFlags.map((flag, i) => (
+                              <View key={i} style={styles.tagGreenFlag}>
+                                <IconCheck size={12} color="#166534" />
+                                <Text style={styles.tagGreenFlagText}>{flag}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
 
-                          {/* Watch Out For */}
-                          <WatchOutSection
-                            frictions={getFrictionPoints(
-                              myProfile,
-                              match.profile,
-                              match.compatibility.categoryScores,
-                            )}
-                          />
-                        </>
+                      {/* Yellow Flags */}
+                      {match.analysis.yellowFlags.length > 0 && (
+                        <View style={styles.flagSection}>
+                          <Text style={styles.flagTitle}>Yellow Flags</Text>
+                          <View style={styles.tagsRow}>
+                            {match.analysis.yellowFlags.map((flag, i) => (
+                              <View key={i} style={styles.tagYellowFlag}>
+                                <IconAlertTriangle size={12} color="#92400e" />
+                                <Text style={styles.tagYellowFlagText}>{flag}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Red Flags */}
+                      {match.analysis.redFlags.length > 0 && (
+                        <View style={styles.flagSection}>
+                          <Text style={styles.flagTitle}>Red Flags</Text>
+                          <View style={styles.tagsRow}>
+                            {match.analysis.redFlags.map((flag, i) => (
+                              <View key={i} style={styles.tagRedFlag}>
+                                <IconX size={12} color="#991b1b" />
+                                <Text style={styles.tagRedFlagText}>{flag}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
                       )}
                     </View>
                   )}
 
                   {/* Full Profile Tab */}
-                  {(activeTab[match.user._id] || "profile") === "profile" && (
+                  {activeTab[match.user._id] === "profile" && (
                     <FullProfileView
                       profile={match.profile}
+                      user={match.user}
                       userName={match.user.name || "User"}
                     />
                   )}
@@ -2255,64 +2174,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     backgroundColor: colors.surface,
   },
-  cardShadow: {
-    margin: spacing.lg,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
-    backgroundColor: colors.surface,
-  },
-  myProfileCard: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  myProfileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  myProfilePhoto: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: spacing.md,
-  },
-  myProfilePhotoPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  myProfilePhotoInitial: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.textSecondary,
-  },
-  myProfileInfo: {
-    flex: 1,
-  },
-  myProfileLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  myProfileName: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes.lg,
-    color: colors.text,
-  },
-  expandArrow: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-  },
   matchCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md * 2,
@@ -2375,9 +2236,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  myProfileBadge: {
+    fontSize: fontSizes.xs,
+    fontFamily: fonts.serif,
+    color: colors.textSecondary,
+    letterSpacing: 1,
+  },
   shortBio: {
     fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    color: colors.text,
     marginTop: spacing.sm,
     lineHeight: 20,
     fontStyle: "italic",
@@ -2412,7 +2279,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     color: colors.textMuted,
     textAlign: "center",
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   breakdown: {
     marginTop: spacing.lg,
@@ -2434,15 +2301,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     overflow: "hidden",
     position: "relative",
-  },
-  categoryBarLocked: {
-    height: 36,
-    backgroundColor: colors.background,
-    borderRadius: 10,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: "dashed",
   },
   categoryBarFill: {
     position: "absolute",
@@ -2471,45 +2329,15 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
     gap: spacing.sm,
   },
-  categoryBarContentLocked: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    height: "100%",
-    paddingLeft: spacing.md,
-    paddingRight: 6,
-    gap: spacing.sm,
-  },
   categoryBarLabel: {
     flex: 1,
     fontSize: fontSizes.sm,
     fontWeight: "600",
     color: colors.text,
   },
-  categoryBarLabelLocked: {
-    flex: 1,
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
-    color: "#5A5A5A", // Halfway between text (#1A1A1A) and textMuted (#999999)
-  },
   categoryBarScore: {
     fontSize: fontSizes.base,
     fontWeight: "700",
-    color: colors.text,
-  },
-  unlockButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E8C547",
-    paddingLeft: spacing.md,
-    paddingRight: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 2,
-  },
-  unlockButtonText: {
-    fontSize: fontSizes.xs,
-    fontWeight: "600",
     color: colors.text,
   },
   sharedSection: {
@@ -2745,18 +2573,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     color: "#be185d",
   },
-  tagKeyword: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tagKeywordText: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
   traitRow: {
     marginBottom: spacing.sm,
   },
@@ -2843,17 +2659,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginLeft: spacing.sm,
   },
-  confidenceContainer: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    alignItems: "center",
-  },
-  confidenceText: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-  },
   // Toggle styles
   toggleContainer: {
     alignItems: "center",
@@ -2886,5 +2691,79 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     color: colors.text,
     fontWeight: "600",
+  },
+  // AI analysis styles
+  analyzingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+  },
+  analyzingText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
+  aiSummary: {
+    fontSize: fontSizes.sm,
+    color: colors.text,
+    lineHeight: 22,
+    fontStyle: "italic",
+    marginBottom: spacing.lg,
+  },
+  flagSection: {
+    marginTop: spacing.md,
+  },
+  flagTitle: {
+    fontSize: fontSizes.sm,
+    color: colors.text,
+    fontWeight: "600",
+    marginBottom: spacing.xs,
+  },
+  tagGreenFlag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: "#dcfce7",
+    borderRadius: 12,
+  },
+  tagGreenFlagText: {
+    fontSize: fontSizes.xs,
+    color: "#166534",
+    flexShrink: 1,
+  },
+  tagYellowFlag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: "#fef3c7",
+    borderRadius: 12,
+  },
+  tagYellowFlagText: {
+    fontSize: fontSizes.xs,
+    color: "#92400e",
+    flexShrink: 1,
+  },
+  tagRedFlag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: "#fee2e2",
+    borderRadius: 12,
+  },
+  tagRedFlagText: {
+    fontSize: fontSizes.xs,
+    color: "#991b1b",
+    flexShrink: 1,
   },
 });

@@ -519,3 +519,19 @@ export const triggerVoiceProfileParsing = action({
     return { scheduled: true };
   },
 });
+
+// Re-parse all users who have completed 10 voice recordings
+export const reparseAllProfiles = action({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.runQuery(internal.voiceRecordings.getUsersWithCompleteRecordings);
+    console.log(`Found ${users.length} users with complete voice recordings`);
+    for (let i = 0; i < users.length; i++) {
+      await ctx.scheduler.runAfter(i * 5000, internal.actions.parseVoiceProfile.parseVoiceProfile, {
+        userId: users[i],
+      });
+      console.log(`Scheduled reparse for user ${users[i]} (delay: ${i * 5}s)`);
+    }
+    return { scheduled: users.length };
+  },
+});

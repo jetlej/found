@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actions_analyzeCompatibility from "../actions/analyzeCompatibility.js";
 import type * as actions_parseProfile from "../actions/parseProfile.js";
 import type * as actions_parseVoiceProfile from "../actions/parseVoiceProfile.js";
 import type * as actions_seedTestPhotos from "../actions/seedTestPhotos.js";
@@ -15,6 +16,7 @@ import type * as actions_seedTestUsers from "../actions/seedTestUsers.js";
 import type * as actions_seedVoiceTestUsers from "../actions/seedVoiceTestUsers.js";
 import type * as actions_voiceQuestionDefinitions from "../actions/voiceQuestionDefinitions.js";
 import type * as answers from "../answers.js";
+import type * as compatibilityAnalyses from "../compatibilityAnalyses.js";
 import type * as config from "../config.js";
 import type * as lib_canonicalValues from "../lib/canonicalValues.js";
 import type * as lib_interests from "../lib/interests.js";
@@ -37,6 +39,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actions/analyzeCompatibility": typeof actions_analyzeCompatibility;
   "actions/parseProfile": typeof actions_parseProfile;
   "actions/parseVoiceProfile": typeof actions_parseVoiceProfile;
   "actions/seedTestPhotos": typeof actions_seedTestPhotos;
@@ -44,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "actions/seedVoiceTestUsers": typeof actions_seedVoiceTestUsers;
   "actions/voiceQuestionDefinitions": typeof actions_voiceQuestionDefinitions;
   answers: typeof answers;
+  compatibilityAnalyses: typeof compatibilityAnalyses;
   config: typeof config;
   "lib/canonicalValues": typeof lib_canonicalValues;
   "lib/interests": typeof lib_interests;

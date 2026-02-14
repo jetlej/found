@@ -148,6 +148,25 @@ export function scoreTheBasics(
     totalScore += substanceSimilarity(u1.marijuana, u2.marijuana, smokeLevels);
     count++;
   }
+  if (u1?.drugs && u2?.drugs) {
+    totalScore += substanceSimilarity(u1.drugs, u2.drugs, smokeLevels);
+    count++;
+  }
+
+  // --- Relationship type (from users table) ---
+  const RELATIONSHIP_TYPE_COMPAT: Record<string, Record<string, number>> = {
+    monogamy:         { monogamy: 1, "open to either": 0.7, "non-monogamy": 0.1 },
+    "non-monogamy":   { "non-monogamy": 1, "open to either": 0.7, monogamy: 0.1 },
+    "open to either": { "open to either": 0.9, monogamy: 0.7, "non-monogamy": 0.7 },
+  };
+  if (u1?.relationshipType && u2?.relationshipType) {
+    const rt1 = u1.relationshipType.toLowerCase();
+    const rt2 = u2.relationshipType.toLowerCase();
+    const s = RELATIONSHIP_TYPE_COMPAT[rt1]?.[rt2] ?? 0.5;
+    totalScore += s;
+    count++;
+    if (s <= 0.2) warnings.push("Relationship Type");
+  }
 
   // --- Voice-extracted dealbreakers cross-check ---
   const allDealbreakers1 = [
@@ -323,7 +342,7 @@ export function scoreRelationshipStyle(p1: UserProfile, p2: UserProfile): number
 // Sleep, exercise, social life, health, pets
 // ============================================================
 
-export function scoreLifestyle(p1: UserProfile, p2: UserProfile): number {
+export function scoreLifestyle(p1: UserProfile, p2: UserProfile, u1?: User, u2?: User): number {
   let score = 0;
   let count = 0;
 
@@ -373,15 +392,19 @@ export function scoreLifestyle(p1: UserProfile, p2: UserProfile): number {
   }
   count++;
 
-  // Pet preference
-  if (p1.lifestyle.petPreference === p2.lifestyle.petPreference) {
-    score += 1;
-  } else if (p1.lifestyle.petPreference === "neutral" || p2.lifestyle.petPreference === "neutral") {
-    score += 0.8;
-  } else {
-    score += 0.5;
+  // Pet preference - try voice-parsed lifestyle, fallback to users table
+  const pet1 = p1.lifestyle.petPreference || u1?.pets;
+  const pet2 = p2.lifestyle.petPreference || u2?.pets;
+  if (pet1 && pet2) {
+    if (pet1.toLowerCase() === pet2.toLowerCase()) {
+      score += 1;
+    } else if (pet1.toLowerCase() === "neutral" || pet2.toLowerCase() === "neutral") {
+      score += 0.8;
+    } else {
+      score += 0.5;
+    }
+    count++;
   }
-  count++;
 
   // Social profile (if available)
   if (p1.socialProfile && p2.socialProfile) {
@@ -452,6 +475,14 @@ export function scoreLifeFuture(
     const politicsMatch = pol1.toLowerCase() === pol2.toLowerCase() ? 1 : 0.3;
     score += politicsMatch * politicsImportance;
     count += politicsImportance;
+  }
+
+  // Ethnicity - try demographics from profile, fallback to users table
+  const eth1 = p1.demographics?.ethnicity ?? u1?.ethnicity;
+  const eth2 = p2.demographics?.ethnicity ?? u2?.ethnicity;
+  if (eth1 && eth2) {
+    score += eth1.toLowerCase() === eth2.toLowerCase() ? 0.8 : 0.5;
+    count++;
   }
 
   return count > 0 ? Math.round((score / count) * 100) : 50;
@@ -539,7 +570,7 @@ export function calculateCompatibility(
   const basicsResult = scoreTheBasics(p1, p2, u1, u2);
   const whoYouAre = scoreWhoYouAre(p1, p2);
   const relationshipStyle = scoreRelationshipStyle(p1, p2);
-  const lifestyle = scoreLifestyle(p1, p2);
+  const lifestyle = scoreLifestyle(p1, p2, u1, u2);
   const lifeFuture = scoreLifeFuture(p1, p2, u1, u2);
   const deeperResult = scoreTheDeeperStuff(p1, p2);
 

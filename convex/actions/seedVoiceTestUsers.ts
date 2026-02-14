@@ -102,6 +102,142 @@ export const seedVoiceProfilesForTestUsers = action({
   },
 });
 
+// Backfill all missing bio fields for existing test users using GPT
+// Schedules one action per user to avoid timeout
+export const backfillTestUserBasics = action({
+  args: {},
+  handler: async (ctx) => {
+    const testUsers = await ctx.runQuery(internal.seedTestUsers.getTestUsers);
+    console.log(`Found ${testUsers.length} test users to backfill`);
+
+    for (const [i, user] of testUsers.entries()) {
+      await ctx.scheduler.runAfter(
+        i * 3000, // stagger by 3s
+        internal.actions.seedVoiceTestUsers.backfillSingleUser,
+        { userId: user._id, name: user.name || "Unknown", gender: user.gender || "Unknown" },
+      );
+    }
+
+    return { scheduled: testUsers.length, names: testUsers.map((u) => u.name) };
+  },
+});
+
+type BackfillResult = {
+  pronouns: string;
+  sexuality: string;
+  birthdate: string;
+  heightInches: number;
+  ethnicity: string;
+  hometown: string;
+  relationshipGoal: string;
+  relationshipType: string;
+  hasChildren: string;
+  wantsChildren: string;
+  religion: string;
+  religionImportance: number;
+  politicalLeaning: string;
+  politicalImportance: number;
+  drinking: string;
+  smoking: string;
+  marijuana: string;
+  drugs: string;
+  pets: string;
+};
+
+export const backfillSingleUser = internalAction({
+  args: {
+    userId: v.id("users"),
+    name: v.string(),
+    gender: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.runQuery(
+      internal.userProfiles.getByUserInternal,
+      { userId: args.userId },
+    );
+
+    const bio = profile?.generatedBio || "";
+    const values = profile?.values?.join(", ") || "";
+    const interests = profile?.interests?.join(", ") || "";
+    const lifestyle = profile?.lifestyle
+      ? `Sleep: ${profile.lifestyle.sleepSchedule}, Exercise: ${profile.lifestyle.exerciseLevel}, Alcohol: ${profile.lifestyle.alcoholUse}, Drugs: ${profile.lifestyle.drugUse}, Pets: ${profile.lifestyle.petPreference}, Location: ${profile.lifestyle.locationPreference}`
+      : "";
+    const wantsKids = profile?.familyPlans?.wantsKids || "unknown";
+
+    const prompt = `You are generating realistic dating profile data for a test user.
+
+User info:
+- Name: ${args.name}
+- Gender: ${args.gender}
+- Bio: ${bio}
+- Values: ${values}
+- Interests: ${interests}
+- Lifestyle: ${lifestyle}
+- Wants kids (from voice profile): ${wantsKids}
+
+Generate realistic, varied profile fields for this person. Be consistent with their bio and personality. Make each user feel distinct.
+
+Return JSON with EXACTLY these fields and allowed values:
+{
+  "pronouns": "he/him" | "she/her" | "they/them",
+  "sexuality": "Straight" | "Gay" | "Lesbian" | "Bisexual" | "Queer" | "Pansexual",
+  "birthdate": "YYYY-MM-DD" (between 1990-01-01 and 2000-12-31, varied),
+  "heightInches": number (58-78, realistic for gender),
+  "ethnicity": "White" | "Black" | "Hispanic/Latino" | "Asian" | "Middle Eastern" | "South Asian" | "Mixed" | "Other",
+  "hometown": "City, State" (a real US city),
+  "relationshipGoal": "marriage" | "long_term" | "life_partner" | "figuring_out",
+  "relationshipType": "Monogamy" | "Non-monogamy" | "Open to either",
+  "hasChildren": "yes" | "no",
+  "wantsChildren": "yes" | "no" | "open" | "not_sure",
+  "religion": "Christian" | "Catholic" | "Jewish" | "Muslim" | "Hindu" | "Buddhist" | "Agnostic" | "Atheist" | "Spiritual" | "None",
+  "religionImportance": number (1-10),
+  "politicalLeaning": "Liberal" | "Moderate" | "Conservative" | "Apolitical",
+  "politicalImportance": number (1-10),
+  "drinking": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "smoking": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "marijuana": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "drugs": "Yes" | "Sometimes" | "No" | "Prefer not to say",
+  "pets": "Dog" | "Cat" | "Both" | "Fish" | "None" | "Other"
+}`;
+
+    const data = await extractStructuredData<BackfillResult>(
+      prompt,
+      `Generate the profile fields for ${args.name} now.`,
+      { maxTokens: 1000 },
+    );
+
+    await ctx.runMutation(internal.seedTestUsers.patchTestUserBasics, {
+      userId: args.userId,
+      pronouns: data.pronouns,
+      sexuality: data.sexuality,
+      birthdate: data.birthdate,
+      heightInches: data.heightInches,
+      ethnicity: data.ethnicity,
+      hometown: data.hometown,
+      relationshipGoal: data.relationshipGoal,
+      relationshipType: data.relationshipType,
+      hasChildren: data.hasChildren,
+      wantsChildren: data.wantsChildren,
+      religion: data.religion,
+      religionImportance: data.religionImportance,
+      politicalLeaning: data.politicalLeaning,
+      politicalImportance: data.politicalImportance,
+      drinking: data.drinking,
+      smoking: data.smoking,
+      marijuana: data.marijuana,
+      drugs: data.drugs,
+      pets: data.pets,
+      drinkingVisible: true,
+      smokingVisible: true,
+      marijuanaVisible: true,
+      drugsVisible: true,
+    });
+
+    console.log(`✓ ${args.name} backfilled`);
+    return { success: true, name: args.name };
+  },
+});
+
 export const seedSingleVoiceTestUser = internalAction({
   args: {
     persona: v.object({

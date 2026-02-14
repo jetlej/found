@@ -16,6 +16,9 @@ export default defineSchema({
     location: v.optional(v.string()),
     sexuality: v.optional(v.string()),
     birthdate: v.optional(v.string()), // ISO date string
+    ageRangeMin: v.optional(v.number()), // preferred partner min age, e.g. 25
+    ageRangeMax: v.optional(v.number()), // preferred partner max age, e.g. 35
+    ageRangeDealbreaker: v.optional(v.boolean()), // true = hard filter, never show outside range
     heightInches: v.optional(v.number()),
     // Structured onboarding answers (collected before voice questions)
     relationshipGoal: v.optional(v.string()), // "marriage", "long_term", "life_partner", "figuring_out"
@@ -55,6 +58,8 @@ export default defineSchema({
     waitlistEndsAt: v.optional(v.number()), // timestamp when 7-day wait ends
     // A/B test: onboarding type
     onboardingType: v.optional(v.union(v.literal("journey"), v.literal("voice"))),
+    // User type: human (real user) or bot (seeded test user)
+    type: v.optional(v.union(v.literal("human"), v.literal("bot"))),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_phone", ["phone"])
@@ -70,7 +75,7 @@ export default defineSchema({
   // Voice recordings for voice-based onboarding experiment
   voiceRecordings: defineTable({
     userId: v.id("users"),
-    questionIndex: v.number(), // 0-9 for the 10 voice questions
+    questionIndex: v.number(), // 0-8 for the 9 voice questions
     storageId: v.id("_storage"),
     durationSeconds: v.number(),
     transcription: v.optional(v.string()), // Populated after AI transcription

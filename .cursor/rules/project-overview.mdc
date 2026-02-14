@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Found - AI Matchmaking Dating App
 
-AI matchmaking app for serious partnerships. Voice-first onboarding with 10 open-ended questions. AI extracts structured profiles via Whisper + GPT. Matching with dealbreakers and preference checklists.
+AI matchmaking app for serious partnerships. Voice-first onboarding with 9 open-ended questions. AI extracts structured profiles via Whisper + GPT. Two-tier matching: rule-based pre-filter (`lib/matching.ts`) then AI compatibility analysis (`convex/actions/analyzeCompatibility.ts`) with per-pair GPT scoring, flags, and summary stored in `compatibilityAnalyses` table.
 
 ## Tech Stack
 

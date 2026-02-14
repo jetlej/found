@@ -58,6 +58,7 @@ export default function OnboardingLayout() {
         <Stack.Screen name="sexuality" />
         <Stack.Screen name="location" />
         <Stack.Screen name="birthday" />
+        <Stack.Screen name="age-range" />
         <Stack.Screen name="height" />
         <Stack.Screen name="photos" />
         <Stack.Screen name="relationship-goals" />

@@ -21,7 +21,7 @@ interface ExtractionCost {
   cost: number;
 }
 
-// The 10 voice questions and what they capture
+// The 9 voice questions and what they capture
 const VOICE_QUESTION_MAPPING = [
   { index: 0, captures: "values, identity, priorities" },
   { index: 1, captures: "love language, relationship style, attachment" },
@@ -31,12 +31,11 @@ const VOICE_QUESTION_MAPPING = [
   { index: 5, captures: "partner preferences, dealbreakers" },
   { index: 6, captures: "communication style, conflict resolution, emotional needs" },
   { index: 7, captures: "interests, hobbies, passions" },
-  { index: 8, captures: "self-awareness, growth, vulnerabilities" },
-  { index: 9, captures: "authentic self-description, quirks" },
+  { index: 8, captures: "growth mindset, self-awareness, evolution" },
 ];
 
 // Comprehensive extraction prompt for voice transcripts
-const VOICE_PROFILE_EXTRACTION_PROMPT = `You are an AI assistant analyzing voice transcripts from a dating app where users answered 10 open-ended questions about themselves. The transcripts are raw speech-to-text, so expect natural speech patterns, filler words, and occasional transcription errors.
+const VOICE_PROFILE_EXTRACTION_PROMPT = `You are an AI assistant analyzing voice transcripts from a dating app where users answered 9 open-ended questions about themselves. The transcripts are raw speech-to-text, so expect natural speech patterns, filler words, and occasional transcription errors.
 
 Your job is to extract a comprehensive dating profile from these transcripts.
 
@@ -469,6 +468,13 @@ export const parseVoiceProfile = internalAction({
     // Save the profile
     await ctx.runMutation(internal.userProfiles.upsertProfile, { profile });
 
+    // Schedule compatibility analyses against all eligible users
+    await ctx.scheduler.runAfter(
+      0,
+      internal.actions.analyzeCompatibility.analyzeAllForUser,
+      { userId: args.userId },
+    );
+
     console.log(`Voice profile parsing complete for user ${args.userId}`);
     return { success: true, confidence: extractedProfile.confidence };
   },
@@ -520,7 +526,7 @@ export const triggerVoiceProfileParsing = action({
   },
 });
 
-// Re-parse all users who have completed 10 voice recordings
+// Re-parse all users who have completed 9 voice recordings
 export const reparseAllProfiles = action({
   args: {},
   handler: async (ctx) => {

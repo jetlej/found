@@ -42,10 +42,10 @@ import {
   IconUsers,
   IconX,
 } from "@tabler/icons-react-native";
-import { useAction, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -1508,7 +1508,7 @@ export default function MatchesScreen() {
     api.voiceRecordings.getRecordingsForUser,
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
-  const isProcessing = !myProfile && (myRecordings?.length ?? 0) >= 10;
+  const isProcessing = !myProfile && (myRecordings?.length ?? 0) >= 9;
 
   // Get all profiles (we'll filter to test users)
   const allProfiles = useQuery(api.userProfiles.listAll);
@@ -1524,11 +1524,6 @@ export default function MatchesScreen() {
     api.compatibilityAnalyses.listForUser,
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
-
-  // Action to trigger AI analysis
-  const runAnalysis = useAction(api.actions.analyzeCompatibility.analyzeCompatibility);
-  const [analyzingCount, setAnalyzingCount] = useState(0);
-  const triggeredPairsRef = useRef(new Set<string>());
 
   // Helper to get first photo URL for a user
   const getFirstPhotoUrl = (uId: string): string | null => {
@@ -1577,6 +1572,14 @@ export default function MatchesScreen() {
     return imIntoThem && theyreIntoMe;
   };
 
+  // Age range compatibility check (hard filter when dealbreaker)
+  const isAgeCompatible = (me: typeof currentUser, them: typeof currentUser): boolean => {
+    if (!me?.ageRangeDealbreaker) return true;
+    if (!them?.birthdate) return true; // pass through incomplete profiles
+    const theirAge = Math.floor((Date.now() - new Date(them.birthdate).getTime()) / 31557600000);
+    return theirAge >= (me.ageRangeMin ?? 18) && theirAge <= (me.ageRangeMax ?? 99);
+  };
+
   // Helper: find AI analysis for a given user pair
   const getAnalysis = useCallback((theirUserId: string) => {
     if (!aiAnalyses || !currentUser?._id) return null;
@@ -1587,16 +1590,16 @@ export default function MatchesScreen() {
     ) ?? null;
   }, [aiAnalyses, currentUser?._id]);
 
-  // Filter to test users (waitlistPosition === 999) and build match list
+  // Filter to bot users and build match list
   const testUserMatches = (() => {
     if (!allProfiles || !allUsers) return null;
 
     const testUsers = allUsers.filter(
       (u) =>
-        u.waitlistPosition === 999 &&
-        u.onboardingType === "voice" &&
+        u.type === "bot" &&
         u._id !== currentUser?._id &&
-        isGenderCompatible(currentUser, u),
+        isGenderCompatible(currentUser, u) &&
+        isAgeCompatible(currentUser, u),
     );
 
     const matches = testUsers
@@ -1624,64 +1627,6 @@ export default function MatchesScreen() {
     );
   })();
 
-  // Count how many test users still need analysis
-  const pendingAnalysisCount = (() => {
-    if (!allProfiles || !allUsers || !myProfile || !currentUser?._id) return 0;
-    const testUsers = allUsers.filter(
-      (u) =>
-        u.waitlistPosition === 999 &&
-        u.onboardingType === "voice" &&
-        u._id !== currentUser?._id &&
-        isGenderCompatible(currentUser, u),
-    );
-    return testUsers.filter((u) => {
-      const hasProfile = allProfiles.some((p) => p.userId === u._id);
-      const hasAnalysis = getAnalysis(u._id);
-      return hasProfile && !hasAnalysis;
-    }).length;
-  })();
-
-  // Trigger AI analyses for test users that don't have one yet (sequential)
-  useEffect(() => {
-    if (!allProfiles || !allUsers || !myProfile || !currentUser?._id) return;
-
-    const testUsers = allUsers.filter(
-      (u) =>
-        u.waitlistPosition === 999 &&
-        u.onboardingType === "voice" &&
-        u._id !== currentUser?._id &&
-        isGenderCompatible(currentUser, u),
-    );
-
-    // Find users needing analysis
-    const needsAnalysis = testUsers.filter((u) => {
-      const hasProfile = allProfiles.some((p) => p.userId === u._id);
-      const hasAnalysis = getAnalysis(u._id);
-      const pairKey = [currentUser._id, u._id].sort().join("_");
-      const alreadyTriggered = triggeredPairsRef.current.has(pairKey);
-      return hasProfile && !hasAnalysis && !alreadyTriggered;
-    });
-
-    if (needsAnalysis.length === 0) return;
-
-    // Trigger sequentially
-    const triggerNext = async () => {
-      for (const user of needsAnalysis) {
-        const pairKey = [currentUser!._id, user._id].sort().join("_");
-        if (triggeredPairsRef.current.has(pairKey)) continue;
-        triggeredPairsRef.current.add(pairKey);
-        setAnalyzingCount((c) => c + 1);
-        try {
-          await runAnalysis({ user1Id: currentUser!._id, user2Id: user._id });
-        } catch (err) {
-          console.error(`Failed to analyze compatibility with ${user.name}:`, err);
-        } finally {
-          setAnalyzingCount((c) => Math.max(0, c - 1));
-        }
-      }
-    };
-    triggerNext();
-  }, [allProfiles, allUsers, myProfile, currentUser?._id, aiAnalyses]);
 
   if (!currentUser) {
     return (
@@ -1703,7 +1648,7 @@ export default function MatchesScreen() {
     );
   }
 
-  if (testUserMatches.length === 0 && pendingAnalysisCount === 0) {
+  if (testUserMatches.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <AppHeader />
@@ -1827,16 +1772,6 @@ export default function MatchesScreen() {
               </>
             )}
           </View>
-          </View>
-        )}
-
-        {/* Loading indicator for pending AI analyses */}
-        {pendingAnalysisCount > 0 && (
-          <View style={styles.analyzingBanner}>
-            <ActivityIndicator size="small" color={colors.textSecondary} />
-            <Text style={styles.analyzingText}>
-              Analyzing compatibility{pendingAnalysisCount > 1 ? ` (${pendingAnalysisCount} remaining)` : ""}...
-            </Text>
           </View>
         )}
 
@@ -2693,21 +2628,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   // AI analysis styles
-  analyzingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-  },
-  analyzingText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
   aiSummary: {
     fontSize: fontSizes.sm,
     color: colors.text,

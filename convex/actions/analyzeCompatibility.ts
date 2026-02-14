@@ -1,8 +1,8 @@
 "use node";
 
 import { v } from "convex/values";
-import { action } from "../_generated/server";
-import { internal } from "../_generated/api";
+import { action, internalAction } from "../_generated/server";
+import { api, internal } from "../_generated/api";
 import {
   extractStructuredDataWithUsage,
   DEFAULT_MODEL,
@@ -22,6 +22,9 @@ function formatProfile(
   const lines: string[] = [];
   lines.push(`## ${name}`);
   lines.push(`**Demographics:** ${age} years old, ${user.gender || "unknown"}, ${user.location || "unknown location"}`);
+  if (user.ageRangeMin && user.ageRangeMax) {
+    lines.push(`**Preferred Partner Age Range:** ${user.ageRangeMin}-${user.ageRangeMax} (dealbreaker: ${user.ageRangeDealbreaker ? "yes" : "no"})`);
+  }
   lines.push(`**Relationship Goal:** ${user.relationshipGoal || "not specified"}`);
   lines.push(`**Wants Children:** ${user.wantsChildren || "not specified"}`);
   lines.push(`**Relationship Type:** ${user.relationshipType || "not specified"}`);
@@ -270,5 +273,72 @@ export const analyzeCompatibility = action({
 
     console.log(`Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`);
     return docId;
+  },
+});
+
+// Gender/sexuality compatibility check (server-side version)
+function isGenderCompatible(
+  me: { sexuality?: string; gender?: string },
+  them: { sexuality?: string; gender?: string },
+): boolean {
+  if (!me.sexuality || !me.gender || !them.sexuality || !them.gender) return true;
+  const attractedTo = (sexuality: string, gender: string): string[] => {
+    const s = sexuality.toLowerCase();
+    if (s === "women") return ["woman"];
+    if (s === "men") return ["man"];
+    if (s === "everyone") return ["man", "woman", "non-binary"];
+    if (s === "bisexual" || s === "pansexual" || s === "queer") return ["man", "woman", "non-binary"];
+    if (s === "straight" || s === "heterosexual") return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
+    if (s === "gay" || s === "lesbian" || s === "homosexual") return [gender.toLowerCase()];
+    return ["man", "woman", "non-binary"];
+  };
+  const iWant = attractedTo(me.sexuality, me.gender);
+  const theyWant = attractedTo(them.sexuality, them.gender);
+  return iWant.includes(them.gender.toLowerCase()) && theyWant.includes(me.gender.toLowerCase());
+}
+
+// Run compatibility analyses for a newly-profiled user against all eligible users
+export const analyzeAllForUser = internalAction({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const [newUser, allUsers, allProfiles] = await Promise.all([
+      ctx.runQuery(internal.users.getById, { userId: args.userId }),
+      ctx.runQuery(api.users.listAll),
+      ctx.runQuery(api.userProfiles.listAll),
+    ]);
+
+    if (!newUser) {
+      console.error(`analyzeAllForUser: user ${args.userId} not found`);
+      return;
+    }
+
+    // Build set of user IDs that have profiles
+    const usersWithProfiles = new Set(allProfiles.map((p) => p.userId));
+
+    // Filter eligible users: has profile, not self, gender-compatible
+    const eligible = allUsers.filter(
+      (u) =>
+        u._id !== args.userId &&
+        usersWithProfiles.has(u._id) &&
+        isGenderCompatible(newUser, u),
+    );
+
+    console.log(`analyzeAllForUser: ${newUser.name} — ${eligible.length} eligible matches`);
+
+    let analyzed = 0;
+    for (const user of eligible) {
+      try {
+        await ctx.runAction(
+          api.actions.analyzeCompatibility.analyzeCompatibility,
+          { user1Id: args.userId, user2Id: user._id },
+        );
+        analyzed++;
+      } catch (err) {
+        console.error(`Failed to analyze ${newUser.name} <-> ${user.name}:`, err);
+      }
+    }
+
+    console.log(`analyzeAllForUser: completed ${analyzed}/${eligible.length} analyses for ${newUser.name}`);
+    return { analyzed, total: eligible.length };
   },
 });

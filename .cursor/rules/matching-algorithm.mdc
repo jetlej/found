@@ -1,52 +1,90 @@
 ---
 description: Compatibility scoring algorithm and matches screen
-globs: lib/matching.ts, convex/matching.ts, app/(tabs)/matches.tsx
+globs: lib/matching.ts, convex/matching.ts, app/(tabs)/matches.tsx, convex/compatibilityAnalyses.ts, convex/actions/analyzeCompatibility.ts
 alwaysApply: false
 ---
 
-# Compatibility Scoring Algorithm
+# Compatibility Scoring — Two-Tier System
 
-## Data Sources
-- **Structured onboarding answers** (from `users` table): relationshipGoal, hasChildren, wantsChildren, religion, religionImportance, politicalLeaning, politicalImportance, drinking, smoking, marijuana, drugs, relationshipType, ethnicity, pets, gender, sexuality, heightInches, hometown, pronouns
-- **Voice-parsed profile** (from `userProfiles` table): traits, values, interests, dealbreakers, partnerPreferences, relationshipStyle, familyPlans, lifestyle, etc.
-- `calculateCompatibility(p1, p2, u1?, u2?)` accepts both profile and user docs
+## Tier 1: Rule-Based Score (Pre-filter, Not Shown to Users)
+
+Cheap, instant, client-side. Used only to decide which pairs warrant the AI analysis. Not displayed anywhere in the UI.
+
+- **Source**: `lib/matching.ts` `calculateCompatibility(p1, p2, u1?, u2?)`
+- **Data**: Structured onboarding answers (`users` table) + voice-parsed profile (`userProfiles` table)
+- **6 weighted categories**: The Basics (25%), Who You Are (20%), Relationship Style (20%), Lifestyle (15%), Life & Future (10%), The Deeper Stuff (10%)
+- In production, only pairs above a threshold (e.g., 50+) would trigger Tier 2. For now, all test users are analyzed.
+
+## Tier 2: AI Compatibility Analysis (What Users See)
+
+Server-side GPT call per pair. Stored in `compatibilityAnalyses` table. Both users in a pair see the same content (neutral perspective using first names).
+
+### How It Works
+1. `convex/actions/analyzeCompatibility.ts` accepts two user IDs
+2. Fetches both `userProfiles` + `users` docs
+3. Builds prompt with all parsed profile data (traits, values, interests, dealbreakers, relationship style, lifestyle, family plans, partner preferences, life story, love philosophy, intimacy, social profile, bio)
+4. Calls GPT (`gpt-5-mini-2025-08-07`) with JSON mode
+5. Stores result in `compatibilityAnalyses` table via `convex/compatibilityAnalyses.ts`
+
+### AI Output
+- **Summary**: 3-4 sentence paragraph about match quality (uses first names)
+- **Green Flags**: 3-6 items (shared values, uncommon similarities, strong alignment)
+- **Yellow Flags**: 2-4 items (differences requiring compromise, not dealbreakers)
+- **Red Flags**: 0-3 items (genuine dealbreakers, serious misalignments)
+- **10 Category Scores** (0-10 each):
+  1. Core Values
+  2. Lifestyle Alignment
+  3. Relationship Goals
+  4. Communication Style
+  5. Emotional Compatibility
+  6. Family Planning
+  7. Social Lifestyle
+  8. Conflict Resolution
+  9. Intimacy Alignment
+  10. Growth Mindset
+
+### Overall Score (0-100)
+- Sum of 10 category scores
+- **Dealbreaker penalty**: Red flags multiply the score down
+  - First red flag: ×0.6
+  - Each additional: ×0.75
+  - Example: 70 with 1 red flag → 42, with 2 → 32
+
+### Storage (`compatibilityAnalyses` table)
+- `userIdPair`: sorted "id1_id2" string for dedup (index: `by_pair`)
+- `user1Id`, `user2Id`: sorted user IDs (indexes: `by_user1`, `by_user2`)
+- `summary`, `greenFlags[]`, `yellowFlags[]`, `redFlags[]`
+- `categoryScores`: object with 10 number fields
+- `overallScore`: number (0-100, after dealbreaker penalty)
+- `generatedAt`, `openaiModel`
+- `clearForUser` mutation: deletes all analyses for a user (for re-generation)
 
 ## Pre-filtering
-- **Gender/sexuality hard filter**: matches are filtered by gender/sexuality compatibility before scoring. Incompatible matches (e.g., straight man seeing other men) are hidden entirely. Incomplete profiles pass through.
-
-## 6 Category Scores
-
-| Category | Weight | Data Sources |
-|----------|--------|--------------|
-| The Basics | 25% | Relationship goals, kids, substances (drinking/smoking/marijuana/drugs), relationship type + voice dealbreakers |
-| Who You Are | 20% | Personality traits + canonical values + broader values overlap |
-| Relationship Style | 20% | Love language, conflict, communication, finances, alone time, intimacy (scoring uses all; display shows only love language, conflict style, alone time) |
-| Lifestyle | 15% | Sleep, exercise, social, substances, location, pets (with users table fallback) |
-| Life & Future | 10% | Family closeness, kids, religion/politics (weighted by importance), ethnicity (with users table fallback) |
-| The Deeper Stuff | 10% | Voice-extracted interests + passions + philosophy |
-
-## Dealbreaker System
-- Voice-extracted `dealbreakers[]` and `partnerPreferences.dealbreakersInPartner[]` cross-checked against other user's keywords/values
-- Kids mismatch (yes vs no) triggers dealbreaker
-- Relationship type mismatch (monogamy vs non-monogamy) triggers warning
-- Legacy: checklist preferences with `isDealbreaker` flag (fallback for old users)
-
-## Interest Matching
-- Primary: `interests[]` from voice parsing (free-text, Jaccard similarity)
-- Also compares `bioElements.passions[]`
-- Fallback: `selectedInterests` from interest picker (legacy)
-
-## Canonical Values (~30 items in `convex/lib/canonicalValues.ts`)
-honesty, loyalty, family, growth, adventure, independence, security, creativity, ambition, kindness, humor, faith, authenticity, empathy, respect, integrity, balance, passion, curiosity, optimism, resilience, patience, generosity, compassion, courage, wisdom, freedom, tradition, equality, justice
+- **Gender/sexuality hard filter**: `attractedTo(sexuality, gender)` returns which genders a person is into
+  - Handles both picker values (`"Women"`, `"Men"`, `"Everyone"`) and orientation labels (`"Straight"`, `"Bisexual"`, `"Gay"`, etc.)
+  - Both directions must match: I must be into their gender AND they must be into mine
+  - Incomplete profiles pass through
 
 ## Matches Screen (`app/(tabs)/matches.tsx`)
-- **Gender/sexuality filter** applied before scoring
-- Overall score badge: green 80+, yellow 60+, red <40
-- **Your Profile card**: same layout as match cards (name, age, location, photos, basics, bio) with "YOU" badge instead of score
-- **Basics at a glance**: collapsed cards show two scrollable rows — top row (height, hometown, kids, pets, substances) and detail row (ethnicity, religion, politics, relationship goal/type) with icons
-- **All 6 compatibility categories unlocked** — no locked/gated categories
-- Expandable cards with Full Profile tab and Compatibility tab (6 bars, shared values/interests, dealbreaker alerts, "Watch Out For" friction points)
-- **Full Profile sections** (only voice-question-backed data, no duplicates with BasicsAtAGlance):
+
+### Match Visibility
+- **Only matches with a completed AI analysis appear** on the page
+- While analyses are generating, shows "Analyzing compatibility..." banner with count
+- Matches appear one by one as analyses complete (reactive via `useQuery`)
+- Sorted by AI `overallScore` descending
+
+### Match Card (Collapsed)
+- Name, age, location, photo strip, basics at a glance, bio preview
+- **Score badge**: AI `overallScore` with color gradient (green 80+ → red <40)
+
+### Match Card (Expanded) — Two Tabs
+- **Compatibility tab** (default, shown first):
+  - AI summary paragraph (italic)
+  - 10 category score bars (gradient fill, 0-10 scale)
+  - Green Flags (green tags with check icon)
+  - Yellow Flags (amber tags with warning icon)
+  - Red Flags (red tags with X icon)
+- **Full Profile tab** (unchanged, from voice parse):
   1. Values, Interests, Dealbreakers (tags)
   2. Personality (11 trait bars)
   3. Life Story (achievements, challenges, risks, dreams, fears)
@@ -55,3 +93,12 @@ honesty, loyalty, family, growth, adventure, independence, security, creativity,
   6. Fun Facts (conversation starters, quirks, passions)
   7. Relationship Style (love language, conflict style, alone time need)
   8. Family & Future (family closeness bar, conditional kids timeline)
+
+### Auto-Trigger (Backend)
+- After `parseVoiceProfile` saves a profile, it schedules `analyzeAllForUser` (internal action in `convex/actions/analyzeCompatibility.ts`)
+- `analyzeAllForUser` finds all users with profiles, filters by gender/sexuality compatibility, and runs `analyzeCompatibility` for each missing pair
+- Action itself dedupes (checks if analysis exists before calling GPT)
+- No frontend trigger — analyses happen automatically in the background after profile creation
+
+## Canonical Values (~30 items in `convex/lib/canonicalValues.ts`)
+honesty, loyalty, family, growth, adventure, independence, security, creativity, ambition, kindness, humor, faith, authenticity, empathy, respect, integrity, balance, passion, curiosity, optimism, resilience, patience, generosity, compassion, courage, wisdom, freedom, tradition, equality, justice

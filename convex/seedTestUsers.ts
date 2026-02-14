@@ -46,6 +46,7 @@ export const createTestUser = internalMutation({
       heightInches: 68,
       onboardingComplete: true,
       waitlistPosition: 999,
+      type: "bot",
     });
 
     // Get all questions to map order -> id
@@ -257,6 +258,9 @@ export const patchTestUserBasics = internalMutation({
     marijuana: v.optional(v.string()),
     drugs: v.optional(v.string()),
     pets: v.optional(v.string()),
+    ageRangeMin: v.optional(v.number()),
+    ageRangeMax: v.optional(v.number()),
+    ageRangeDealbreaker: v.optional(v.boolean()),
     drinkingVisible: v.optional(v.boolean()),
     smokingVisible: v.optional(v.boolean()),
     marijuanaVisible: v.optional(v.boolean()),
@@ -303,5 +307,84 @@ export const saveTestUserPhoto = internalMutation({
     await ctx.db.patch(args.userId, { avatarUrl: args.url });
 
     return args.url;
+  },
+});
+
+// One-time: backfill type field on all existing users
+export const backfillUserTypes = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    let bots = 0;
+    let humans = 0;
+    for (const user of users) {
+      if (user.type) continue; // already set
+      if (user.waitlistPosition === 999) {
+        await ctx.db.patch(user._id, { type: "bot" });
+        bots++;
+      } else {
+        await ctx.db.patch(user._id, { type: "human" });
+        humans++;
+      }
+    }
+    return { bots, humans };
+  },
+});
+
+// One-time: delete non-voice bot users and all their related data
+export const deleteNonVoiceBots = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    const toDelete = users.filter(
+      (u) => u.waitlistPosition === 999 && u.onboardingType !== "voice",
+    );
+
+    for (const user of toDelete) {
+      // Delete answers
+      const answers = await ctx.db
+        .query("answers")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect();
+      for (const a of answers) await ctx.db.delete(a._id);
+
+      // Delete photos
+      const photos = await ctx.db
+        .query("photos")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect();
+      for (const p of photos) await ctx.db.delete(p._id);
+
+      // Delete voice recordings (shouldn't have any, but be safe)
+      const recordings = await ctx.db
+        .query("voiceRecordings")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect();
+      for (const r of recordings) await ctx.db.delete(r._id);
+
+      // Delete user profiles
+      const profiles = await ctx.db
+        .query("userProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .collect();
+      for (const p of profiles) await ctx.db.delete(p._id);
+
+      // Delete compatibility analyses
+      const analyses1 = await ctx.db
+        .query("compatibilityAnalyses")
+        .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+        .collect();
+      for (const a of analyses1) await ctx.db.delete(a._id);
+      const analyses2 = await ctx.db
+        .query("compatibilityAnalyses")
+        .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+        .collect();
+      for (const a of analyses2) await ctx.db.delete(a._id);
+
+      // Delete the user
+      await ctx.db.delete(user._id);
+    }
+
+    return { deleted: toDelete.length, names: toDelete.map((u) => u.name) };
   },
 });

@@ -43,7 +43,7 @@ Persona:
 - Gender: ${persona.gender}
 - Description: ${persona.description}
 
-Write answers for all 10 questions below.
+Write answers for all 9 questions below.
 Requirements:
 - Answer in first person, naturally, like spoken voice notes.
 - Each answer must be one large paragraph (120-220 words).
@@ -54,7 +54,7 @@ Requirements:
 Questions:
 ${getVoiceQuestionsForPrompt()}
 
-Return JSON:
+Return JSON with EXACTLY 9 answers (one per question, no more, no less):
 {
   "answers": [
     "answer for question 1",
@@ -65,8 +65,7 @@ Return JSON:
     "answer for question 6",
     "answer for question 7",
     "answer for question 8",
-    "answer for question 9",
-    "answer for question 10"
+    "answer for question 9"
   ]
 }`;
 }
@@ -142,6 +141,9 @@ type BackfillResult = {
   marijuana: string;
   drugs: string;
   pets: string;
+  ageRangeMin: number;
+  ageRangeMax: number;
+  ageRangeDealbreaker: boolean;
 };
 
 export const backfillSingleUser = internalAction({
@@ -177,11 +179,16 @@ User info:
 
 Generate realistic, varied profile fields for this person. Be consistent with their bio and personality. Make each user feel distinct.
 
-Return JSON with EXACTLY these fields and allowed values:
+IMPORTANT: You MUST include ALL 22 fields listed below. Do not omit any field. Every single field is required.
+
+Return JSON with EXACTLY these 22 fields and allowed values:
 {
   "pronouns": "he/him" | "she/her" | "they/them",
   "sexuality": "Straight" | "Gay" | "Lesbian" | "Bisexual" | "Queer" | "Pansexual",
   "birthdate": "YYYY-MM-DD" (between 1990-01-01 and 2000-12-31, varied),
+  "ageRangeMin": number (18-60, typically their age minus 3-8),
+  "ageRangeMax": number (20-99, typically their age plus 3-8),
+  "ageRangeDealbreaker": true or false (true ~40% of the time),
   "heightInches": number (58-78, realistic for gender),
   "ethnicity": "White" | "Black" | "Hispanic/Latino" | "Asian" | "Middle Eastern" | "South Asian" | "Mixed" | "Other",
   "hometown": "City, State" (a real US city),
@@ -206,6 +213,17 @@ Return JSON with EXACTLY these fields and allowed values:
       { maxTokens: 1000 },
     );
 
+    // Ensure age range fields are always present (fallback if GPT omits them)
+    if (!data.ageRangeMin || !data.ageRangeMax) {
+      const birthYear = parseInt(data.birthdate?.split("-")[0] || "1995");
+      const age = new Date().getFullYear() - birthYear;
+      data.ageRangeMin = Math.max(18, age - 5);
+      data.ageRangeMax = Math.min(99, age + 5);
+    }
+    if (data.ageRangeDealbreaker === undefined) {
+      data.ageRangeDealbreaker = Math.random() < 0.4;
+    }
+
     await ctx.runMutation(internal.seedTestUsers.patchTestUserBasics, {
       userId: args.userId,
       pronouns: data.pronouns,
@@ -227,6 +245,9 @@ Return JSON with EXACTLY these fields and allowed values:
       marijuana: data.marijuana,
       drugs: data.drugs,
       pets: data.pets,
+      ageRangeMin: data.ageRangeMin,
+      ageRangeMax: data.ageRangeMax,
+      ageRangeDealbreaker: data.ageRangeDealbreaker,
       drinkingVisible: true,
       smokingVisible: true,
       marijuanaVisible: true,
@@ -252,7 +273,7 @@ export const seedSingleVoiceTestUser = internalAction({
 
     const answerPayload = await extractStructuredData<{ answers: string[] }>(
       buildAnswersPrompt(persona),
-      "Generate the 10 voice answers now.",
+      "Generate exactly 9 voice answers now, one per question.",
       { maxTokens: 12000 },
     );
 
@@ -297,5 +318,48 @@ export const seedSingleVoiceTestUser = internalAction({
     });
 
     return { success: true, userId, name: persona.name };
+  },
+});
+
+// 3 female personas designed for high compatibility with Jordan (dev user)
+const HIGH_COMPAT_PERSONAS: Persona[] = [
+  {
+    name: "Mia Torres",
+    gender: "Woman",
+    description:
+      "Latina entrepreneur in her early 30s running a wellness-tech startup that combines meditation tools with gamification. Former yoga teacher who still teaches one class a week. Morning person — up at 6:30 for journaling and a workout before diving into founder life. Has traveled to 20+ countries including multiple ayahuasca retreats in Peru that profoundly shaped her worldview. Deeply values creativity, family, growth, and authenticity. Politically liberal, spiritually curious, doesn't smoke, drinks socially, and is openly supportive of psychedelic-assisted therapy. Loves karaoke nights, board game marathons, and building side projects. Wants marriage, 2-3 kids, and a monogamous partnership where both people push each other to be great. Very close with her big family — Sunday dinners are non-negotiable. Fiercely independent and confident but deeply affectionate and romantic at her core.",
+  },
+  {
+    name: "Sasha Kim",
+    gender: "Woman",
+    description:
+      "Korean-American product designer at a mission-driven ed-tech company, with a side project building educational games for underserved communities. Grew up in the Bay Area, has lived in Seoul and Berlin. Intensely curious — reads voraciously about behavioral economics, game theory, and social policy. Passionate advocate for UBI and wealth redistribution. Exercises 5 days a week (mix of climbing and lifting), morning person, liberal, agnostic but spiritually open. Has done years of therapy and maintains a daily meditation practice. Values honesty, curiosity, ambition, independence, and adventure above all. Loves game nights, improv comedy, and spontaneous travel. Open-minded about psychedelics and consciousness exploration. Wants marriage and kids someday — envisions a power-couple dynamic built on mutual respect, deep conversation, and shared ambition. Addresses conflict head-on with radical honesty.",
+  },
+  {
+    name: "Ava Chen",
+    gender: "Woman",
+    description:
+      "Chinese-American startup COO who previously founded a youth mentorship nonprofit. Lifts weights 4-5 times a week and treats fitness as a cornerstone of her mental health. Morning person — 6am gym sessions followed by focused deep work. Has traveled extensively through Southeast Asia and South America. Deeply family-oriented — oldest of three siblings and the glue of her family. Politically liberal, spiritually grounded (meditation + occasional psychedelic journeys), doesn't smoke. Values family, ambition, honesty, growth, generosity, and equality. Loves musicals, karaoke, Pokémon, and hosting dinner parties. Has done extensive inner work through therapy, meditation, and plant medicine. Wants marriage, 2-3 kids, and a monogamous relationship that feels like a true partnership — romantic, honest, and building something meaningful together. Love language is physical touch and words of affirmation.",
+  },
+];
+
+// Seed the 3 high-compatibility test users
+export const seedHighCompatUsers = action({
+  args: {},
+  handler: async (ctx) => {
+    console.log("Seeding 3 high-compatibility female personas...");
+
+    for (const [index, persona] of HIGH_COMPAT_PERSONAS.entries()) {
+      await ctx.scheduler.runAfter(
+        index * 2000,
+        internal.actions.seedVoiceTestUsers.seedSingleVoiceTestUser,
+        { persona },
+      );
+    }
+
+    return {
+      scheduled: HIGH_COMPAT_PERSONAS.length,
+      personas: HIGH_COMPAT_PERSONAS.map((p) => p.name),
+    };
   },
 });

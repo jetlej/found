@@ -74,7 +74,7 @@ export default function BirthdayScreen() {
     setError("");
     try {
       await updateBasics({ clerkId: userId, birthdate: birthdate.toISOString() });
-      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "height" });
+      if (!isEditing) await setOnboardingStep({ clerkId: userId, step: "age-range" });
       goToNextStep(router, "birthday", isEditing);
     } catch (err) {
       setLoading(false);

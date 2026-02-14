@@ -9,9 +9,11 @@ alwaysApply: false
 ## users
 - `clerkId`: string (index: `by_clerk_id`), `phone`: string (index: `by_phone`)
 - `name`, `avatarUrl`, `gender` ("Man"/"Woman"/"Non-binary"), `location`, `sexuality` ("Men"/"Women"/"Everyone"): optional strings
-- `birthdate`: optional string (ISO date), `heightInches`: optional number
+- `birthdate`: optional string (ISO date), `ageRangeMin`, `ageRangeMax`: optional numbers (preferred partner age range), `ageRangeDealbreaker`: optional boolean (hard filter when true)
+- `heightInches`: optional number
 - `onboardingComplete`: optional boolean, `onboardingStep`: optional string ("basics"/"photos")
 - `onboardingType`: optional "journey" | "voice"
+- `type`: optional "human" | "bot" — real users get "human", seeded test users get "bot"
 - `level`: optional number (1-6), `completedCategories`: optional string[]
 - `waitlistPosition`, `pushToken`, `notificationsEnabled`, `reminderHour`, `reminderMinute`: optional
 
@@ -34,7 +36,7 @@ alwaysApply: false
 - Indexes: `by_user`, `by_user_question`
 
 ## voiceRecordings
-- `userId`: Id<"users">, `questionIndex`: number (0-9)
+- `userId`: Id<"users">, `questionIndex`: number (0-8)
 - `storageId`: Id<"_storage">, `durationSeconds`: number
 - `transcription`: optional string, `createdAt`: number (timestamp)
 - Indexes: `by_user`, `by_user_question`
@@ -53,3 +55,11 @@ alwaysApply: false
 - `lifestyle`: sleepSchedule, exerciseLevel, dietType, alcoholUse, drugUse, petPreference, locationPreference
 - Narrative sections: lifeStory, socialProfile, intimacyProfile, lovePhilosophy, partnerPreferences, bioElements, demographics, health
 - Generated: `generatedBio`, `shortBio`, `keywords`: string[], `processedAt`, `openaiModel`, `confidence`
+
+## compatibilityAnalyses (AI-generated per-pair compatibility)
+- `userIdPair`: string — sorted "id1_id2" for dedup (index: `by_pair`)
+- `user1Id`: Id<"users"> (index: `by_user1`), `user2Id`: Id<"users"> (index: `by_user2`)
+- `summary`: string, `greenFlags`: string[], `yellowFlags`: string[], `redFlags`: string[]
+- `categoryScores`: object with 10 number fields (coreValues, lifestyleAlignment, relationshipGoals, communicationStyle, emotionalCompatibility, familyPlanning, socialLifestyle, conflictResolution, intimacyAlignment, growthMindset)
+- `overallScore`: number (0-100, sum of categories with dealbreaker penalty)
+- `generatedAt`: number (timestamp), `openaiModel`: string

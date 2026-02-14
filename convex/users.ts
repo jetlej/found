@@ -37,6 +37,7 @@ export const getOrCreate = mutation({
       clerkId: args.clerkId,
       phone: args.phone,
       name: args.name,
+      type: "human",
     });
   },
 });
@@ -109,6 +110,9 @@ export const updateBasics = mutation({
     location: v.optional(v.string()),
     sexuality: v.optional(v.string()),
     birthdate: v.optional(v.string()),
+    ageRangeMin: v.optional(v.number()),
+    ageRangeMax: v.optional(v.number()),
+    ageRangeDealbreaker: v.optional(v.boolean()),
     heightInches: v.optional(v.number()),
     relationshipGoal: v.optional(v.string()),
     hasChildren: v.optional(v.string()),

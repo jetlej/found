@@ -26,7 +26,14 @@ import { useAction, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -38,7 +45,20 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Confetti - explosive burst from center
-const CONFETTI_COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9", "#FF85A2", "#7BED9F", "#70A1FF", "#FFC048"];
+const CONFETTI_COLORS = [
+  "#FF6B6B",
+  "#4ECDC4",
+  "#45B7D1",
+  "#FFA07A",
+  "#98D8C8",
+  "#F7DC6F",
+  "#BB8FCE",
+  "#85C1E9",
+  "#FF85A2",
+  "#7BED9F",
+  "#70A1FF",
+  "#FFC048",
+];
 const CONFETTI_COUNT = 240;
 
 function ConfettiParticle({ index }: { index: number }) {
@@ -61,13 +81,30 @@ function ConfettiParticle({ index }: { index: number }) {
     const dur = 600 + Math.random() * 400;
     const fallDur = 1200 + Math.random() * 800;
     scale.value = withDelay(d, withTiming(1, { duration: 80 }));
-    translateX.value = withDelay(d, withTiming(targetX, { duration: dur, easing: Easing.out(Easing.quad) }));
-    translateY.value = withDelay(d, withSequence(
-      withTiming(targetY, { duration: dur, easing: Easing.out(Easing.quad) }),
-      withTiming(targetY + 600 + Math.random() * 300, { duration: fallDur, easing: Easing.in(Easing.quad) }),
-    ));
-    rotate.value = withDelay(d, withTiming(720 * (Math.random() > 0.5 ? 1 : -1), { duration: dur + fallDur }));
-    opacity.value = withDelay(d + dur + fallDur * 0.5, withTiming(0, { duration: fallDur * 0.5 }));
+    translateX.value = withDelay(
+      d,
+      withTiming(targetX, { duration: dur, easing: Easing.out(Easing.quad) }),
+    );
+    translateY.value = withDelay(
+      d,
+      withSequence(
+        withTiming(targetY, { duration: dur, easing: Easing.out(Easing.quad) }),
+        withTiming(targetY + 600 + Math.random() * 300, {
+          duration: fallDur,
+          easing: Easing.in(Easing.quad),
+        }),
+      ),
+    );
+    rotate.value = withDelay(
+      d,
+      withTiming(720 * (Math.random() > 0.5 ? 1 : -1), {
+        duration: dur + fallDur,
+      }),
+    );
+    opacity.value = withDelay(
+      d + dur + fallDur * 0.5,
+      withTiming(0, { duration: fallDur * 0.5 }),
+    );
   }, []);
 
   const style = useAnimatedStyle(() => ({
@@ -107,7 +144,17 @@ function CelebrationText({ children }: { children: React.ReactNode }) {
   }, []);
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   return (
-    <Animated.View style={[{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }, animStyle]}>
+    <Animated.View
+      style={[
+        {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 32,
+        },
+        animStyle,
+      ]}
+    >
       {children}
     </Animated.View>
   );
@@ -170,13 +217,22 @@ export default function QuestionsScreen() {
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
-  const triggerParsing = useAction(api.actions.parseVoiceProfile.triggerVoiceProfileParsing);
+  const triggerParsing = useAction(
+    api.actions.parseVoiceProfile.triggerVoiceProfileParsing,
+  );
   const [regenerating, setRegenerating] = useState(false);
-  const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(null);
+  const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(
+    null,
+  );
 
   // Auto-dismiss celebration when profile is updated after regeneration
   useEffect(() => {
-    if (regenerating && regenerateStartedAt && myProfile?.processedAt && myProfile.processedAt > regenerateStartedAt) {
+    if (
+      regenerating &&
+      regenerateStartedAt &&
+      myProfile?.processedAt &&
+      myProfile.processedAt > regenerateStartedAt
+    ) {
       setRegenerating(false);
       setRegenerateStartedAt(null);
     }
@@ -252,7 +308,7 @@ export default function QuestionsScreen() {
         <AppHeader showLevelLink={false} />
         <View style={styles.header}>
           <Text style={styles.subtitle}>
-            Answer 10 questions with your voice. Be yourself — no editing, no
+            Answer 9 questions with your voice. Be yourself — no editing, no
             second-guessing.
           </Text>
         </View>
@@ -279,7 +335,10 @@ export default function QuestionsScreen() {
                 if (basicsComplete) {
                   router.push({ pathname: "/(onboarding)/edit-basics" });
                 } else {
-                  router.push({ pathname: `/(onboarding)/${firstUnansweredBasicsStep}`, params: { editing: "true" } });
+                  router.push({
+                    pathname: `/(onboarding)/${firstUnansweredBasicsStep}`,
+                    params: { editing: "true" },
+                  });
                 }
               }}
             >
@@ -392,7 +451,9 @@ export default function QuestionsScreen() {
                 await triggerParsing({ userId: currentUser._id });
               }}
             >
-              <Text style={styles.regenerateButtonText}>Regenerate Profile</Text>
+              <Text style={styles.regenerateButtonText}>
+                Regenerate Profile
+              </Text>
             </Pressable>
           )}
           <View style={styles.bottomPadding} />
@@ -405,7 +466,8 @@ export default function QuestionsScreen() {
               <IconSparkles size={48} color={colors.text} />
               <Text style={styles.celebrationTitle}>Regenerating!</Text>
               <Text style={styles.celebrationSubtitle}>
-                We're using AI to craft your updated profile and compatibility scores. This usually takes about a minute.
+                We're using AI to craft your updated profile and compatibility
+                scores. This usually takes about a minute.
               </Text>
               <ActivityIndicator
                 size="small"

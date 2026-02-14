@@ -13,6 +13,7 @@ export const ONBOARDING_FLOW = [
   "sexuality",
   "location",
   "birthday",
+  "age-range",
   "height",
   "photos",
   "relationship-goals",

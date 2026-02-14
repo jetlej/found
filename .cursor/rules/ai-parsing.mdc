@@ -7,21 +7,25 @@ alwaysApply: false
 # AI Profile Parsing System
 
 ## Architecture Flow (Voice-First)
-1. User records 10 voice answers -> `saveRecording` mutation triggers `parseVoiceProfile` when count reaches 10
+
+1. User records 9 voice answers -> `saveRecording` mutation triggers `parseVoiceProfile` when count reaches 9
 2. Action transcribes audio with Whisper (parallel, reuses existing transcriptions)
 3. Single GPT call extracts all structured data from combined transcripts
 4. Results saved to `userProfiles` table
 
 ## OpenAI Integration (`convex/lib/openai.ts`)
+
 - Model: `gpt-5-mini-2025-08-07` (~$0.03 per profile extraction)
 - Retry logic with exponential backoff (3 retries)
 - JSON response format enforced
 - Token usage and cost tracking logged
 
 ## Voice Extraction Prompt (`convex/actions/parseVoiceProfile.ts`)
-Single comprehensive prompt extracts all fields from 10 voice transcripts. Only fields well-supported by the questions are displayed in the UI.
+
+Single comprehensive prompt extracts all fields from 9 voice transcripts. Only fields well-supported by the questions are displayed in the UI.
 
 ## userProfiles Structured Data
+
 - **Core**: `canonicalValues[]`, `values[]`, `interests[]`, `dealbreakers[]`, `keywords[]`
 - **Personality**: 11 traits on 1-10 scale (introversion, adventurousness, ambition, emotionalOpenness, traditionalValues, independenceNeed, romanticStyle, socialEnergy, communicationStyle, attachmentStyle, planningStyle)
 - **Relationship style**: loveLanguage (Q1), conflictStyle (Q6), aloneTimeNeed (Q1) — displayed; communicationFrequency, financialApproach — extracted but not displayed (weak question support)
@@ -33,3 +37,10 @@ Single comprehensive prompt extracts all fields from 10 voice transcripts. Only 
 - **Extracted but NOT displayed** (weak/no question support): socialProfile, intimacyProfile (except connectionTriggers), lifestyle, health, demographics
 - **Generated**: generatedBio, shortBio, processedAt, openaiModel, confidence
 - **Utility**: `formatLabel()` converts snake_case enum values to Title Case for display
+
+## AI Compatibility Analysis (separate from profile parsing)
+
+- **Action**: `convex/actions/analyzeCompatibility.ts` — per-pair GPT call comparing two parsed profiles
+- **Storage**: `compatibilityAnalyses` table (see `convex/compatibilityAnalyses.ts` for queries/mutations)
+- **Output**: summary, green/yellow/red flags, 10 category scores (0-10), overall score (0-100 with dealbreaker penalty)
+- This is a **separate system** from profile parsing — profile parsing extracts data from voice transcripts, compatibility analysis compares two already-parsed profiles

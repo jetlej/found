@@ -6,36 +6,37 @@ alwaysApply: false
 
 # Voice Questions System (Primary Onboarding)
 
-Users answer 10 open-ended questions by recording voice memos. AI transcribes and extracts structured profile data.
+Users answer 9 open-ended questions by recording voice memos. AI transcribes and extracts structured profile data.
 
-## 10 Voice Questions (`lib/voice-questions.ts`, `convex/actions/voiceQuestionDefinitions.ts`)
+## 9 Voice Questions (`lib/voice-questions.ts`, `convex/actions/voiceQuestionDefinitions.ts`)
 
-| # | Category | Question | Captures |
-|---|----------|----------|----------|
-| 1 | Values & Identity | "Who are you? What do you care about? What gives your life meaning?" | values, identity, priorities |
-| 2 | Love & Relationships | "What does your ideal relationship look like? How do you love, and how do you want to be loved?" | love language, relationship style, attachment |
-| 3 | Your Story | "Tell me your story. What experiences shaped who you are today?" | background, formative moments, life story |
-| 4 | Daily Life | "Walk me through your life right now — your days, your work, how you spend your time." | lifestyle, career, daily routine |
-| 5 | Family & Future | "What's your relationship with family like, and what do you envision for your own future?" | family closeness, kids, future plans |
-| 6 | What You Want | "What are you looking for in a partner? What would make someone not right for you?" | partner preferences, dealbreakers |
-| 7 | Communication | "How do you handle conflict? What do you need when things get hard?" | communication style, conflict resolution, emotional needs |
-| 8 | Passions | "What are you passionate about? What could you talk about for hours?" | interests, hobbies, passions |
-| 9 | Growth | "What are you working on in yourself? What's something you've struggled with?" | self-awareness, growth, vulnerabilities |
-| 10 | The Real You | "If your best friends were setting you up on a date, what would they say about you — the good, the weird, and what you wish they'd leave out?" | authentic self-description, quirks |
+| #   | Category             | Question                                                                                                                  | Captures                                                  |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | Values & Identity    | "Who are you? What do you care about? What gives your life meaning?"                                                      | values, identity, priorities                              |
+| 2   | Love & Relationships | "What does your ideal relationship look like? How do you love, and how do you want to be loved?"                          | love language, relationship style, attachment             |
+| 3   | Your Story           | "Tell me your story. What experiences shaped who you are today?"                                                          | background, formative moments, life story                 |
+| 4   | Daily Life           | "Walk me through your life right now — your days, your work, how you spend your time."                                    | lifestyle, career, daily routine                          |
+| 5   | Family & Future      | "What's your relationship with family like, and what do you envision for your own future?"                                | family closeness, kids, future plans                      |
+| 6   | What You Want        | "What are you looking for in a partner? What would make someone not right for you?"                                       | partner preferences, dealbreakers                         |
+| 7   | Communication        | "How do you handle conflict? What do you need when things get hard?"                                                      | communication style, conflict resolution, emotional needs |
+| 8   | Passions             | "What are you passionate about? What could you talk about for hours?"                                                     | interests, hobbies, passions                              |
+| 9   | Growth               | "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?" | growth mindset, self-awareness, evolution                 |
 
 ## Technical Architecture
+
 - **Recording**: `expo-av` Audio API, M4A format
 - **Storage**: Saved to Convex `_storage` bucket
 - **Transcription**: OpenAI Whisper API (`whisper-1`), parallel
-- **Extraction**: GPT processes all 10 transcripts together
-- **Auto-trigger**: `saveRecording` mutation schedules `parseVoiceProfile` when count reaches 10
+- **Extraction**: GPT processes all 9 transcripts together
+- **Auto-trigger**: `saveRecording` mutation schedules `parseVoiceProfile` when count reaches 9
 - **Re-parsing**: Updating any recording after completion re-triggers full parsing
 - **Cost**: ~$0.05-0.10 per user (Whisper + GPT)
 
 ## Convex Action (`convex/actions/parseVoiceProfile.ts`)
-1. Fetch all 10 recordings -> get audio URLs from storage
+
+1. Fetch all 9 recordings -> get audio URLs from storage
 2. Transcribe each with Whisper (parallel, reuses existing transcriptions)
 3. Save transcriptions to `voiceRecordings` table
 4. Extract structured profile via GPT (values, traits, bios, relationship style, etc.)
 5. Save to `userProfiles` table
-6. **Batch reparse**: `reparseAllProfiles` action finds all users with 10 recordings and schedules reparsing (5s stagger)
+6. **Batch reparse**: `reparseAllProfiles` action finds all users with 9 recordings and schedules reparsing (5s stagger)

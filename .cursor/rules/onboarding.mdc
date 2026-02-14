@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Onboarding Flow
 
-Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> gender -> sexuality -> location -> birthday -> height -> photos -> relationship-goals -> kids -> wants-kids -> religion -> politics -> substances.
+Defined in `lib/onboarding-flow.ts`. Linear sequence: referral -> name -> gender -> sexuality -> location -> birthday -> age-range -> height -> photos -> relationship-goals -> kids -> wants-kids -> religion -> politics -> substances.
 
 ## Shared Components
 
@@ -29,16 +29,17 @@ When entering onboarding from the Questions tab ("The Basics" card), pages recei
 3. **Sexuality** (`sexuality.tsx`): "Men", "Women", "Everyone"
 4. **Location** (`location.tsx`): `expo-location` auto-detect city/state
 5. **Birthday** (`birthday.tsx`): `@react-native-community/datetimepicker`, 18+ required
-6. **Height** (`height.tsx`): Scrollable list of height options
-7. **Photos** (`photos.tsx`): 6-slot grid, first 4 required
+6. **Age Range** (`age-range.tsx`): Dual-handle `MultiSlider` (18-99) + dealbreaker toggle. Defaults to own age +/-5. Stored as `ageRangeMin`, `ageRangeMax`, `ageRangeDealbreaker` on `users` table. When dealbreaker, matches outside range are hard-filtered from the matches page.
+7. **Height** (`height.tsx`): Scrollable list of height options
+8. **Photos** (`photos.tsx`): 6-slot grid, first 4 required
 
 ## Structured Questions (stored in `users` table)
-8. **Relationship Goals** (`relationship-goals.tsx`): Marriage, Long-term partner, etc.
-9. **Kids** (`kids.tsx`): "Do you have children?" Yes/No (row layout)
-10. **Wants Kids** (`wants-kids.tsx`): Yes, No, Open to it, Not sure
-11. **Religion** (`religion.tsx`): 2-column grid + ImportanceSlider
-12. **Politics** (`politics.tsx`): Column options + ImportanceSlider
-13. **Substances** (`substances.tsx`): Drinking/Smoking/Marijuana pill selectors. Last step -- calls `completeCategory` during initial onboarding.
+9. **Relationship Goals** (`relationship-goals.tsx`): Marriage, Long-term partner, etc.
+10. **Kids** (`kids.tsx`): "Do you have children?" Yes/No (row layout)
+11. **Wants Kids** (`wants-kids.tsx`): Yes, No, Open to it, Not sure
+12. **Religion** (`religion.tsx`): 2-column grid + ImportanceSlider
+13. **Politics** (`politics.tsx`): Column options + ImportanceSlider
+14. **Substances** (`substances.tsx`): Drinking/Smoking/Marijuana pill selectors. Last step -- calls `completeCategory` during initial onboarding.
 
 ## Voice Questions Screen (`voice-questions.tsx`)
 - Full-screen recording interface for 10 open-ended questions

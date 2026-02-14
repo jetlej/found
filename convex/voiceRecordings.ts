@@ -7,7 +7,7 @@ import {
   query,
 } from "./_generated/server";
 
-const TOTAL_VOICE_QUESTIONS = 10;
+const TOTAL_VOICE_QUESTIONS = 9;
 
 // Save a voice recording
 export const saveRecording = mutation({
@@ -49,7 +49,7 @@ export const saveRecording = mutation({
       { recordingId: id },
     );
 
-    // Check if all 10 questions are now complete
+    // Check if all 9 questions are now complete
     const allRecordings = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -262,7 +262,7 @@ export const getUsersWithCompleteRecordings = internalQuery({
     }
     const completeUsers: string[] = [];
     for (const [userId, count] of countByUser) {
-      if (count >= 10) completeUsers.push(userId);
+      if (count >= 9) completeUsers.push(userId);
     }
     return completeUsers;
   },

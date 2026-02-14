@@ -47,11 +47,6 @@ export const VOICE_QUESTIONS = [
   {
     index: 8,
     category: "Growth",
-    text: "What are you working on in yourself? What's something you've struggled with?",
-  },
-  {
-    index: 9,
-    category: "The Real You",
-    text: "If your best friends were setting you up on a date, what would they say about you — the good, the weird, and what you wish they'd leave out?",
+    text: "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?",
   },
 ];

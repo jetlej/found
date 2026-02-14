@@ -1,4 +1,4 @@
-// 10 broad voice questions designed to capture the same information as 91 text questions
+// 9 broad voice questions designed to capture the same information as 91 text questions
 // Users record voice answers which are transcribed and parsed by AI
 
 export type VoiceQuestionIcon =
@@ -82,15 +82,8 @@ export const VOICE_QUESTIONS: VoiceQuestion[] = [
     index: 8,
     category: "Growth",
     icon: "seedling",
-    text: "What are you working on in yourself? What's something you've struggled with?",
-    description: "Self-awareness, growth, vulnerabilities",
-  },
-  {
-    index: 9,
-    category: "The Real You",
-    icon: "sparkles",
-    text: "If your best friends were setting you up on a date, what would they say about you — the good, the weird, and what you wish they'd leave out?",
-    description: "Quirky - authentic self-description, quirks",
+    text: "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?",
+    description: "Growth mindset, self-awareness, evolution",
   },
 ];
 

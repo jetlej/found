@@ -17,8 +17,9 @@ export default function LandingScreen() {
           <View style={styles.promiseSection}>
             <Text style={styles.promiseLabel}>OUR PROMISE</Text>
             <Text style={styles.promise}>
-              Answer just 10 questions with authentic answers, and we <Text style={styles.underline}>will</Text> introduce you to someone incredible.
-
+              Answer just 9 questions with authentic answers, and we{" "}
+              <Text style={styles.underline}>will</Text> introduce you to
+              someone incredible.
             </Text>
           </View>
 
@@ -37,15 +38,21 @@ export default function LandingScreen() {
             </View>
             <View style={styles.bulletRow}>
               <Text style={styles.bulletCheck}>✓</Text>
-              <Text style={styles.bulletText}>Butterflies on the first date</Text>
+              <Text style={styles.bulletText}>
+                Butterflies on the first date
+              </Text>
             </View>
             <View style={styles.bulletRow}>
               <Text style={styles.bulletCheck}>✓</Text>
-              <Text style={styles.bulletText}>"Where have you been all my life?"</Text>
+              <Text style={styles.bulletText}>
+                "Where have you been all my life?"
+              </Text>
             </View>
             <View style={styles.bulletRow}>
               <Text style={styles.bulletCheck}>✓</Text>
-              <Text style={styles.bulletText}>Your friends asking how you met</Text>
+              <Text style={styles.bulletText}>
+                Your friends asking how you met
+              </Text>
             </View>
           </View>
         </View>

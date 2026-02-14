@@ -257,7 +257,19 @@ export const seedSingleVoiceTestUser = internalAction({
       { userId },
     );
 
-    console.log(`  ✓ ${persona.name} created (profile parsing scheduled)`);
+    // Step 5: Schedule photo seeding (DDG image search, runs in parallel with parsing)
+    await ctx.scheduler.runAfter(
+      0,
+      internal.actions.seedTestPhotos.seedPhotosForPersona,
+      {
+        userId,
+        name: persona.name,
+        gender: persona.gender,
+        description: persona.description,
+      },
+    );
+
+    console.log(`  ✓ ${persona.name} created (profile parsing + photos scheduled)`);
     return { success: true, userId, name: persona.name };
   },
 });

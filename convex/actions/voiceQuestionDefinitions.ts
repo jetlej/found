@@ -36,16 +36,11 @@ export const VOICE_QUESTIONS = [
   },
   {
     index: 6,
-    category: "Communication",
-    text: "How do you handle conflict? What do you need when things get hard?",
-  },
-  {
-    index: 7,
     category: "Passions",
     text: "What are you passionate about? What could you talk about for hours?",
   },
   {
-    index: 8,
+    index: 7,
     category: "Growth",
     text: "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?",
   },

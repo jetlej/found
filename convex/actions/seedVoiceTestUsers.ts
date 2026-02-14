@@ -43,7 +43,7 @@ Persona:
 - Gender: ${persona.gender}
 - Description: ${persona.description}
 
-Write answers for all 9 questions below.
+Write answers for all 8 questions below.
 Requirements:
 - Answer in first person, naturally, like spoken voice notes.
 - Each answer must be one large paragraph (120-220 words).
@@ -54,7 +54,7 @@ Requirements:
 Questions:
 ${getVoiceQuestionsForPrompt()}
 
-Return JSON with EXACTLY 9 answers (one per question, no more, no less):
+Return JSON with EXACTLY 8 answers (one per question, no more, no less):
 {
   "answers": [
     "answer for question 1",
@@ -64,8 +64,7 @@ Return JSON with EXACTLY 9 answers (one per question, no more, no less):
     "answer for question 5",
     "answer for question 6",
     "answer for question 7",
-    "answer for question 8",
-    "answer for question 9"
+    "answer for question 8"
   ]
 }`;
 }
@@ -209,8 +208,8 @@ Return JSON with EXACTLY these 22 fields and allowed values:
 
     const data = await extractStructuredData<BackfillResult>(
       prompt,
-      `Generate the profile fields for ${args.name} now.`,
-      { maxTokens: 1000 },
+      `Generate the profile fields for ${args.name} now. Return ALL 22 fields.`,
+      { maxTokens: 1500 },
     );
 
     // Ensure age range fields are always present (fallback if GPT omits them)
@@ -273,7 +272,7 @@ export const seedSingleVoiceTestUser = internalAction({
 
     const answerPayload = await extractStructuredData<{ answers: string[] }>(
       buildAnswersPrompt(persona),
-      "Generate exactly 9 voice answers now, one per question.",
+      "Generate exactly 8 voice answers now, one per question.",
       { maxTokens: 12000 },
     );
 

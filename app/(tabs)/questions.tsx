@@ -15,7 +15,6 @@ import {
   IconLeaf,
   IconListCheck,
   IconLock,
-  IconMessage,
   IconPlant,
   IconSparkles,
   IconStar,
@@ -178,7 +177,6 @@ const ICONS: Record<
   leaf: IconLeaf,
   users: IconUsers,
   target: IconTarget,
-  message: IconMessage,
   star: IconStar,
   seedling: IconPlant,
   sparkles: IconSparkles,
@@ -308,7 +306,7 @@ export default function QuestionsScreen() {
         <AppHeader showLevelLink={false} />
         <View style={styles.header}>
           <Text style={styles.subtitle}>
-            Answer 9 questions with your voice. Be yourself — no editing, no
+            Answer 8 questions with your voice. Be yourself — no editing, no
             second-guessing.
           </Text>
         </View>

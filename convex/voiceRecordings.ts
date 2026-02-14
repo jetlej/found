@@ -7,7 +7,7 @@ import {
   query,
 } from "./_generated/server";
 
-const TOTAL_VOICE_QUESTIONS = 9;
+const TOTAL_VOICE_QUESTIONS = 8;
 
 // Save a voice recording
 export const saveRecording = mutation({
@@ -56,7 +56,7 @@ export const saveRecording = mutation({
       .collect();
 
     if (allRecordings.length === TOTAL_VOICE_QUESTIONS) {
-      // All 10 complete - schedule voice profile parsing
+      // All 8 complete - schedule voice profile parsing
       // This runs both on initial completion AND when updating any recording
       await ctx.scheduler.runAfter(
         0,

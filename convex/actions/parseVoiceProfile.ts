@@ -29,9 +29,8 @@ const VOICE_QUESTION_MAPPING = [
   { index: 3, captures: "lifestyle, career, daily routine, social life" },
   { index: 4, captures: "family closeness, kids, location, future plans" },
   { index: 5, captures: "partner preferences, dealbreakers" },
-  { index: 6, captures: "communication style, conflict resolution, emotional needs" },
-  { index: 7, captures: "interests, hobbies, passions" },
-  { index: 8, captures: "growth mindset, self-awareness, evolution" },
+  { index: 6, captures: "interests, hobbies, passions" },
+  { index: 7, captures: "growth mindset, self-awareness, evolution" },
 ];
 
 // Comprehensive extraction prompt for voice transcripts

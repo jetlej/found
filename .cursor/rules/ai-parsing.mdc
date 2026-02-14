@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Architecture Flow (Voice-First)
 
-1. User records 9 voice answers -> `saveRecording` mutation triggers `parseVoiceProfile` when count reaches 9
+1. User records 8 voice answers -> `saveRecording` mutation triggers `parseVoiceProfile` when count reaches 8
 2. Action transcribes audio with Whisper (parallel, reuses existing transcriptions)
 3. Single GPT call extracts all structured data from combined transcripts
 4. Results saved to `userProfiles` table
@@ -22,18 +22,18 @@ alwaysApply: false
 
 ## Voice Extraction Prompt (`convex/actions/parseVoiceProfile.ts`)
 
-Single comprehensive prompt extracts all fields from 9 voice transcripts. Only fields well-supported by the questions are displayed in the UI.
+Single comprehensive prompt extracts all fields from 8 voice transcripts. Only fields well-supported by the questions are displayed in the UI.
 
 ## userProfiles Structured Data
 
 - **Core**: `canonicalValues[]`, `values[]`, `interests[]`, `dealbreakers[]`, `keywords[]`
 - **Personality**: 11 traits on 1-10 scale (introversion, adventurousness, ambition, emotionalOpenness, traditionalValues, independenceNeed, romanticStyle, socialEnergy, communicationStyle, attachmentStyle, planningStyle)
-- **Relationship style**: loveLanguage (Q1), conflictStyle (Q6), aloneTimeNeed (Q1) — displayed; communicationFrequency, financialApproach — extracted but not displayed (weak question support)
+- **Relationship style**: loveLanguage (Q1), conflictStyle, aloneTimeNeed (Q1) — displayed; communicationFrequency, financialApproach — extracted but not displayed (weak question support)
 - **Family**: familyCloseness (Q4), kidsTimeline (Q4 conditional) — displayed; wantsKids, parentingStyle — extracted but not displayed
-- **Life story**: proudestAchievement, definingHardship, biggestRisk, dreams, fears (Q2+Q8)
+- **Life story**: proudestAchievement, definingHardship, biggestRisk, dreams, fears (Q2+Q7)
 - **Love philosophy**: loveDefinition, healthyRelationshipVision (Q1 conditional)
 - **Partner preferences**: mustHaves, niceToHaves, redFlags, dealbreakersInPartner (Q5)
-- **Bio elements**: conversationStarters, uniqueQuirks, passions (Q7+Q9)
+- **Bio elements**: conversationStarters, uniqueQuirks, passions (Q6+Q8)
 - **Extracted but NOT displayed** (weak/no question support): socialProfile, intimacyProfile (except connectionTriggers), lifestyle, health, demographics
 - **Generated**: generatedBio, shortBio, processedAt, openaiModel, confidence
 - **Utility**: `formatLabel()` converts snake_case enum values to Title Case for display

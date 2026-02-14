@@ -35,7 +35,7 @@ stores/                 # Zustand stores
 
 ## Critical Conventions
 
-- **Convex does NOT auto-sync.** After ANY change to `convex/` files, run `bunx convex dev` to push.
+- **Convex does NOT auto-sync.** After ANY change to `convex/` files, the AI must run `bunx convex dev` once to push. `convex dev` is not kept running in a separate terminal -- just run it once after changes and let it complete.
 - Always reference questions by `questionKey`, never by `order` number.
 - All screens use `useEffectiveUserId()` instead of `useAuth()` directly (supports dev impersonation).
 - Env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CONVEX_URL` in `.env.local`; `OPENAI_API_KEY` set via `bunx convex env set`.
@@ -44,6 +44,6 @@ stores/                 # Zustand stores
 
 ```bash
 bun install
-bunx convex dev          # Keep running in separate terminal
+bunx convex dev          # Run once after any convex/ changes to push
 bun start                # Press 'i' for iOS simulator
 ```

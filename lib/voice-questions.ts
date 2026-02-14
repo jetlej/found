@@ -8,7 +8,6 @@ export type VoiceQuestionIcon =
   | "leaf"
   | "users"
   | "target"
-  | "message"
   | "star"
   | "seedling"
   | "sparkles";
@@ -66,20 +65,13 @@ export const VOICE_QUESTIONS: VoiceQuestion[] = [
   },
   {
     index: 6,
-    category: "Communication",
-    icon: "message",
-    text: "How do you handle conflict? What do you need when things get hard?",
-    description: "Communication style, conflict resolution, emotional needs",
-  },
-  {
-    index: 7,
     category: "Passions",
     icon: "star",
     text: "What are you passionate about? What could you talk about for hours?",
     description: "Interests, hobbies, passions",
   },
   {
-    index: 8,
+    index: 7,
     category: "Growth",
     icon: "seedling",
     text: "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?",

@@ -189,6 +189,21 @@ export const getRecordingsForUserInternal = internalQuery({
   },
 });
 
+// Clear all transcriptions for a user (forces Whisper re-run on next parse)
+export const clearTranscriptionsForUser = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const recordings = await ctx.db
+      .query("voiceRecordings")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    for (const r of recordings) {
+      await ctx.db.patch(r._id, { transcription: undefined });
+    }
+    return recordings.length;
+  },
+});
+
 // Internal mutation for updating transcription (used by actions)
 export const updateTranscriptionInternal = internalMutation({
   args: {

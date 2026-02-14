@@ -7,6 +7,8 @@ import {
   extractStructuredDataWithUsage,
   DEFAULT_MODEL,
   formatCost,
+  calculateCost,
+  type TokenUsage,
 } from "../lib/openai";
 
 // Build profile summary string for the prompt
@@ -184,16 +186,21 @@ export const analyzeCompatibility = action({
   args: {
     user1Id: v.id("users"),
     user2Id: v.id("users"),
+    model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Check if already exists
-    const existing = await ctx.runQuery(
-      internal.compatibilityAnalyses.getForPairInternal,
-      { user1Id: args.user1Id, user2Id: args.user2Id },
-    );
-    if (existing) {
-      console.log(`Analysis already exists for pair, skipping`);
-      return existing._id;
+    const model = args.model ?? DEFAULT_MODEL;
+
+    // Check if already exists (skip unless model override = forced re-run)
+    if (!args.model) {
+      const existing = await ctx.runQuery(
+        internal.compatibilityAnalyses.getForPairInternal,
+        { user1Id: args.user1Id, user2Id: args.user2Id },
+      );
+      if (existing) {
+        console.log(`Analysis already exists for pair, skipping`);
+        return { docId: existing._id, usage: null, cost: 0 };
+      }
     }
 
     // Fetch both profiles and users
@@ -218,17 +225,17 @@ export const analyzeCompatibility = action({
       formatProfile(name2, user2, profile2),
     ].join("\n");
 
-    console.log(`Analyzing compatibility: ${name1} <-> ${name2}`);
+    console.log(`Analyzing compatibility [${model}]: ${name1} <-> ${name2}`);
 
-    // Call GPT
+    // Call LLM via OpenRouter
     const result = await extractStructuredDataWithUsage<AnalysisResult>(
       SYSTEM_PROMPT,
       userContent,
-      { maxTokens: 4000 },
+      { model, maxTokens: 4000 },
     );
 
     const analysis = result.data;
-    console.log(`Compatibility analysis complete (${formatCost(result.cost)})`);
+    console.log(`Compatibility analysis complete [${model}] (${formatCost(result.cost)})`);
 
     // Calculate overall score
     const scores = analysis.categoryScores;
@@ -255,7 +262,7 @@ export const analyzeCompatibility = action({
     }
     overallScore = Math.round(overallScore);
 
-    // Store result
+    // Store result (upserts — replaces existing for same pair)
     const docId = await ctx.runMutation(
       internal.compatibilityAnalyses.store,
       {
@@ -267,12 +274,12 @@ export const analyzeCompatibility = action({
         redFlags: analysis.redFlags,
         categoryScores: analysis.categoryScores,
         overallScore,
-        openaiModel: DEFAULT_MODEL,
+        openaiModel: model,
       },
     );
 
     console.log(`Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`);
-    return docId;
+    return { docId, usage: result.usage, cost: result.cost };
   },
 });
 
@@ -340,5 +347,130 @@ export const analyzeAllForUser = internalAction({
 
     console.log(`analyzeAllForUser: completed ${analyzed}/${eligible.length} analyses for ${newUser.name}`);
     return { analyzed, total: eligible.length };
+  },
+});
+
+// Benchmark: re-run ALL existing analyses with a specific model.
+// Runs each pair inline (no nested actions) to avoid overhead, batched to stay under timeout.
+export const rerunAllAnalyses = action({
+  args: { model: v.string() },
+  handler: async (ctx, args) => {
+    const allAnalyses = await ctx.runQuery(
+      internal.compatibilityAnalyses.listAllInternal,
+      {},
+    );
+
+    console.log(`\n========================================`);
+    console.log(`BENCHMARK: Re-running ${allAnalyses.length} analyses with ${args.model}`);
+    console.log(`========================================\n`);
+
+    const stats: { pair: string; promptTokens: number; completionTokens: number; totalTokens: number; cost: number }[] = [];
+
+    // Process in parallel batches of 5 to stay under timeout
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < allAnalyses.length; i += BATCH_SIZE) {
+      const batch = allAnalyses.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.allSettled(
+        batch.map(async (analysis) => {
+          const [user1, user2, profile1, profile2] = await Promise.all([
+            ctx.runQuery(internal.users.getById, { userId: analysis.user1Id }),
+            ctx.runQuery(internal.users.getById, { userId: analysis.user2Id }),
+            ctx.runQuery(internal.userProfiles.getByUserInternal, { userId: analysis.user1Id }),
+            ctx.runQuery(internal.userProfiles.getByUserInternal, { userId: analysis.user2Id }),
+          ]);
+
+          if (!user1 || !user2 || !profile1 || !profile2) {
+            throw new Error(`Missing data for pair ${analysis.userIdPair}`);
+          }
+
+          const name1 = user1.name?.split(" ")[0] || "Person A";
+          const name2 = user2.name?.split(" ")[0] || "Person B";
+
+          const userContent = [
+            formatProfile(name1, user1, profile1),
+            "\n---\n",
+            formatProfile(name2, user2, profile2),
+          ].join("\n");
+
+          const result = await extractStructuredDataWithUsage<AnalysisResult>(
+            SYSTEM_PROMPT,
+            userContent,
+            { model: args.model, maxTokens: 4000 },
+          );
+
+          const a = result.data;
+          let overallScore =
+            a.categoryScores.coreValues + a.categoryScores.lifestyleAlignment +
+            a.categoryScores.relationshipGoals + a.categoryScores.communicationStyle +
+            a.categoryScores.emotionalCompatibility + a.categoryScores.familyPlanning +
+            a.categoryScores.socialLifestyle + a.categoryScores.conflictResolution +
+            a.categoryScores.intimacyAlignment + a.categoryScores.growthMindset;
+
+          const redFlagCount = a.redFlags.length;
+          if (redFlagCount > 0) {
+            overallScore *= 0.6;
+            for (let i = 1; i < redFlagCount; i++) overallScore *= 0.75;
+          }
+          overallScore = Math.round(overallScore);
+
+          await ctx.runMutation(internal.compatibilityAnalyses.store, {
+            user1Id: analysis.user1Id,
+            user2Id: analysis.user2Id,
+            summary: a.summary,
+            greenFlags: a.greenFlags,
+            yellowFlags: a.yellowFlags,
+            redFlags: a.redFlags,
+            categoryScores: a.categoryScores,
+            overallScore,
+            openaiModel: args.model,
+          });
+
+          console.log(`[${args.model}] ${name1}<->${name2}: score=${overallScore}, cost=${formatCost(result.cost)}, tokens=${result.usage.totalTokens}`);
+
+          return {
+            pair: `${name1}<->${name2}`,
+            promptTokens: result.usage.promptTokens,
+            completionTokens: result.usage.completionTokens,
+            totalTokens: result.usage.totalTokens,
+            cost: result.cost,
+          };
+        }),
+      );
+
+      for (const r of batchResults) {
+        if (r.status === "fulfilled") stats.push(r.value);
+        else console.error(`Failed:`, r.reason);
+      }
+    }
+
+    // Report
+    const totalCost = stats.reduce((s, r) => s + r.cost, 0);
+    const totalPrompt = stats.reduce((s, r) => s + r.promptTokens, 0);
+    const totalCompletion = stats.reduce((s, r) => s + r.completionTokens, 0);
+    const totalTokens = stats.reduce((s, r) => s + r.totalTokens, 0);
+    const n = stats.length;
+
+    console.log(`\n========================================`);
+    console.log(`BENCHMARK RESULTS: ${args.model}`);
+    console.log(`========================================`);
+    console.log(`Pairs analyzed: ${n}`);
+    console.log(`Total tokens: ${totalTokens} (prompt: ${totalPrompt}, completion: ${totalCompletion})`);
+    console.log(`Total cost: ${formatCost(totalCost)}`);
+    if (n > 0) {
+      console.log(`Avg tokens/run: ${Math.round(totalTokens / n)} (prompt: ${Math.round(totalPrompt / n)}, completion: ${Math.round(totalCompletion / n)})`);
+      console.log(`Avg cost/run: ${formatCost(totalCost / n)}`);
+    }
+    console.log(`========================================\n`);
+
+    return {
+      model: args.model,
+      pairsAnalyzed: n,
+      totalTokens,
+      totalPromptTokens: totalPrompt,
+      totalCompletionTokens: totalCompletion,
+      totalCost,
+      avgTokensPerRun: n > 0 ? Math.round(totalTokens / n) : 0,
+      avgCostPerRun: n > 0 ? totalCost / n : 0,
+    };
   },
 });

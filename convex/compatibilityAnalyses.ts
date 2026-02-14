@@ -35,6 +35,36 @@ export const listForUser = query({
   },
 });
 
+// Internal query: list all analyses (for benchmark re-runs)
+export const listAllInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("compatibilityAnalyses").collect();
+  },
+});
+
+// Query: list just user ID pairs (lightweight, for benchmark scripts)
+export const listPairs = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("compatibilityAnalyses").collect();
+    return all.map((a) => ({ user1Id: a.user1Id, user2Id: a.user2Id }));
+  },
+});
+
+// Query: count analyses by model (for benchmark progress tracking)
+export const modelStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("compatibilityAnalyses").collect();
+    const counts: Record<string, number> = {};
+    for (const a of all) {
+      counts[a.openaiModel] = (counts[a.openaiModel] || 0) + 1;
+    }
+    return { total: all.length, byModel: counts };
+  },
+});
+
 // Internal query: check if analysis exists (for action dedup)
 export const getForPairInternal = internalQuery({
   args: { user1Id: v.id("users"), user2Id: v.id("users") },

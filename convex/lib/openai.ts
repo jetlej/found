@@ -1,31 +1,48 @@
 import OpenAI from "openai";
 
-// OpenAI client - initialized lazily with API key from environment
-let openaiClient: OpenAI | null = null;
+// OpenRouter client for chat completions (lazy singleton)
+let openRouterClient: OpenAI | null = null;
 
 export function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
+  if (!openRouterClient) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENROUTER_API_KEY environment variable is not set");
+    }
+    openRouterClient = new OpenAI({
+      apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
+    });
+  }
+  return openRouterClient;
+}
+
+// Direct OpenAI client for Whisper / DALL-E (not available on OpenRouter)
+let directOpenAIClient: OpenAI | null = null;
+
+export function getDirectOpenAIClient(): OpenAI {
+  if (!directOpenAIClient) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY environment variable is not set");
     }
-    openaiClient = new OpenAI({ apiKey });
+    directOpenAIClient = new OpenAI({ apiKey });
   }
-  return openaiClient;
+  return directOpenAIClient;
 }
 
-// Default model for profile parsing (cost-efficient)
-export const DEFAULT_MODEL = "gpt-5-mini-2025-08-07";
+// Default model (OpenRouter model ID)
+export const DEFAULT_MODEL = "openai/gpt-5-mini";
 
 // Higher accuracy model for complex extractions
-export const ACCURATE_MODEL = "gpt-5-mini-2025-08-07";
+export const ACCURATE_MODEL = "openai/gpt-5-mini";
 
-// Pricing per 1M tokens (GPT-5 mini estimated pricing)
-// Update these values based on actual OpenAI pricing
+// Pricing per 1M tokens (OpenRouter pricing)
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  "gpt-5-mini-2025-08-07": { input: 0.15, output: 0.60 }, // $ per 1M tokens
-  "gpt-4o-mini": { input: 0.15, output: 0.60 },
-  "gpt-4o": { input: 2.50, output: 10.00 },
+  "openai/gpt-5-mini": { input: 0.25, output: 2.00 },
+  "moonshotai/kimi-k2.5": { input: 0.45, output: 2.25 },
+  // legacy keys kept as fallback
+  "gpt-5-mini-2025-08-07": { input: 0.25, output: 2.00 },
 };
 
 // Type for tracking API usage
@@ -56,7 +73,7 @@ type ChatMessage = {
 
 // Calculate cost from token usage
 export function calculateCost(usage: TokenUsage, model: string = DEFAULT_MODEL): number {
-  const pricing = MODEL_PRICING[model] || MODEL_PRICING["gpt-5-mini-2025-08-07"];
+  const pricing = MODEL_PRICING[model] || MODEL_PRICING["openai/gpt-5-mini"];
   const inputCost = (usage.promptTokens / 1_000_000) * pricing.input;
   const outputCost = (usage.completionTokens / 1_000_000) * pricing.output;
   return inputCost + outputCost;
@@ -227,14 +244,14 @@ export function formatCost(cost: number): string {
   return `$${cost.toFixed(4)}`;
 }
 
-// Generate an image using OpenAI's image generation API
+// Generate an image using OpenAI's image generation API (direct, not OpenRouter)
 export async function generateImage(
   prompt: string,
   options: {
     size?: "1024x1024" | "1024x1792" | "1792x1024";
   } = {}
 ): Promise<ArrayBuffer> {
-  const client = getOpenAIClient();
+  const client = getDirectOpenAIClient();
   const { size = "1024x1024" } = options;
 
   const response = await client.images.generate({

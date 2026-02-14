@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { internalAction, action } from "../_generated/server";
 import { internal } from "../_generated/api";
 import {
-  getOpenAIClient,
+  getDirectOpenAIClient,
   extractStructuredDataWithUsage,
   DEFAULT_MODEL,
   TokenUsage,
@@ -147,7 +147,7 @@ const WHISPER_MAX_RETRIES = 3;
 const WHISPER_BASE_DELAY_MS = 1000;
 
 async function transcribeAudio(audioUrl: string): Promise<{ text: string; cost: number }> {
-  const client = getOpenAIClient();
+  const client = getDirectOpenAIClient();
   
   // Fetch the audio file
   const response = await fetch(audioUrl);
@@ -522,6 +522,27 @@ export const triggerVoiceProfileParsing = action({
       userId: args.userId,
     });
     return { scheduled: true };
+  },
+});
+
+// Benchmark: clear transcriptions, re-run Whisper + GPT extraction, report costs
+export const benchmarkOnboardingCost = action({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // Clear existing transcriptions so Whisper runs fresh
+    const cleared = await ctx.runMutation(
+      internal.voiceRecordings.clearTranscriptionsForUser,
+      { userId: args.userId },
+    );
+    console.log(`Cleared ${cleared} transcriptions for user ${args.userId}`);
+
+    // Run the full parse (Whisper + GPT extraction) — costs are logged by parseVoiceProfile
+    const result = await ctx.runAction(
+      internal.actions.parseVoiceProfile.parseVoiceProfile,
+      { userId: args.userId },
+    );
+
+    return result;
   },
 });
 

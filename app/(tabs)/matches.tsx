@@ -45,7 +45,7 @@ import {
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -57,6 +57,11 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -1480,6 +1485,11 @@ function FullProfileView({
 export default function MatchesScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
+
+  const fadeOpacity = useSharedValue(0);
+  const hasFaded = useRef(false);
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
+
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [fullscreenPhotos, setFullscreenPhotos] = useState<{
     urls: string[];
@@ -1614,46 +1624,41 @@ export default function MatchesScreen() {
   })();
 
 
-  if (!currentUser) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.text} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const isLoading = !currentUser || !testUserMatches;
+  const isEmpty = testUserMatches && testUserMatches.length === 0;
+  const isReady = !isLoading && !isEmpty;
 
-  if (!testUserMatches) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.text} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (testUserMatches.length === 0) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <AppHeader />
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>🧪</Text>
-          <Text style={styles.emptyTitle}>No Test Users</Text>
-          <Text style={styles.emptyText}>
-            Run the seed command to create test profiles:{"\n\n"}
-            <Text style={styles.codeText}>
-              bunx convex run seedTestUsers:seedTestUsers
-            </Text>
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Trigger fade once data is ready (or empty state)
+  useEffect(() => {
+    if (!isLoading && !hasFaded.current) {
+      hasFaded.current = true;
+      fadeOpacity.value = withTiming(1, { duration: 150 });
+    }
+  }, [isLoading]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <Animated.View style={[{ flex: 1 }, fadeStyle]}>
+      {isLoading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.text} />
+        </View>
+      ) : isEmpty ? (
+        <>
+          <AppHeader />
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>🧪</Text>
+            <Text style={styles.emptyTitle}>No Test Users</Text>
+            <Text style={styles.emptyText}>
+              Run the seed command to create test profiles:{"\n\n"}
+              <Text style={styles.codeText}>
+                bunx convex run seedTestUsers:seedTestUsers
+              </Text>
+            </Text>
+          </View>
+        </>
+      ) : (
+        <>
       <AppHeader />
 
       <ScrollView style={styles.scrollView}>
@@ -1905,6 +1910,9 @@ export default function MatchesScreen() {
           onClose={() => setFullscreenPhotos(null)}
         />
       )}
+        </>
+      )}
+      </Animated.View>
     </SafeAreaView>
   );
 }

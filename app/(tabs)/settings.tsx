@@ -14,7 +14,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { IconChevronRight, IconPencil } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +30,11 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
@@ -48,6 +53,18 @@ export default function SettingsScreen() {
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
 
   const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+
+  // Fade in once data is ready
+  const fadeOpacity = useSharedValue(0);
+  const hasFaded = useRef(false);
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
+  useEffect(() => {
+    if (currentUser && !hasFaded.current) {
+      hasFaded.current = true;
+      fadeOpacity.value = withTiming(1, { duration: 150 });
+    }
+  }, [currentUser]);
+
   const updateProfile = useMutation(api.users.updateProfile);
   const updateNotifications = useMutation(api.users.updateNotificationSettings);
 
@@ -178,6 +195,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <Animated.View style={[{ flex: 1 }, fadeStyle]}>
       <View style={styles.navBar}>
         <View style={styles.navSpacer} />
         <Text style={styles.navTitle}>Settings</Text>
@@ -361,6 +379,7 @@ export default function SettingsScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      </Animated.View>
     </SafeAreaView>
   );
 }

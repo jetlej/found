@@ -17,7 +17,7 @@ export default function LandingScreen() {
           <View style={styles.promiseSection}>
             <Text style={styles.promiseLabel}>OUR PROMISE</Text>
             <Text style={styles.promise}>
-              Answer just 9 questions with authentic answers, and we{" "}
+              Authentically share who you are and what you want, and we{" "}
               <Text style={styles.underline}>will</Text> introduce you to
               someone incredible.
             </Text>

@@ -12,7 +12,39 @@ alwaysApply: false
 - Auth flow handled in `app/_layout.tsx` via `AuthGate` component
 - Onboarding uses `router.replace()` for back navigation to avoid errors when history is empty
 - Onboarding step saved to database (`onboardingStep` field) for resume on app restart
-- Onboarding supports **editing mode** (`editing=true` param): entered from Questions tab, shows X button to close, skips `setOnboardingStep`, carries `editing` param via `goToNextStep(router, step, isEditing)`
+- Onboarding supports **editing mode** (`editing=true` param): entered from Settings > Edit Profile, shows X button to close, skips `setOnboardingStep`, carries `editing` param via `goToNextStep(router, step, isEditing)`
+
+## App Navigation Flow
+
+```
+Landing (/) -> Auth -> Onboarding -> (tabs)
+```
+
+### AuthGate Routing Logic (`app/_layout.tsx`)
+
+1. Not signed in -> `/` (landing page)
+2. Signed in, onboarding incomplete -> `/(onboarding)/<step>`
+3. Signed in, onboarding complete, voice questions incomplete -> `/(tabs)/questions`
+4. Signed in, onboarding complete, voice questions complete -> `/(tabs)/matches`
+
+AuthGate queries `voiceRecordings.getCompletedCount` to determine voice question completion. `hasRouted` state resets when `effectiveIsSignedIn` changes to handle sign-out/sign-in cycles. `onLandingPage` check includes `segments[0] === "index"` for proper root detection.
+
+### Dynamic Tab Bar (`app/(tabs)/_layout.tsx`)
+
+Tabs are shown/hidden based on voice question completion state:
+
+- **Before questions complete**: Questions tab + Settings tab (2 tabs)
+- **After questions complete**: Matches + Chats + Settings (3 tabs)
+
+Tab bar: black background, white active icons, icon-only (no labels), `lazy: false` (eager-loads all screens). Each screen has a 150ms fade-in animation on data ready. Tab bar itself slides up + fades in on mount.
+
+### Settings Tab (`app/(tabs)/settings.tsx`)
+
+Always visible. Contains profile photo, name editing, notifications, sign-out. "View Profile" and "Edit Profile" links are conditionally hidden until voice questions are complete. Edit Profile navigates to `/(tabs)/questions` with `editing=true`. View Profile opens `/my-profile` modal.
+
+### Sign Out
+
+Settings calls `signOut()` without manual navigation -- AuthGate handles redirect to landing page automatically when `effectiveIsSignedIn` flips.
 
 ## Dev Admin Panel (DEV MODE ONLY)
 

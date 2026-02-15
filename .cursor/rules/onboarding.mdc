@@ -34,7 +34,7 @@ photos (own layout, no `useBasicsStep`)
 
 ## Editing Mode
 
-When entering from the Questions tab or basics-summary, screens receive `editing=true` param. In editing mode:
+When entering from the Settings tab (Edit Profile) or basics-summary, screens receive `editing=true` param. In editing mode:
 - Screen shows a back arrow at top (via `onClose` on `OnboardingScreen`, or custom `closeHeader` on custom screens)
 - Footer shows a single "Save" button (no Back/Next row)
 - `save()` calls `router.back()` instead of advancing to next step
@@ -45,12 +45,14 @@ When entering from the Questions tab or basics-summary, screens receive `editing
 
 Summary/edit page showing all basics fields organized by section. Each row shows the current value and navigates to the corresponding screen with `editing=true`. Unanswered fields show a red warning icon + "Answer this" text with highlighted row background.
 
-## Three-State Basics Card (`questions.tsx`)
+## Three-State Basics Card (`(tabs)/questions.tsx`)
 
-The Basics card on the Questions tab has three states:
+The Basics card on the Questions screen has three states:
 - **Complete** (`basicsComplete`): Green check + "Edit" -> basics-summary
 - **Has unanswered** (`completedCategories` includes `"the_basics"` but `basicsComplete` is false): Warning triangle + "Update" -> basics-summary (never forces back into linear onboarding)
 - **First time** (never completed onboarding): "Answer" button -> first unanswered step in linear flow
+
+When all 8 voice questions are complete and not in editing mode, the Questions screen auto-redirects to `/(tabs)/matches`.
 
 ## Auto-Advance
 

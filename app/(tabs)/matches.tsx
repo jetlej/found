@@ -2,34 +2,27 @@ import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import {
-  type CategoryScores,
-} from "@/lib/matching";
+import { type CategoryScores } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
   IconAlertTriangle,
   IconBabyCarriage,
   IconBookFilled,
-  IconBottle,
-  IconBrain,
   IconBuildingChurch,
   IconBuildingCommunity,
-  IconCake,
   IconCannabis,
   IconCheck,
   IconDiamondFilled,
   IconFlag,
   IconFlame,
   IconGlass,
+  IconHeart,
   IconHeartFilled,
   IconHome,
-  IconMapPin,
   IconMessageCircle,
   IconMoodSmile,
   IconPaw,
   IconPill,
-  IconHeart,
-  IconPlant,
   IconRocket,
   IconRuler,
   IconSeedlingFilled,
@@ -37,7 +30,6 @@ import {
   IconSmokingNo,
   IconStarFilled,
   IconTarget,
-  IconUser,
   IconUserFilled,
   IconUsers,
   IconX,
@@ -96,26 +88,26 @@ function PhotoStrip({
           const rotation = i % 2 === 0 ? "-5deg" : "5deg";
           const translateY = i % 2 === 0 ? 0 : PHOTO_HEIGHT * 0.05;
           return (
-          <Pressable
-            key={i}
-            onPress={() => hasPhotos && onPhotoPress(i)}
-            style={[
-              photoStripStyles.photoWrapper,
-              { transform: [{ rotate: rotation }, { translateY }] },
-            ]}
-          >
-            {url ? (
-              <Image
-                source={{ uri: url }}
-                style={photoStripStyles.photo}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={photoStripStyles.placeholder}>
-                <IconUserFilled size={40} color="#BDBDBD" />
-              </View>
-            )}
-          </Pressable>
+            <Pressable
+              key={i}
+              onPress={() => hasPhotos && onPhotoPress(i)}
+              style={[
+                photoStripStyles.photoWrapper,
+                { transform: [{ rotate: rotation }, { translateY }] },
+              ]}
+            >
+              {url ? (
+                <Image
+                  source={{ uri: url }}
+                  style={photoStripStyles.photo}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={photoStripStyles.placeholder}>
+                  <IconUserFilled size={40} color="#BDBDBD" />
+                </View>
+              )}
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -276,13 +268,31 @@ const SCORE_KEY_TO_CATEGORY_ID: Record<keyof CategoryScores, string> = {
 };
 
 // AI compatibility analysis - 10 category system
-type AICategoryKey = "coreValues" | "lifestyleAlignment" | "relationshipGoals" | "communicationStyle" | "emotionalCompatibility" | "familyPlanning" | "socialLifestyle" | "conflictResolution" | "intimacyAlignment" | "growthMindset";
+type AICategoryKey =
+  | "coreValues"
+  | "lifestyleAlignment"
+  | "relationshipGoals"
+  | "communicationStyle"
+  | "emotionalCompatibility"
+  | "familyPlanning"
+  | "socialLifestyle"
+  | "conflictResolution"
+  | "intimacyAlignment"
+  | "growthMindset";
 
-const AI_CATEGORIES: { key: AICategoryKey; label: string; icon: React.ComponentType<{ size: number; color: string }> }[] = [
+const AI_CATEGORIES: {
+  key: AICategoryKey;
+  label: string;
+  icon: React.ComponentType<{ size: number; color: string }>;
+}[] = [
   { key: "coreValues", label: "Core Values", icon: IconDiamondFilled },
   { key: "lifestyleAlignment", label: "Lifestyle", icon: IconSeedlingFilled },
   { key: "relationshipGoals", label: "Relationship Goals", icon: IconTarget },
-  { key: "communicationStyle", label: "Communication", icon: IconMessageCircle },
+  {
+    key: "communicationStyle",
+    label: "Communication",
+    icon: IconMessageCircle,
+  },
   { key: "emotionalCompatibility", label: "Emotional", icon: IconMoodSmile },
   { key: "familyPlanning", label: "Family Planning", icon: IconBabyCarriage },
   { key: "socialLifestyle", label: "Social Life", icon: IconUsers },
@@ -305,28 +315,35 @@ function formatHeight(inches?: number): string | null {
 // Convert snake_case enum values to readable labels
 // e.g. "words_of_affirmation" -> "Words of Affirmation", "split_50_50" -> "Split 50/50"
 function formatLabel(value: string): string {
-  return value
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // Hinge-style basics display
 const ICON_SIZE = 20;
 const ICON_COLOR = colors.text;
 
-type BasicRow = { icon: React.ComponentType<{ size: number; color: string }>; label: string };
+type BasicRow = {
+  icon: React.ComponentType<{ size: number; color: string }>;
+  label: string;
+};
 
 function getBasicsData(user: Doc<"users">) {
   // Top row: quick-glance items (horizontal scroll)
   const topRow: BasicRow[] = [];
-  if (user.heightInches) topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches)! });
+  if (user.heightInches)
+    topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches)! });
   if (user.hometown) topRow.push({ icon: IconHome, label: user.hometown });
   if (user.wantsChildren) {
     const kidsLabels: Record<string, string> = {
-      yes: "Wants children", no: "Doesn't want children",
-      open: "Open to children", not_sure: "Not sure about children",
+      yes: "Wants children",
+      no: "Doesn't want children",
+      open: "Open to children",
+      not_sure: "Not sure about children",
     };
-    topRow.push({ icon: IconBabyCarriage, label: kidsLabels[user.wantsChildren] || user.wantsChildren });
+    topRow.push({
+      icon: IconBabyCarriage,
+      label: kidsLabels[user.wantsChildren] || user.wantsChildren,
+    });
   }
   if (user.pets) topRow.push({ icon: IconPaw, label: user.pets });
   if (user.drinkingVisible !== false && user.drinking)
@@ -340,9 +357,15 @@ function getBasicsData(user: Doc<"users">) {
 
   // Detail rows (important compatibility fields)
   const detailRows: BasicRow[] = [];
-  if (user.ethnicity) detailRows.push({ icon: IconFlag, label: user.ethnicity });
-  if (user.religion) detailRows.push({ icon: IconBuildingChurch, label: user.religion });
-  if (user.politicalLeaning) detailRows.push({ icon: IconBuildingCommunity, label: user.politicalLeaning });
+  if (user.ethnicity)
+    detailRows.push({ icon: IconFlag, label: user.ethnicity });
+  if (user.religion)
+    detailRows.push({ icon: IconBuildingChurch, label: user.religion });
+  if (user.politicalLeaning)
+    detailRows.push({
+      icon: IconBuildingCommunity,
+      label: user.politicalLeaning,
+    });
   // Combine relationship goal + type into one line
   const goalParts: string[] = [];
   if (user.relationshipGoal) {
@@ -350,7 +373,8 @@ function getBasicsData(user: Doc<"users">) {
     goalParts.push(goal.charAt(0).toUpperCase() + goal.slice(1));
   }
   if (user.relationshipType) goalParts.push(user.relationshipType);
-  if (goalParts.length > 0) detailRows.push({ icon: IconHeart, label: goalParts.join(" / ") });
+  if (goalParts.length > 0)
+    detailRows.push({ icon: IconHeart, label: goalParts.join(" / ") });
 
   return { topRow, detailRows };
 }
@@ -358,7 +382,11 @@ function getBasicsData(user: Doc<"users">) {
 function ScrollableRow({ items }: { items: BasicRow[] }) {
   if (items.length === 0) return null;
   return (
-    <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      showsHorizontalScrollIndicator={false}
+    >
       <View style={basicsStyles.topRow}>
         {items.map((item, i) => (
           <View key={i} style={basicsStyles.topItem}>
@@ -1319,26 +1347,28 @@ function FullProfileView({
       )}
 
       {/* Love Philosophy */}
-      {profile.lovePhilosophy && (profile.lovePhilosophy.loveDefinition || profile.lovePhilosophy.healthyRelationshipVision) && (
-        <ProfileSection title="Love Philosophy">
-          {profile.lovePhilosophy.loveDefinition && (
-            <View style={styles.storyItem}>
-              <Text style={styles.storyLabel}>What is Love?</Text>
-              <Text style={styles.storyText}>
-                {profile.lovePhilosophy.loveDefinition}
-              </Text>
-            </View>
-          )}
-          {profile.lovePhilosophy.healthyRelationshipVision && (
-            <View style={styles.storyItem}>
-              <Text style={styles.storyLabel}>Healthy Relationship</Text>
-              <Text style={styles.storyText}>
-                {profile.lovePhilosophy.healthyRelationshipVision}
-              </Text>
-            </View>
-          )}
-        </ProfileSection>
-      )}
+      {profile.lovePhilosophy &&
+        (profile.lovePhilosophy.loveDefinition ||
+          profile.lovePhilosophy.healthyRelationshipVision) && (
+          <ProfileSection title="Love Philosophy">
+            {profile.lovePhilosophy.loveDefinition && (
+              <View style={styles.storyItem}>
+                <Text style={styles.storyLabel}>What is Love?</Text>
+                <Text style={styles.storyText}>
+                  {profile.lovePhilosophy.loveDefinition}
+                </Text>
+              </View>
+            )}
+            {profile.lovePhilosophy.healthyRelationshipVision && (
+              <View style={styles.storyItem}>
+                <Text style={styles.storyLabel}>Healthy Relationship</Text>
+                <Text style={styles.storyText}>
+                  {profile.lovePhilosophy.healthyRelationshipVision}
+                </Text>
+              </View>
+            )}
+          </ProfileSection>
+        )}
 
       {/* Partner Preferences */}
       {profile.partnerPreferences && (
@@ -1379,18 +1409,19 @@ function FullProfileView({
               </View>
             </View>
           )}
-          {profile.intimacyProfile && profile.intimacyProfile.connectionTriggers.length > 0 && (
-            <View style={styles.storyItem}>
-              <Text style={styles.storyLabel}>What Creates Connection</Text>
-              <View style={styles.tagsRow}>
-                {profile.intimacyProfile.connectionTriggers.map((t, i) => (
-                  <View key={i} style={styles.tagSmall}>
-                    <Text style={styles.tagSmallText}>{t}</Text>
-                  </View>
-                ))}
+          {profile.intimacyProfile &&
+            profile.intimacyProfile.connectionTriggers.length > 0 && (
+              <View style={styles.storyItem}>
+                <Text style={styles.storyLabel}>What Creates Connection</Text>
+                <View style={styles.tagsRow}>
+                  {profile.intimacyProfile.connectionTriggers.map((t, i) => (
+                    <View key={i} style={styles.tagSmall}>
+                      <Text style={styles.tagSmallText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          )}
+            )}
         </ProfileSection>
       )}
 
@@ -1477,7 +1508,6 @@ function FullProfileView({
           highLabel="Very close"
         />
       </ProfileSection>
-
     </View>
   );
 }
@@ -1501,10 +1531,7 @@ export default function MatchesScreen() {
   >({});
 
   // Get current user
-  const currentUser = useQuery(
-    api.users.current,
-    userId ? {} : "skip",
-  );
+  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
 
   // Get all profiles (we'll filter to test users)
   const allProfiles = useQuery(api.userProfiles.listAll);
@@ -1547,8 +1574,12 @@ export default function MatchesScreen() {
 
   // Gender/sexuality compatibility check
   // Returns which genders a person is attracted to, then checks both directions
-  const isGenderCompatible = (me: typeof currentUser, them: typeof currentUser): boolean => {
-    if (!me?.sexuality || !me?.gender || !them?.sexuality || !them?.gender) return true; // pass through incomplete profiles
+  const isGenderCompatible = (
+    me: typeof currentUser,
+    them: typeof currentUser,
+  ): boolean => {
+    if (!me?.sexuality || !me?.gender || !them?.sexuality || !them?.gender)
+      return true; // pass through incomplete profiles
     const attractedTo = (sexuality: string, gender: string): string[] => {
       const s = sexuality.toLowerCase();
       // Direct gender values from picker: "Women", "Men", "Everyone"
@@ -1556,9 +1587,12 @@ export default function MatchesScreen() {
       if (s === "men") return ["man"];
       if (s === "everyone") return ["man", "woman", "non-binary"];
       // Orientation labels
-      if (s === "bisexual" || s === "pansexual" || s === "queer") return ["man", "woman", "non-binary"];
-      if (s === "straight" || s === "heterosexual") return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
-      if (s === "gay" || s === "lesbian" || s === "homosexual") return [gender.toLowerCase()];
+      if (s === "bisexual" || s === "pansexual" || s === "queer")
+        return ["man", "woman", "non-binary"];
+      if (s === "straight" || s === "heterosexual")
+        return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
+      if (s === "gay" || s === "lesbian" || s === "homosexual")
+        return [gender.toLowerCase()];
       return ["man", "woman", "non-binary"]; // unknown = open to all
     };
     const iWant = attractedTo(me.sexuality, me.gender);
@@ -1569,22 +1603,34 @@ export default function MatchesScreen() {
   };
 
   // Age range compatibility check (hard filter when dealbreaker)
-  const isAgeCompatible = (me: typeof currentUser, them: typeof currentUser): boolean => {
+  const isAgeCompatible = (
+    me: typeof currentUser,
+    them: typeof currentUser,
+  ): boolean => {
     if (!me?.ageRangeDealbreaker) return true;
     if (!them?.birthdate) return true; // pass through incomplete profiles
-    const theirAge = Math.floor((Date.now() - new Date(them.birthdate).getTime()) / 31557600000);
-    return theirAge >= (me.ageRangeMin ?? 18) && theirAge <= (me.ageRangeMax ?? 99);
+    const theirAge = Math.floor(
+      (Date.now() - new Date(them.birthdate).getTime()) / 31557600000,
+    );
+    return (
+      theirAge >= (me.ageRangeMin ?? 18) && theirAge <= (me.ageRangeMax ?? 99)
+    );
   };
 
   // Helper: find AI analysis for a given user pair
-  const getAnalysis = useCallback((theirUserId: string) => {
-    if (!aiAnalyses || !currentUser?._id) return null;
-    return aiAnalyses.find(
-      (a) =>
-        (a.user1Id === currentUser._id && a.user2Id === theirUserId) ||
-        (a.user2Id === currentUser._id && a.user1Id === theirUserId),
-    ) ?? null;
-  }, [aiAnalyses, currentUser?._id]);
+  const getAnalysis = useCallback(
+    (theirUserId: string) => {
+      if (!aiAnalyses || !currentUser?._id) return null;
+      return (
+        aiAnalyses.find(
+          (a) =>
+            (a.user1Id === currentUser._id && a.user2Id === theirUserId) ||
+            (a.user2Id === currentUser._id && a.user1Id === theirUserId),
+        ) ?? null
+      );
+    },
+    [aiAnalyses, currentUser?._id],
+  );
 
   // Filter to bot users and build match list
   const testUserMatches = (() => {
@@ -1619,10 +1665,10 @@ export default function MatchesScreen() {
 
     // Sort by AI overall score (descending)
     return matches.sort(
-      (a, b) => (b?.analysis.overallScore ?? 0) - (a?.analysis.overallScore ?? 0),
+      (a, b) =>
+        (b?.analysis.overallScore ?? 0) - (a?.analysis.overallScore ?? 0),
     );
   })();
-
 
   const isLoading = !currentUser || !testUserMatches;
   const isEmpty = testUserMatches && testUserMatches.length === 0;
@@ -1639,279 +1685,339 @@ export default function MatchesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
-      {isLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.text} />
-        </View>
-      ) : isEmpty ? (
-        <>
-          <AppHeader />
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🧪</Text>
-            <Text style={styles.emptyTitle}>No Test Users</Text>
-            <Text style={styles.emptyText}>
-              Run the seed command to create test profiles:{"\n\n"}
-              <Text style={styles.codeText}>
-                bunx convex run seedTestUsers:seedTestUsers
-              </Text>
-            </Text>
+        {isLoading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={colors.text} />
           </View>
-        </>
-      ) : (
-        <>
-      <AppHeader />
-
-      <ScrollView style={styles.scrollView}>
-        {/* Match list */}
-        {testUserMatches.map((match) => {
-          if (!match) return null;
-          const isExpanded = expandedUser === match.user._id;
-
-          return (
-            <View key={match.user._id} style={styles.matchCard}>
-            <Pressable
-              style={styles.matchCardInner}
-              onPress={() =>
-                setExpandedUser(isExpanded ? null : match.user._id)
-              }
-            >
-              <View style={styles.matchHeader}>
-                <View style={styles.matchInfo}>
-                  <Text style={styles.matchName}>{match.user.name?.split(" ")[0] || "Unknown"}</Text>
-                  <Text style={styles.matchLocation}>
-                    {match.user.birthdate
-                      ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
-                      : ""}
-                    {match.user.location || "Unknown location"}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.scoreBadge,
-                    {
-                      backgroundColor: getScoreColor(match.analysis.overallScore),
-                    },
-                  ]}
-                >
-                  <Text style={styles.scoreText}>
-                    {match.analysis.overallScore}
-                  </Text>
-                </View>
-              </View>
-
-              <PhotoStrip
-                photos={match.photos}
-                onPhotoPress={(i) => {
-                  if (match.photos.length > 0)
-                    setFullscreenPhotos({ urls: match.photos, startIndex: i });
-                }}
-              />
-            </Pressable>
-
-            {/* Basics at a glance - outside Pressable so scroll works */}
-            <BasicsAtAGlance user={match.user} />
-
-            <Pressable
-              style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
-              onPress={() =>
-                setExpandedUser(isExpanded ? null : match.user._id)
-              }
-            >
-              {/* Bio - always visible */}
-              {match.profile.generatedBio && (
-                <Text style={styles.shortBio}>
-                  {!isExpanded && match.profile.generatedBio.length > 375
-                    ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, "") + "..."
-                    : match.profile.generatedBio}
+        ) : isEmpty ? (
+          <>
+            <AppHeader />
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>🧪</Text>
+              <Text style={styles.emptyTitle}>No Test Users</Text>
+              <Text style={styles.emptyText}>
+                Run the seed command to create test profiles:{"\n\n"}
+                <Text style={styles.codeText}>
+                  bunx convex run seedTestUsers:seedTestUsers
                 </Text>
-              )}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <AppHeader />
 
-              {/* Expanded view with tabs */}
-              {isExpanded && (
-                <View style={styles.breakdown}>
-                  {/* Toggle tabs - Compatibility first (default) */}
-                  <View style={styles.toggleContainer}>
-                    <View style={styles.toggleTrack}>
-                      <Pressable
-                        style={[
-                          styles.toggleOption,
-                          (activeTab[match.user._id] || "compatibility") ===
-                            "compatibility" && styles.toggleOptionActive,
-                        ]}
-                        onPress={() =>
-                          setActiveTab({
-                            ...activeTab,
-                            [match.user._id]: "compatibility",
-                          })
-                        }
-                      >
-                        <Text
+            <ScrollView style={styles.scrollView}>
+              {/* Match list */}
+              {testUserMatches.map((match) => {
+                if (!match) return null;
+                const isExpanded = expandedUser === match.user._id;
+
+                return (
+                  <View key={match.user._id} style={styles.matchCard}>
+                    <Pressable
+                      style={styles.matchCardInner}
+                      onPress={() =>
+                        setExpandedUser(isExpanded ? null : match.user._id)
+                      }
+                    >
+                      <View style={styles.matchHeader}>
+                        <View style={styles.matchInfo}>
+                          <Text style={styles.matchName}>
+                            {match.user.name?.split(" ")[0] || "Unknown"}
+                          </Text>
+                          <Text style={styles.matchLocation}>
+                            {match.user.birthdate
+                              ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
+                              : ""}
+                            {match.user.location || "Unknown location"}
+                          </Text>
+                        </View>
+                        <View
                           style={[
-                            styles.toggleText,
-                            (activeTab[match.user._id] || "compatibility") ===
-                              "compatibility" && styles.toggleTextActive,
+                            styles.scoreBadge,
+                            {
+                              backgroundColor: getScoreColor(
+                                match.analysis.overallScore,
+                              ),
+                            },
                           ]}
                         >
-                          Compatibility
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.toggleOption,
-                          activeTab[match.user._id] === "profile" &&
-                            styles.toggleOptionActive,
-                        ]}
-                        onPress={() =>
-                          setActiveTab({
-                            ...activeTab,
-                            [match.user._id]: "profile",
-                          })
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.toggleText,
-                            activeTab[match.user._id] === "profile" &&
-                              styles.toggleTextActive,
-                          ]}
-                        >
-                          Full Profile
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
+                          <Text style={styles.scoreText}>
+                            {match.analysis.overallScore}
+                          </Text>
+                        </View>
+                      </View>
 
-                  {/* Compatibility Tab (AI-powered) */}
-                  {(activeTab[match.user._id] || "compatibility") === "compatibility" && (
-                    <View>
-                      {/* AI Summary */}
-                      <Text style={styles.aiSummary}>
-                        {match.analysis.summary}
-                      </Text>
+                      <PhotoStrip
+                        photos={match.photos}
+                        onPhotoPress={(i) => {
+                          if (match.photos.length > 0)
+                            setFullscreenPhotos({
+                              urls: match.photos,
+                              startIndex: i,
+                            });
+                        }}
+                      />
+                    </Pressable>
 
-                      {/* 10 AI Category Bars */}
-                      {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
-                        const score = match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
-                        const scoreColor = getScoreColor(score);
-                        const isFull = score === 100;
-                        return (
-                          <View key={key} style={styles.categoryBar}>
-                            <View
-                              style={[
-                                styles.categoryBarFill,
-                                {
-                                  width: `${score}%`,
-                                  borderTopRightRadius: isFull ? 10 : 0,
-                                  borderBottomRightRadius: isFull ? 10 : 0,
-                                },
-                              ]}
-                            >
-                              <LinearGradient
-                                colors={[`${scoreColor}4D`, `${scoreColor}99`]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.categoryBarGradient}
-                              />
-                              {!isFull && (
-                                <View
+                    {/* Basics at a glance - outside Pressable so scroll works */}
+                    <BasicsAtAGlance user={match.user} />
+
+                    <Pressable
+                      style={{
+                        paddingHorizontal: spacing.md,
+                        paddingBottom: spacing.md,
+                      }}
+                      onPress={() =>
+                        setExpandedUser(isExpanded ? null : match.user._id)
+                      }
+                    >
+                      {/* Bio - always visible */}
+                      {match.profile.generatedBio && (
+                        <Text style={styles.shortBio}>
+                          {!isExpanded &&
+                          match.profile.generatedBio.length > 375
+                            ? match.profile.generatedBio
+                                .slice(0, 375)
+                                .replace(/\s+\S*$/, "") + "..."
+                            : match.profile.generatedBio}
+                        </Text>
+                      )}
+
+                      {/* Expanded view with tabs */}
+                      {isExpanded && (
+                        <View style={styles.breakdown}>
+                          {/* Toggle tabs - Compatibility first (default) */}
+                          <View style={styles.toggleContainer}>
+                            <View style={styles.toggleTrack}>
+                              <Pressable
+                                style={[
+                                  styles.toggleOption,
+                                  (activeTab[match.user._id] ||
+                                    "compatibility") === "compatibility" &&
+                                    styles.toggleOptionActive,
+                                ]}
+                                onPress={() =>
+                                  setActiveTab({
+                                    ...activeTab,
+                                    [match.user._id]: "compatibility",
+                                  })
+                                }
+                              >
+                                <Text
                                   style={[
-                                    styles.categoryBarEdge,
-                                    { backgroundColor: scoreColor },
+                                    styles.toggleText,
+                                    (activeTab[match.user._id] ||
+                                      "compatibility") === "compatibility" &&
+                                      styles.toggleTextActive,
                                   ]}
-                                />
+                                >
+                                  Compatibility
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={[
+                                  styles.toggleOption,
+                                  activeTab[match.user._id] === "profile" &&
+                                    styles.toggleOptionActive,
+                                ]}
+                                onPress={() =>
+                                  setActiveTab({
+                                    ...activeTab,
+                                    [match.user._id]: "profile",
+                                  })
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.toggleText,
+                                    activeTab[match.user._id] === "profile" &&
+                                      styles.toggleTextActive,
+                                  ]}
+                                >
+                                  Full Profile
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+
+                          {/* Compatibility Tab (AI-powered) */}
+                          {(activeTab[match.user._id] || "compatibility") ===
+                            "compatibility" && (
+                            <View>
+                              {/* AI Summary */}
+                              <Text style={styles.aiSummary}>
+                                {match.analysis.summary}
+                              </Text>
+
+                              {/* 10 AI Category Bars */}
+                              {AI_CATEGORIES.map(
+                                ({ key, label, icon: CatIcon }) => {
+                                  const score =
+                                    match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
+                                  const scoreColor = getScoreColor(score);
+                                  const isFull = score === 100;
+                                  return (
+                                    <View key={key} style={styles.categoryBar}>
+                                      <View
+                                        style={[
+                                          styles.categoryBarFill,
+                                          {
+                                            width: `${score}%`,
+                                            borderTopRightRadius: isFull
+                                              ? 10
+                                              : 0,
+                                            borderBottomRightRadius: isFull
+                                              ? 10
+                                              : 0,
+                                          },
+                                        ]}
+                                      >
+                                        <LinearGradient
+                                          colors={[
+                                            `${scoreColor}4D`,
+                                            `${scoreColor}99`,
+                                          ]}
+                                          start={{ x: 0, y: 0 }}
+                                          end={{ x: 1, y: 0 }}
+                                          style={styles.categoryBarGradient}
+                                        />
+                                        {!isFull && (
+                                          <View
+                                            style={[
+                                              styles.categoryBarEdge,
+                                              { backgroundColor: scoreColor },
+                                            ]}
+                                          />
+                                        )}
+                                      </View>
+                                      <View style={styles.categoryBarContent}>
+                                        <CatIcon
+                                          size={20}
+                                          color={colors.text}
+                                        />
+                                        <Text style={styles.categoryBarLabel}>
+                                          {label}
+                                        </Text>
+                                        <Text style={styles.categoryBarScore}>
+                                          {match.analysis.categoryScores[key]}
+                                          /10
+                                        </Text>
+                                      </View>
+                                    </View>
+                                  );
+                                },
+                              )}
+
+                              {/* Green Flags */}
+                              {match.analysis.greenFlags.length > 0 && (
+                                <View style={styles.flagSection}>
+                                  <Text style={styles.flagTitle}>
+                                    Green Flags
+                                  </Text>
+                                  <View style={styles.tagsRow}>
+                                    {match.analysis.greenFlags.map(
+                                      (flag, i) => (
+                                        <View
+                                          key={i}
+                                          style={styles.tagGreenFlag}
+                                        >
+                                          <IconCheck
+                                            size={12}
+                                            color="#166534"
+                                          />
+                                          <Text style={styles.tagGreenFlagText}>
+                                            {flag}
+                                          </Text>
+                                        </View>
+                                      ),
+                                    )}
+                                  </View>
+                                </View>
+                              )}
+
+                              {/* Yellow Flags */}
+                              {match.analysis.yellowFlags.length > 0 && (
+                                <View style={styles.flagSection}>
+                                  <Text style={styles.flagTitle}>
+                                    Yellow Flags
+                                  </Text>
+                                  <View style={styles.tagsRow}>
+                                    {match.analysis.yellowFlags.map(
+                                      (flag, i) => (
+                                        <View
+                                          key={i}
+                                          style={styles.tagYellowFlag}
+                                        >
+                                          <IconAlertTriangle
+                                            size={12}
+                                            color="#92400e"
+                                          />
+                                          <Text
+                                            style={styles.tagYellowFlagText}
+                                          >
+                                            {flag}
+                                          </Text>
+                                        </View>
+                                      ),
+                                    )}
+                                  </View>
+                                </View>
+                              )}
+
+                              {/* Red Flags */}
+                              {match.analysis.redFlags.length > 0 && (
+                                <View style={styles.flagSection}>
+                                  <Text style={styles.flagTitle}>
+                                    Red Flags
+                                  </Text>
+                                  <View style={styles.tagsRow}>
+                                    {match.analysis.redFlags.map((flag, i) => (
+                                      <View key={i} style={styles.tagRedFlag}>
+                                        <IconX size={12} color="#991b1b" />
+                                        <Text style={styles.tagRedFlagText}>
+                                          {flag}
+                                        </Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                </View>
                               )}
                             </View>
-                            <View style={styles.categoryBarContent}>
-                              <CatIcon size={20} color={colors.text} />
-                              <Text style={styles.categoryBarLabel}>
-                                {label}
-                              </Text>
-                              <Text style={styles.categoryBarScore}>
-                                {match.analysis.categoryScores[key]}/10
-                              </Text>
-                            </View>
-                          </View>
-                        );
-                      })}
+                          )}
 
-                      {/* Green Flags */}
-                      {match.analysis.greenFlags.length > 0 && (
-                        <View style={styles.flagSection}>
-                          <Text style={styles.flagTitle}>Green Flags</Text>
-                          <View style={styles.tagsRow}>
-                            {match.analysis.greenFlags.map((flag, i) => (
-                              <View key={i} style={styles.tagGreenFlag}>
-                                <IconCheck size={12} color="#166534" />
-                                <Text style={styles.tagGreenFlagText}>{flag}</Text>
-                              </View>
-                            ))}
-                          </View>
+                          {/* Full Profile Tab */}
+                          {activeTab[match.user._id] === "profile" && (
+                            <FullProfileView
+                              profile={match.profile}
+                              user={match.user}
+                              userName={match.user.name || "User"}
+                            />
+                          )}
                         </View>
                       )}
 
-                      {/* Yellow Flags */}
-                      {match.analysis.yellowFlags.length > 0 && (
-                        <View style={styles.flagSection}>
-                          <Text style={styles.flagTitle}>Yellow Flags</Text>
-                          <View style={styles.tagsRow}>
-                            {match.analysis.yellowFlags.map((flag, i) => (
-                              <View key={i} style={styles.tagYellowFlag}>
-                                <IconAlertTriangle size={12} color="#92400e" />
-                                <Text style={styles.tagYellowFlagText}>{flag}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
+                      <Text style={styles.expandHint}>
+                        {isExpanded ? "Tap to collapse" : "Tap for details"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
 
-                      {/* Red Flags */}
-                      {match.analysis.redFlags.length > 0 && (
-                        <View style={styles.flagSection}>
-                          <Text style={styles.flagTitle}>Red Flags</Text>
-                          <View style={styles.tagsRow}>
-                            {match.analysis.redFlags.map((flag, i) => (
-                              <View key={i} style={styles.tagRedFlag}>
-                                <IconX size={12} color="#991b1b" />
-                                <Text style={styles.tagRedFlagText}>{flag}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  )}
+              <View style={styles.bottomPadding} />
+            </ScrollView>
 
-                  {/* Full Profile Tab */}
-                  {activeTab[match.user._id] === "profile" && (
-                    <FullProfileView
-                      profile={match.profile}
-                      user={match.user}
-                      userName={match.user.name || "User"}
-                    />
-                  )}
-                </View>
-              )}
-
-              <Text style={styles.expandHint}>
-                {isExpanded ? "Tap to collapse" : "Tap for details"}
-              </Text>
-            </Pressable>
-            </View>
-          );
-        })}
-
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-
-      {fullscreenPhotos && (
-        <FullscreenPhotoViewer
-          photos={fullscreenPhotos.urls}
-          startIndex={fullscreenPhotos.startIndex}
-          onClose={() => setFullscreenPhotos(null)}
-        />
-      )}
-        </>
-      )}
+            {fullscreenPhotos && (
+              <FullscreenPhotoViewer
+                photos={fullscreenPhotos.urls}
+                startIndex={fullscreenPhotos.startIndex}
+                onClose={() => setFullscreenPhotos(null)}
+              />
+            )}
+          </>
+        )}
       </Animated.View>
     </SafeAreaView>
   );
@@ -2536,6 +2642,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: "#dcfce7",
     borderRadius: 12,
+    maxWidth: "100%",
   },
   tagGreenFlagText: {
     fontSize: fontSizes.xs,
@@ -2550,6 +2657,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: "#fef3c7",
     borderRadius: 12,
+    maxWidth: "100%",
   },
   tagYellowFlagText: {
     fontSize: fontSizes.xs,

@@ -24,8 +24,16 @@ app/                    # Expo Router screens
 ├── _layout.tsx         # Root layout with AuthGate, fonts, splash
 ├── (auth)/             # sign-in.tsx, verify.tsx
 ├── (onboarding)/       # basics screens (use BasicOptionScreen or useBasicsStep), basics-summary.tsx, voice-questions.tsx
-├── (tabs)/             # index.tsx, questions.tsx, matches.tsx, journey.tsx (hidden)
-└── profile.tsx
+├── (tabs)/             # Dynamic tabs based on completion state
+│   ├── _layout.tsx     # Tab config: hides/shows tabs based on voice question completion
+│   ├── questions.tsx   # Voice questions checklist (visible before questions complete)
+│   ├── matches.tsx     # Browse matches (visible after questions complete)
+│   ├── chats.tsx       # Chats placeholder (visible after questions complete)
+│   ├── settings.tsx    # Profile/settings tab (always visible)
+│   ├── waitlist.tsx    # Waitlist screen (hidden, for future use)
+│   └── journey.tsx     # Journey screen (hidden, for future use)
+├── profile.tsx         # Profile modal (legacy, kept for compat)
+└── my-profile.tsx      # View own profile modal
 convex/                 # Backend: schema, mutations, queries, actions
 components/             # Reusable UI components
 lib/                    # Utilities, theme, matching algorithm

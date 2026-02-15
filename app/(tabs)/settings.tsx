@@ -334,6 +334,8 @@ export default function SettingsScreen() {
         <Text style={styles.version}>v1.0.0</Text>
       </ScrollView>
 
+      </Animated.View>
+
       {showTimePicker && (
         <View style={styles.timePickerOverlay}>
           <View style={styles.timePickerContainer}>
@@ -379,7 +381,6 @@ export default function SettingsScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-      </Animated.View>
     </SafeAreaView>
   );
 }

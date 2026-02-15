@@ -57,22 +57,59 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-import { isValidStep, ONBOARDING_FLOW } from "@/lib/onboarding-flow";
+import { isValidStep } from "@/lib/onboarding-flow";
 import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
 
-// Helper to determine which onboarding step to resume from
-function getOnboardingRoute(user: any): string {
-  if (!user) {
-    return "/(onboarding)/referral";
+// ── Route State Machine ─────────────────────────────────────────────────────
+// Pure derivation: compute a single routing state from all inputs.
+// "loading" = not enough data yet, keep splash screen up.
+
+type RouteState =
+  | { status: "loading" }
+  | { status: "unauthenticated" }
+  | { status: "onboarding"; route: string }
+  | { status: "voice_questions" }
+  | { status: "ready" };
+
+function deriveRouteState(p: {
+  authReady: boolean;
+  effectiveIsSignedIn: boolean | undefined;
+  isOnline: boolean;
+  isConvexAuthenticated: boolean;
+  creatingUser: boolean;
+  currentUser: any;
+  cachedUser: any;
+  voiceRecordingCount: number | undefined;
+}): RouteState {
+  if (!p.authReady) return { status: "loading" };
+  if (!p.effectiveIsSignedIn) return { status: "unauthenticated" };
+
+  // Offline with cached user — use cached data
+  if (!p.isOnline && p.cachedUser) {
+    if (p.cachedUser.onboardingComplete) return { status: "ready" };
+    return { status: "onboarding", route: "/(onboarding)/referral" };
   }
 
-  // Use saved onboarding step if it's valid
-  if (user.onboardingStep && isValidStep(user.onboardingStep)) {
-    return `/(onboarding)/${user.onboardingStep}`;
+  // Still creating the user doc
+  if (p.creatingUser) return { status: "loading" };
+
+  // Convex user not yet loaded (undefined = loading, null = no doc yet)
+  if (!p.currentUser) return { status: "loading" };
+
+  // User doc loaded — check onboarding
+  if (!p.currentUser.onboardingComplete) {
+    let route = "/(onboarding)/referral";
+    if (p.currentUser.onboardingStep && isValidStep(p.currentUser.onboardingStep)) {
+      route = `/(onboarding)/${p.currentUser.onboardingStep}`;
+    }
+    return { status: "onboarding", route };
   }
 
-  // Default to first step
-  return "/(onboarding)/referral";
+  // Onboarding complete — check voice questions
+  if (p.voiceRecordingCount === undefined) return { status: "loading" };
+  if (p.voiceRecordingCount < TOTAL_VOICE_QUESTIONS) return { status: "voice_questions" };
+
+  return { status: "ready" };
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -187,101 +224,57 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useOfflineSync();
   usePushNotifications();
 
-  // Track if we've completed initial routing
+  // ── Derive route state (pure, no side effects) ──────────────────────────
+  const authReady = isDevImpersonating
+    ? true
+    : isOnline
+      ? isLoaded
+      : isLoaded || offlineAuthLoaded;
+
+  const routeState = deriveRouteState({
+    authReady,
+    effectiveIsSignedIn,
+    isOnline,
+    isConvexAuthenticated,
+    creatingUser,
+    currentUser,
+    cachedUser,
+    voiceRecordingCount,
+  });
+
+  // ── Routing effect (simple switch, setHasRouted always called) ──────────
   const [hasRouted, setHasRouted] = useState(false);
 
-  // Reset routing state when auth changes (e.g. sign-out then sign-in)
+  // Reset when auth changes (sign-out then sign-in)
   useEffect(() => {
     setHasRouted(false);
   }, [effectiveIsSignedIn]);
 
   useEffect(() => {
-    // Wait for auth and navigation to be ready
-    // When offline or dev impersonating, we can proceed with cached/dev auth
-    const authReady = isDevImpersonating
-      ? true
-      : isOnline
-        ? isLoaded
-        : isLoaded || offlineAuthLoaded;
-
-    if (!authReady || !navigationState?.key) return;
+    if (routeState.status === "loading") return;
+    if (!navigationState?.key) return;
 
     const inAuthGroup = segments[0] === "(auth)";
     const inOnboarding = segments[0] === "(onboarding)";
     const onLandingPage = segments[0] === undefined || segments[0] === "index" || segments.length === 0;
 
-    if (!effectiveIsSignedIn) {
-      // Not signed in - allow landing page and auth screens
-      if (!inAuthGroup && !onLandingPage) {
-        router.replace("/");
-      }
-      setHasRouted(true);
-    } else {
-      // Signed in - check if user needs onboarding
-      if (inAuthGroup || onLandingPage) {
-        // Just finished auth or on landing, check if user exists and has completed onboarding
-        // When offline, use cached user data
-        const userData = currentUser ?? cachedUser;
-
-        if (!isOnline && cachedUser) {
-          // Offline with cached user - proceed to main app or onboarding
-          if (cachedUser.onboardingComplete) {
-            router.replace("/(tabs)/matches");
-          } else {
-            router.replace("/(onboarding)/referral");
-          }
-          setHasRouted(true);
-        } else if (currentUser === undefined && isOnline && isConvexAuthenticated) {
-          // Convex auth is ready but user data still loading - wait
-          return;
-        } else if (currentUser === null && isOnline && isConvexAuthenticated) {
-          // No user doc yet — getOrCreate effect will create it. Wait.
-          return;
-        } else if (!userData?.onboardingComplete) {
-          // Determine which onboarding step to resume from
-          const onboardingRoute = getOnboardingRoute(currentUser);
-          router.replace(onboardingRoute);
-          setHasRouted(true);
-        } else if (voiceRecordingCount !== undefined && voiceRecordingCount < TOTAL_VOICE_QUESTIONS) {
-          // Onboarding complete but voice questions not done yet -- go to tabs with questions tab active
-          router.replace("/(tabs)/questions");
-          setHasRouted(true);
-        } else if (voiceRecordingCount === undefined) {
-          // Still loading voice recording count - wait
-          return;
-        } else {
-          router.replace("/(tabs)/matches");
-          setHasRouted(true);
-        }
-      } else {
-        // Already on a valid screen
-        if (
-          !inOnboarding &&
-          isOnline &&
-          currentUser !== undefined &&
-          !currentUser?.onboardingComplete
-        ) {
-          // Signed in but onboarding not complete - redirect to appropriate step
-          const onboardingRoute = getOnboardingRoute(currentUser);
-          router.replace(onboardingRoute);
-        }
-        // If on questions screen or tabs, let them stay (questions screen handles its own completion redirect)
-        setHasRouted(true);
-      }
+    switch (routeState.status) {
+      case "unauthenticated":
+        if (!inAuthGroup && !onLandingPage) router.replace("/");
+        break;
+      case "onboarding":
+        if (inAuthGroup || onLandingPage) router.replace(routeState.route);
+        else if (!inOnboarding) router.replace(routeState.route);
+        break;
+      case "voice_questions":
+        if (inAuthGroup || onLandingPage) router.replace("/(tabs)/questions");
+        break;
+      case "ready":
+        if (inAuthGroup || onLandingPage) router.replace("/(tabs)/matches");
+        break;
     }
-  }, [
-    isLoaded,
-    effectiveIsSignedIn,
-    isConvexAuthenticated,
-    segments,
-    navigationState?.key,
-    currentUser,
-    isOnline,
-    offlineAuthLoaded,
-    cachedUser,
-    isDevImpersonating,
-    voiceRecordingCount,
-  ]);
+    setHasRouted(true);
+  }, [routeState, segments, navigationState?.key]);
 
   // Note: We don't hide splash screen here anymore.
   // Individual screens use useScreenReady() hook to hide splash when their data is ready.

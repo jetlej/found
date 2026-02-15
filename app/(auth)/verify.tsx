@@ -63,6 +63,7 @@ export default function Verify() {
         });
 
         if (result?.status === "complete") {
+          await setSignUpActive?.({ session: result.createdSessionId });
           try {
             await createUser({
               phone: phone!,
@@ -70,8 +71,6 @@ export default function Verify() {
           } catch (convexErr) {
             console.log("Convex error (continuing anyway):", convexErr);
           }
-
-          await setSignUpActive?.({ session: result.createdSessionId });
           return;
         } else if (result?.status === "missing_requirements") {
           if (result.createdSessionId) {
@@ -167,6 +166,7 @@ export default function Verify() {
           onPress={() => hiddenInputRef.current?.focus()}
         >
           <TextInput
+            testID="code-input"
             ref={hiddenInputRef}
             style={styles.hiddenInput}
             value={code}

@@ -1,0 +1,28 @@
+appId: com.jetlej.found
+---
+# Auth flow — enter test phone number and verify with Clerk test code
+#
+# PREREQUISITE: Configure a test phone number in Clerk Dashboard:
+#   Phone: +15555550100  Code: 424242
+
+- assertVisible: "Phone Number"
+- tapOn:
+    id: "phone-input"
+- inputText: "5555550100"
+- tapOn: "Continue"
+
+# SMS verification screen
+- assertVisible: "Enter code"
+# Tap the code box area to focus the hidden input field
+- tapOn:
+    point: "50%,38%"
+- inputText: "424242"
+# Code auto-submits when 6 digits entered
+
+# Dismiss any LogBox error overlay (dev mode only)
+- tapOn:
+    text: "Dismiss"
+    optional: true
+- tapOn:
+    text: "Dismiss"
+    optional: true

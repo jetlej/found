@@ -1,0 +1,6 @@
+appId: com.jetlej.found
+---
+# After onboarding completes, verify we land on the Questions tab
+# (photos is last step, completing it redirects to /(tabs)/questions)
+
+- assertVisible: "Questions"

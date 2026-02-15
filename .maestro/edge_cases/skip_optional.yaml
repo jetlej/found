@@ -1,0 +1,106 @@
+appId: com.jetlej.found
+---
+# Edge case: Skip referral and use minimal/default inputs throughout
+# Tests that the flow works without entering optional data
+
+- clearKeychain
+- launchApp
+- extendedWaitUntil:
+    visible: "I'm Ready"
+    timeout: 15000
+- runFlow: ../flows/01_landing.yaml
+- runFlow: ../flows/02_auth.yaml
+
+# 1. Referral — skip
+- assertVisible: "Have a referral code?"
+- tapOn: "I don't have a code"
+
+# 2. Name — required, enter minimal
+- assertVisible: "What's your first name?"
+- tapOn:
+    id: "name-input"
+- inputText: "A"
+- hideKeyboard
+- tapOn: "Next"
+
+# 3-5. Quick selections
+- assertVisible: "What are your pronouns?"
+- tapOn: "they/them"
+- assertVisible: "I am a..."
+- tapOn: "Non-binary"
+- assertVisible: "interested in"
+- tapOn: "Everyone"
+
+# 6. Location
+- assertVisible: "Where are you located?"
+- tapOn: "Enable Location"
+- tapOn:
+    text: "Allow While Using App"
+    optional: true
+- extendedWaitUntil:
+    visible: "Next"
+    timeout: 10000
+- tapOn: "Next"
+
+# 7-9. Accept defaults
+- assertVisible: "What's your birthday?"
+- tapOn: "Next"
+- assertVisible: "What age range are you looking for?"
+- tapOn: "Next"
+- assertVisible: "How tall are you?"
+- tapOn: "Next"
+
+# 10-13. Quick taps
+- assertVisible: "What are you looking for?"
+- tapOn: "Figuring it out"
+- assertVisible: "What type of relationship?"
+- tapOn: "Prefer not to say"
+- assertVisible: "Do you have children?"
+- tapOn: "No"
+- assertVisible: "Do you want children?"
+- tapOn: "Not sure"
+
+# 14. Ethnicity
+- assertVisible: "What's your ethnicity?"
+- tapOn: "Prefer not to say"
+
+# 15. Hometown — required text input
+- assertVisible: "Where's your hometown?"
+- tapOn:
+    id: "hometown-input"
+- inputText: "Anywhere"
+- hideKeyboard
+- tapOn: "Next"
+
+# 16-17. With sliders — use "Prefer not to say" + accept defaults
+- assertVisible: "What are your religious beliefs?"
+- tapOn: "Prefer not to say"
+- tapOn: "Next"
+- assertVisible: "Where do you lean politically?"
+- tapOn: "Prefer not to say"
+- tapOn: "Next"
+
+# 18. Pets
+- assertVisible: "Do you have pets?"
+- tapOn: "Prefer not to say"
+
+# 19-22. Substance screens — "Prefer not to say" + Next
+- assertVisible: "Do you drink?"
+- tapOn: "Prefer not to say"
+- tapOn: "Next"
+- assertVisible: "Do you smoke?"
+- tapOn: "Prefer not to say"
+- tapOn: "Next"
+- assertVisible: "Do you use marijuana?"
+- tapOn: "Prefer not to say"
+- tapOn: "Next"
+- assertVisible: "Do you use drugs?"
+- tapOn: "Prefer not to say"
+- tapOn: "Next"
+
+# 23. Tattoos
+- assertVisible: "Do you have tattoos?"
+- tapOn: "Prefer not to say"
+
+# Should land on photos screen
+- assertVisible: "Add your photos"

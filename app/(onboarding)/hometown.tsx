@@ -86,6 +86,7 @@ export default function HometownScreen() {
           <Text style={styles.question}>Where's your hometown?</Text>
           <Text style={styles.questionSubtext}>Where did you grow up?</Text>
           <TextInput
+            testID="hometown-input"
             ref={inputRef}
             style={styles.input}
             value={hometown}

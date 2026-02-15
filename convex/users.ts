@@ -27,7 +27,7 @@ async function getAuthClerkId(ctx: QueryCtx | MutationCtx) {
 
 export const getOrCreate = mutation({
   args: {
-    phone: v.string(),
+    phone: v.optional(v.string()),
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -45,15 +45,17 @@ export const getOrCreate = mutation({
 
     // Then check by phone - link existing user to new clerkId
     // This handles the case where Clerk generates a different ID on a different device
-    const existingByPhone = await ctx.db
-      .query("users")
-      .withIndex("by_phone", (q) => q.eq("phone", args.phone))
-      .first();
+    if (args.phone) {
+      const existingByPhone = await ctx.db
+        .query("users")
+        .withIndex("by_phone", (q) => q.eq("phone", args.phone))
+        .first();
 
-    if (existingByPhone) {
-      // Update the existing user with the new clerkId
-      await ctx.db.patch(existingByPhone._id, { clerkId });
-      return existingByPhone._id;
+      if (existingByPhone) {
+        // Update the existing user with the new clerkId
+        await ctx.db.patch(existingByPhone._id, { clerkId });
+        return existingByPhone._id;
+      }
     }
 
     // No existing user - create new

@@ -1,0 +1,13 @@
+appId: com.jetlej.found
+---
+# Navigate to Matches tab and verify it loads
+#
+# PREREQUISITE: Seed test users before running:
+#   bunx convex run actions/seedVoiceTestUsers:seedCelebProfiles
+#   bunx convex run actions/seedTestPhotos:seedCelebPhotos
+
+- tapOn: "Matches"
+# Wait for matches to load (may take a moment for queries)
+- extendedWaitUntil:
+    visible: "Tap for details"
+    timeout: 15000

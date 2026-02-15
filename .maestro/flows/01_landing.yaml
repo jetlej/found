@@ -1,0 +1,5 @@
+appId: com.jetlej.found
+---
+# Landing page — tap "I'm Ready" to enter auth flow
+- assertVisible: "I'm Ready"
+- tapOn: "I'm Ready"

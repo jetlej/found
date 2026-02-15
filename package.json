@@ -15,7 +15,12 @@
     "update": "eas update --channel production --message",
     "set-min-build": "node -e \"const r=require('child_process').execSync('eas build:list --platform ios --limit 1 --non-interactive --json',{encoding:'utf8'});const b=JSON.parse(r)[0]?.buildNumber;if(!b){console.log('Could not get latest build number');process.exit(1)}require('child_process').execSync('bunx convex run config:setMinBuildNumber \\'{\\\"build\\\":'+b+'}\\'',(e,o)=>console.log(o||e));console.log('Set minBuildNumber to '+b)\"",
     "seed:voice-test-users": "bunx convex run actions/seedVoiceTestUsers:seedVoiceProfilesForTestUsers",
-    "seed:test-photos": "bunx convex run actions/seedTestPhotos:seedTestPhotos"
+    "seed:test-photos": "bunx convex run actions/seedTestPhotos:seedTestPhotos",
+    "test:e2e:setup": "bunx convex run users:deleteUserByPhone '{\"phone\": \"+15555550100\"}'; xcrun simctl location booted set 40.7128,-74.0060",
+    "test:e2e": "bun run test:e2e:setup; $HOME/.maestro/bin/maestro test .maestro/flows/full_flow.yaml",
+    "test:e2e:auth": "$HOME/.maestro/bin/maestro test .maestro/flows/02_auth.yaml",
+    "test:e2e:onboarding": "$HOME/.maestro/bin/maestro test .maestro/flows/03_onboarding.yaml",
+    "test:e2e:edge": "$HOME/.maestro/bin/maestro test .maestro/edge_cases/"
   },
   "dependencies": {
     "@bsky.app/expo-image-crop-tool": "^0.5.0",

@@ -93,6 +93,7 @@ export default function NameScreen() {
             This is how you'll appear to matches
           </Text>
           <TextInput
+            testID="name-input"
             ref={inputRef}
             style={styles.nameInput}
             value={firstName}

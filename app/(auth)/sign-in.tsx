@@ -104,6 +104,7 @@ export default function SignIn() {
         <View style={styles.form}>
           <Text style={styles.label}>Phone Number</Text>
           <TextInput
+            testID="phone-input"
             style={styles.input}
             placeholder="(555) 555-5555"
             placeholderTextColor={colors.textPlaceholder}

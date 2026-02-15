@@ -1,0 +1,39 @@
+appId: com.jetlej.found
+---
+# Photos screen — pick 4 photos from the simulator's photo library
+
+- extendedWaitUntil:
+    visible: "Add your photos"
+    timeout: 15000
+
+# Pick 4 photos (tap empty slot -> select photo -> crop -> repeat)
+- repeat:
+    times: 4
+    commands:
+      # Tap an empty "Required" slot
+      - tapOn:
+          text: "Required"
+      # Handle photo library permission (first time only)
+      - tapOn:
+          text: "Allow Full Access"
+          optional: true
+      # Wait for photo library to appear, then tap the first photo
+      - waitForAnimationToEnd
+      - tapOn:
+          point: "10%,30%"
+      # Wait for crop tool to appear, then tap "Choose" or "Done"
+      - waitForAnimationToEnd
+      - tapOn:
+          text: "Choose"
+          optional: true
+      - tapOn:
+          text: "Done"
+          optional: true
+      # Wait for upload to process
+      - waitForAnimationToEnd
+
+# Now tap Continue
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 10000
+- tapOn: "Continue"

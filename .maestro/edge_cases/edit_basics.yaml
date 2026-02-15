@@ -1,0 +1,37 @@
+appId: com.jetlej.found
+---
+# Edge case: Edit a basics field after onboarding is complete
+# Assumes user has already completed onboarding and is on the tabs
+#
+# NOTE: Run this AFTER the full_flow has completed, not standalone
+
+# Go to Questions tab
+- tapOn: "Questions"
+
+# Look for the Edit or Update button on the Basics card
+- tapOn:
+    text: "Edit"
+    optional: true
+- tapOn:
+    text: "Update"
+    optional: true
+
+# Should see basics summary page
+- assertVisible:
+    text: "Name"
+    optional: true
+
+# Tap the Name row to edit it
+- tapOn: "TestUser"
+
+# Should be on the Name editing screen
+- assertVisible: "What's your first name?"
+- tapOn:
+    id: "name-input"
+- clearText
+- inputText: "UpdatedName"
+- hideKeyboard
+- tapOn: "Save"
+
+# Should return to basics summary
+- assertVisible: "UpdatedName"

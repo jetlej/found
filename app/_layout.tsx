@@ -21,7 +21,7 @@ import {
     Figtree_700Bold,
 } from "@expo-google-fonts/figtree";
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as Application from "expo-application";
 import { useFonts } from "expo-font";
 import * as Linking from "expo-linking";
@@ -147,6 +147,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     effectiveUserId && isConvexAuthenticated ? {} : "skip"
   );
 
+  // If signed in but no Convex user doc exists, create one. This handles the
+  // case where verify.tsx's createUser call failed due to JWT timing.
+  const getOrCreate = useMutation(api.users.getOrCreate);
+  const [creatingUser, setCreatingUser] = useState(false);
+  useEffect(() => {
+    if (isConvexAuthenticated && effectiveIsSignedIn && currentUser === null && !creatingUser && !isDevImpersonating) {
+      setCreatingUser(true);
+      getOrCreate({}).finally(() => setCreatingUser(false));
+    }
+  }, [isConvexAuthenticated, effectiveIsSignedIn, currentUser, creatingUser]);
+
   // Get cached user from offline store
   const { cachedUser, setCachedUser: setOfflineUser } = useOfflineStore();
 
@@ -210,6 +221,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           setHasRouted(true);
         } else if (currentUser === undefined && isOnline && isConvexAuthenticated) {
           // Convex auth is ready but user data still loading - wait
+          return;
+        } else if (currentUser === null && isOnline && isConvexAuthenticated) {
+          // No user doc yet — getOrCreate effect will create it. Wait.
           return;
         } else if (!userData?.onboardingComplete) {
           // Determine which onboarding step to resume from

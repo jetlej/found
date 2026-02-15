@@ -1,0 +1,8 @@
+appId: com.jetlej.found
+---
+# One-time reset: clear keychain to get back to landing page
+- clearKeychain
+- launchApp
+- extendedWaitUntil:
+    visible: "I'm Ready"
+    timeout: 20000

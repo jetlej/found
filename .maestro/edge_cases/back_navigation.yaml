@@ -1,0 +1,40 @@
+appId: com.jetlej.found
+---
+# Edge case: Test back navigation during onboarding
+# Starts from referral, advances 3 steps, goes back, verifies correct screen
+
+- clearKeychain
+- launchApp
+- extendedWaitUntil:
+    visible: "I'm Ready"
+    timeout: 15000
+
+# Get through landing and auth
+- runFlow: ../flows/01_landing.yaml
+- runFlow: ../flows/02_auth.yaml
+
+# Step 1: Skip referral
+- assertVisible: "Have a referral code?"
+- tapOn: "I don't have a code"
+
+# Step 2: Enter name
+- assertVisible: "What's your first name?"
+- tapOn:
+    id: "name-input"
+- inputText: "BackNavTest"
+- hideKeyboard
+- tapOn: "Next"
+
+# Step 3: Pronouns (auto-advances)
+- assertVisible: "What are your pronouns?"
+- tapOn: "she/her"
+
+# Step 4: Should be on Gender now
+- assertVisible: "I am a..."
+
+# Tap the back button (chevron in layout header)
+- tapOn:
+    point: "10%,6%"
+
+# Should be back on Pronouns
+- assertVisible: "What are your pronouns?"

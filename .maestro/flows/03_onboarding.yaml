@@ -1,0 +1,144 @@
+appId: com.jetlej.found
+---
+# Full onboarding flow — 24 basics steps
+# Screens auto-advance on option tap unless they have visibility/importance fields
+
+# Dismiss any LogBox errors from auth transition (dev mode only)
+- tapOn:
+    text: "Dismiss"
+    optional: true
+
+# 1. Referral — skip it
+- extendedWaitUntil:
+    visible: "Have a referral code?"
+    timeout: 10000
+- tapOn: "I don't have a code"
+
+# 2. Name — text input (first screen that saves to Convex)
+- assertVisible: "What's your first name?"
+- tapOn:
+    id: "name-input"
+- inputText: "TestUser"
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: "Next"
+# The first tap may not navigate if Convex auth is still settling.
+# Wait a moment then retry once.
+- tapOn:
+    text: "Next"
+    optional: true
+
+# 3. Pronouns
+- extendedWaitUntil:
+    visible: "What are your pronouns?"
+    timeout: 15000
+- tapOn: "she/her"
+
+# 4. Gender — auto-advances
+- assertVisible: "I am a..."
+- tapOn: "Woman"
+
+# 5. Sexuality — auto-advances
+- extendedWaitUntil:
+    visible: "5 of 24"
+    timeout: 10000
+- tapOn: "Men"
+
+# 6. Location — requires permission + button tap
+# PREREQUISITE: Set simulator location before running:
+#   xcrun simctl location booted set 40.7128,-74.0060
+- assertVisible: "Where are you located?"
+- tapOn: "Enable Location"
+# Handle iOS location permission dialog (may not appear if already granted)
+- tapOn:
+    text: "Allow While Using App"
+    optional: true
+# Wait for reverse geocode to complete — "Enable Location" disappears
+# and is replaced by the location text when done
+- extendedWaitUntil:
+    notVisible: "Enable Location"
+    timeout: 15000
+- tapOn: "Next"
+
+# 7. Birthday — date picker + Next
+- assertVisible: "What's your birthday?"
+# Default date picker value is fine for testing
+- tapOn: "Next"
+
+# 8. Age Range — slider + Next
+- assertVisible: "What age range are you looking for?"
+# Default range is fine
+- tapOn: "Next"
+
+# 9. Height — picker + Next
+- assertVisible: "How tall are you?"
+# Default picker values are fine
+- tapOn: "Next"
+
+# 10. Relationship Goals — auto-advances
+- assertVisible: "What are you looking for?"
+- tapOn: "Long-term partner"
+
+# 11. Relationship Type — auto-advances
+- assertVisible: "What type of relationship?"
+- tapOn: "Monogamy"
+
+# 12. Kids — auto-advances
+- assertVisible: "Do you have children?"
+- tapOn: "No"
+
+# 13. Wants Kids — auto-advances
+- assertVisible: "Do you want children?"
+- tapOn: "Open to it"
+
+# 14. Ethnicity — auto-advances
+- assertVisible: "What's your ethnicity?"
+- tapOn: "White/Caucasian"
+
+# 15. Hometown — text input
+- assertVisible: "Where's your hometown?"
+- tapOn:
+    id: "hometown-input"
+- inputText: "New York, NY"
+- hideKeyboard
+- tapOn: "Next"
+
+# 16. Religion — has importance slider, needs button tap
+- assertVisible: "What are your religious beliefs?"
+- tapOn: "Agnostic"
+- tapOn: "Next"
+
+# 17. Politics — has importance slider, needs button tap
+- assertVisible: "Where do you lean politically?"
+- tapOn: "Moderate"
+- tapOn: "Next"
+
+# 18. Pets — auto-advances
+- assertVisible: "Do you have pets?"
+- tapOn: "Dog"
+
+# 19. Drinking — has visibility toggle, needs button tap
+- assertVisible: "Do you drink?"
+- tapOn: "Sometimes"
+- tapOn: "Next"
+
+# 20. Smoking — has visibility toggle, needs button tap
+- assertVisible: "Do you smoke?"
+- tapOn: "No"
+- tapOn: "Next"
+
+# 21. Marijuana — has visibility toggle, needs button tap
+- assertVisible: "Do you use marijuana?"
+- tapOn: "No"
+- tapOn: "Next"
+
+# 22. Drugs — has visibility toggle, needs button tap
+- assertVisible: "Do you use drugs?"
+- tapOn: "No"
+- tapOn: "Next"
+
+# 23. Tattoos — auto-advances
+- assertVisible: "Do you have tattoos?"
+- tapOn: "No"
+
+# Done with basics — photos screen is next

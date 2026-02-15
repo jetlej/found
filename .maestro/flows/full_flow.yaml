@@ -1,0 +1,17 @@
+appId: com.jetlej.found
+---
+# Full E2E flow: Sign Up -> Onboarding -> Photos
+#
+# PREREQUISITES:
+# 1. Configure Clerk test phone: +15555550100 with code 424242
+# 2. App running on simulator, on the landing page (signed out)
+# 3. Run: bun run test:e2e (setup script cleans state automatically)
+
+- extendedWaitUntil:
+    visible: "I'm Ready"
+    timeout: 10000
+
+- runFlow: 01_landing.yaml
+- runFlow: 02_auth.yaml
+- runFlow: 03_onboarding.yaml
+- runFlow: 04_photos.yaml

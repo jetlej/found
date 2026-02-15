@@ -23,9 +23,9 @@ import {
   IconUsers,
 } from "@tabler/icons-react-native";
 import { useAction, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -186,6 +186,8 @@ const ICONS: Record<
 export default function QuestionsScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
+  const { editing } = useLocalSearchParams<{ editing?: string }>();
+  const isEditing = editing === "true";
 
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
@@ -307,6 +309,15 @@ export default function QuestionsScreen() {
   };
 
   const allComplete = completedCount === TOTAL_VOICE_QUESTIONS;
+
+  // Auto-redirect to matches tab when all questions are complete (not in editing mode)
+  const hasRedirected = useRef(false);
+  useEffect(() => {
+    if (allComplete && !isEditing && !hasRedirected.current && !regenerating) {
+      hasRedirected.current = true;
+      router.replace("/(tabs)/matches");
+    }
+  }, [allComplete, isEditing, regenerating]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

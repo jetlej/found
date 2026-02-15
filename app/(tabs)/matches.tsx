@@ -1481,7 +1481,6 @@ export default function MatchesScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
-  const [showMyProfile, setShowMyProfile] = useState(false);
   const [fullscreenPhotos, setFullscreenPhotos] = useState<{
     urls: string[];
     startIndex: number;
@@ -1496,19 +1495,6 @@ export default function MatchesScreen() {
     api.users.current,
     userId ? {} : "skip",
   );
-
-  // Get current user's profile
-  const myProfile = useQuery(
-    api.userProfiles.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
-  );
-
-  // Get voice recordings to detect "processing" state
-  const myRecordings = useQuery(
-    api.voiceRecordings.getRecordingsForUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
-  );
-  const isProcessing = !myProfile && (myRecordings?.length ?? 0) >= 9;
 
   // Get all profiles (we'll filter to test users)
   const allProfiles = useQuery(api.userProfiles.listAll);
@@ -1671,108 +1657,6 @@ export default function MatchesScreen() {
       <AppHeader />
 
       <ScrollView style={styles.scrollView}>
-        {/* Your profile card - same layout as match cards */}
-        {myProfile ? (
-          <View style={styles.matchCard}>
-            <Pressable
-              style={styles.matchCardInner}
-              onPress={() => setShowMyProfile(!showMyProfile)}
-            >
-              <View style={styles.matchHeader}>
-                <View style={styles.matchInfo}>
-                  <Text style={styles.matchName}>{currentUser.name?.split(" ")[0] || "You"}</Text>
-                  <Text style={styles.matchLocation}>
-                    {currentUser.birthdate
-                      ? `${Math.floor((Date.now() - new Date(currentUser.birthdate).getTime()) / 31557600000)}, `
-                      : ""}
-                    {currentUser.location || ""}
-                  </Text>
-                </View>
-              </View>
-
-              <PhotoStrip
-                photos={getUserPhotos(currentUser._id)}
-                onPhotoPress={(i) => {
-                  const p = getUserPhotos(currentUser._id);
-                  if (p.length > 0) setFullscreenPhotos({ urls: p, startIndex: i });
-                }}
-              />
-            </Pressable>
-
-            <BasicsAtAGlance user={currentUser} />
-
-            <Pressable
-              style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
-              onPress={() => setShowMyProfile(!showMyProfile)}
-            >
-              {!showMyProfile && myProfile.generatedBio && (
-                <Text style={styles.shortBio}>
-                  {myProfile.generatedBio.length > 375
-                    ? myProfile.generatedBio.slice(0, 375).replace(/\s+\S*$/, "") + "..."
-                    : myProfile.generatedBio}
-                </Text>
-              )}
-
-              {showMyProfile && (
-                <FullProfileView
-                  profile={myProfile}
-                  user={currentUser}
-                  userName={currentUser.name || "You"}
-                />
-              )}
-
-              <Text style={styles.expandHint}>
-                {showMyProfile ? "Tap to collapse" : "Tap for details"}
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.matchCard}>
-          <View style={styles.matchCardInner}>
-            <View style={styles.matchHeader}>
-              <View style={styles.matchInfo}>
-                <Text style={styles.matchName}>{currentUser.name?.split(" ")[0] || "You"}</Text>
-                <Text style={styles.matchLocation}>
-                  {currentUser.birthdate
-                    ? `${Math.floor((Date.now() - new Date(currentUser.birthdate).getTime()) / 31557600000)}, `
-                    : ""}
-                  {currentUser.location || ""}
-                </Text>
-              </View>
-            </View>
-            <PhotoStrip
-              photos={getUserPhotos(currentUser._id)}
-              onPhotoPress={(i) => {
-                const p = getUserPhotos(currentUser._id);
-                if (p.length > 0) setFullscreenPhotos({ urls: p, startIndex: i });
-              }}
-            />
-            {isProcessing ? (
-              <View style={styles.processingContainer}>
-                <ActivityIndicator size="small" color={colors.textSecondary} />
-                <Text style={styles.processingText}>
-                  Crafting your profile using AI...
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.emptyText}>
-                  Complete your profile to unlock compatibility scoring.
-                </Text>
-                <Pressable
-                  style={styles.completeProfileButton}
-                  onPress={() => router.push("/(onboarding)/voice-questions")}
-                >
-                  <Text style={styles.completeProfileButtonText}>
-                    Complete Profile
-                  </Text>
-                </Pressable>
-              </>
-            )}
-          </View>
-          </View>
-        )}
-
         {/* Match list */}
         {testUserMatches.map((match) => {
           if (!match) return null;

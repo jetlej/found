@@ -58,6 +58,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 import { isValidStep, ONBOARDING_FLOW } from "@/lib/onboarding-flow";
+import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
 
 // Helper to determine which onboarding step to resume from
 function getOnboardingRoute(user: any): string {
@@ -147,6 +148,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     effectiveUserId && isConvexAuthenticated ? {} : "skip"
   );
 
+  // Check if voice questions are complete (needed to route to /questions vs /(tabs))
+  const voiceRecordingCount = useQuery(
+    api.voiceRecordings.getCompletedCount,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
+
   // If signed in but no Convex user doc exists, create one. This handles the
   // case where verify.tsx's createUser call failed due to JWT timing.
   const getOrCreate = useMutation(api.users.getOrCreate);
@@ -183,6 +190,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Track if we've completed initial routing
   const [hasRouted, setHasRouted] = useState(false);
 
+  // Reset routing state when auth changes (e.g. sign-out then sign-in)
+  useEffect(() => {
+    setHasRouted(false);
+  }, [effectiveIsSignedIn]);
+
   useEffect(() => {
     // Wait for auth and navigation to be ready
     // When offline or dev impersonating, we can proceed with cached/dev auth
@@ -196,7 +208,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     const inAuthGroup = segments[0] === "(auth)";
     const inOnboarding = segments[0] === "(onboarding)";
-    const onLandingPage = segments[0] === undefined || segments.length === 0;
+    const onLandingPage = segments[0] === undefined || segments[0] === "index" || segments.length === 0;
 
     if (!effectiveIsSignedIn) {
       // Not signed in - allow landing page and auth screens
@@ -214,7 +226,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         if (!isOnline && cachedUser) {
           // Offline with cached user - proceed to main app or onboarding
           if (cachedUser.onboardingComplete) {
-            router.replace("/(tabs)");
+            router.replace("/(tabs)/matches");
           } else {
             router.replace("/(onboarding)/referral");
           }
@@ -230,8 +242,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           const onboardingRoute = getOnboardingRoute(currentUser);
           router.replace(onboardingRoute);
           setHasRouted(true);
+        } else if (voiceRecordingCount !== undefined && voiceRecordingCount < TOTAL_VOICE_QUESTIONS) {
+          // Onboarding complete but voice questions not done yet -- go to tabs with questions tab active
+          router.replace("/(tabs)/questions");
+          setHasRouted(true);
+        } else if (voiceRecordingCount === undefined) {
+          // Still loading voice recording count - wait
+          return;
         } else {
-          router.replace("/(tabs)");
+          router.replace("/(tabs)/matches");
           setHasRouted(true);
         }
       } else {
@@ -246,6 +265,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           const onboardingRoute = getOnboardingRoute(currentUser);
           router.replace(onboardingRoute);
         }
+        // If on questions screen or tabs, let them stay (questions screen handles its own completion redirect)
         setHasRouted(true);
       }
     }
@@ -260,6 +280,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     offlineAuthLoaded,
     cachedUser,
     isDevImpersonating,
+    voiceRecordingCount,
   ]);
 
   // Note: We don't hide splash screen here anymore.
@@ -450,6 +471,15 @@ function RootLayoutNav() {
               />
               <Stack.Screen
                 name="profile"
+                options={{
+                  headerShown: false,
+                  presentation: "modal",
+                  animation: "slide_from_bottom",
+                  gestureEnabled: true,
+                }}
+              />
+              <Stack.Screen
+                name="my-profile"
                 options={{
                   headerShown: false,
                   presentation: "modal",

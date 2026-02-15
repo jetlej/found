@@ -1859,52 +1859,65 @@ export default function MatchesScreen() {
                                   const scoreColor = getScoreColor(score);
                                   const isFull = score === 100;
                                   return (
-                                    <View key={key} style={styles.categoryBar}>
-                                      <View
+                                    <View key={key} style={styles.categoryRow}>
+                                      <View style={styles.categoryBar}>
+                                        <View
+                                          style={[
+                                            styles.categoryBarFill,
+                                            {
+                                              width: `${score}%`,
+                                              borderTopRightRadius: isFull
+                                                ? 10
+                                                : 0,
+                                              borderBottomRightRadius: isFull
+                                                ? 10
+                                                : 0,
+                                            },
+                                          ]}
+                                        >
+                                          <LinearGradient
+                                            colors={[
+                                              `${scoreColor}4D`,
+                                              `${scoreColor}99`,
+                                            ]}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.categoryBarGradient}
+                                          />
+                                          {!isFull && (
+                                            <View
+                                              style={[
+                                                styles.categoryBarEdge,
+                                                {
+                                                  backgroundColor: scoreColor,
+                                                },
+                                              ]}
+                                            />
+                                          )}
+                                        </View>
+                                        <View
+                                          style={styles.categoryBarContent}
+                                        >
+                                          <CatIcon
+                                            size={20}
+                                            color={colors.text}
+                                          />
+                                          <Text
+                                            style={styles.categoryBarLabel}
+                                          >
+                                            {label}
+                                          </Text>
+                                        </View>
+                                      </View>
+                                      <Text
                                         style={[
-                                          styles.categoryBarFill,
-                                          {
-                                            width: `${score}%`,
-                                            borderTopRightRadius: isFull
-                                              ? 10
-                                              : 0,
-                                            borderBottomRightRadius: isFull
-                                              ? 10
-                                              : 0,
-                                          },
+                                          styles.categoryBarScore,
+                                          { color: scoreColor },
                                         ]}
                                       >
-                                        <LinearGradient
-                                          colors={[
-                                            `${scoreColor}4D`,
-                                            `${scoreColor}99`,
-                                          ]}
-                                          start={{ x: 0, y: 0 }}
-                                          end={{ x: 1, y: 0 }}
-                                          style={styles.categoryBarGradient}
-                                        />
-                                        {!isFull && (
-                                          <View
-                                            style={[
-                                              styles.categoryBarEdge,
-                                              { backgroundColor: scoreColor },
-                                            ]}
-                                          />
-                                        )}
-                                      </View>
-                                      <View style={styles.categoryBarContent}>
-                                        <CatIcon
-                                          size={20}
-                                          color={colors.text}
-                                        />
-                                        <Text style={styles.categoryBarLabel}>
-                                          {label}
-                                        </Text>
-                                        <Text style={styles.categoryBarScore}>
-                                          {match.analysis.categoryScores[key]}
-                                          /10
-                                        </Text>
-                                      </View>
+                                        {match.analysis.categoryScores[key]}
+                                        /10
+                                      </Text>
                                     </View>
                                   );
                                 },
@@ -2219,11 +2232,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   // Category bar styles (card-like progress bars)
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
   categoryBar: {
+    flex: 1,
     height: 36,
     backgroundColor: colors.border,
     borderRadius: 10,
-    marginBottom: spacing.sm,
     overflow: "hidden",
     position: "relative",
   },
@@ -2261,9 +2280,11 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   categoryBarScore: {
-    fontSize: fontSizes.base,
+    width: 42,
+    fontSize: fontSizes.sm,
     fontWeight: "700",
     color: colors.text,
+    textAlign: "right",
   },
   sharedSection: {
     marginTop: spacing.md,

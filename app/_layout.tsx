@@ -480,6 +480,13 @@ function RootLayoutNav() {
                   gestureEnabled: true,
                 }}
               />
+              <Stack.Screen
+                name="mini-profile"
+                options={{
+                  headerShown: false,
+                  animation: "default",
+                }}
+              />
             </Stack>
           </DevTrigger>
         </AuthGate>

@@ -106,6 +106,13 @@ export default function SettingsScreen() {
             </Pressable>
             <Pressable
               style={styles.menuItem}
+              onPress={() => router.push("/mini-profile")}
+            >
+              <Text style={styles.menuText}>View Mini Profile</Text>
+              <Text style={styles.menuArrow}>→</Text>
+            </Pressable>
+            <Pressable
+              style={styles.menuItem}
               onPress={() => router.push({ pathname: "/(tabs)/questions", params: { editing: "true" } })}
             >
               <Text style={styles.menuText}>Edit Profile</Text>

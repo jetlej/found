@@ -1,8 +1,10 @@
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { filterProfile } from "@/lib/filterProfile";
+import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
+import { useMemo } from "react";
 import {
   Image,
   Pressable,
@@ -25,6 +27,11 @@ export default function MyProfileScreen() {
   const userPhotos = useQuery(
     api.photos.getByUser,
     currentUser?._id ? { userId: currentUser._id } : "skip",
+  );
+
+  const filteredProfile = useMemo(
+    () => (myProfile ? filterProfile(myProfile, myProfile.hiddenFields ?? undefined) : null),
+    [myProfile],
   );
 
   const sortedPhotos = userPhotos?.sort((a, b) => a.order - b.order) ?? [];
@@ -69,19 +76,19 @@ export default function MyProfileScreen() {
         </View>
 
         {/* Bio */}
-        {myProfile?.generatedBio && (
+        {filteredProfile?.generatedBio && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.bioText}>{myProfile.generatedBio}</Text>
+            <Text style={styles.bioText}>{filteredProfile.generatedBio}</Text>
           </View>
         )}
 
         {/* Values */}
-        {myProfile?.values && myProfile.values.length > 0 && (
+        {filteredProfile?.values && filteredProfile.values.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Values</Text>
             <View style={styles.tagsRow}>
-              {myProfile.values.map((v, i) => (
+              {filteredProfile.values.map((v, i) => (
                 <View key={i} style={styles.tag}>
                   <Text style={styles.tagText}>{v}</Text>
                 </View>
@@ -91,11 +98,11 @@ export default function MyProfileScreen() {
         )}
 
         {/* Interests */}
-        {myProfile?.interests && myProfile.interests.length > 0 && (
+        {filteredProfile?.interests && filteredProfile.interests.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Interests</Text>
             <View style={styles.tagsRow}>
-              {myProfile.interests.map((v, i) => (
+              {filteredProfile.interests.map((v, i) => (
                 <View key={i} style={[styles.tag, styles.tagInterest]}>
                   <Text style={[styles.tagText, styles.tagInterestText]}>{v}</Text>
                 </View>
@@ -105,11 +112,11 @@ export default function MyProfileScreen() {
         )}
 
         {/* Keywords */}
-        {myProfile?.keywords && myProfile.keywords.length > 0 && (
+        {filteredProfile?.keywords && filteredProfile.keywords.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Keywords</Text>
             <View style={styles.tagsRow}>
-              {myProfile.keywords.map((k, i) => (
+              {filteredProfile.keywords.map((k, i) => (
                 <View key={i} style={[styles.tag, styles.tagKeyword]}>
                   <Text style={styles.tagText}>{k}</Text>
                 </View>
@@ -132,7 +139,7 @@ const styles = StyleSheet.create({
   },
   closeButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
   closeIcon: { fontSize: 20, color: colors.textMuted },
-  navTitle: { fontFamily: fonts.serif, fontSize: fontSizes.lg, color: colors.text },
+  navTitle: { ...textStyles.pageTitle },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: spacing["3xl"] },
   photoStrip: { paddingHorizontal: spacing.lg, gap: 10, paddingVertical: spacing.md },

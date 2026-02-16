@@ -2,7 +2,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
 import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
 import { useAuth } from "@clerk/clerk-expo";
 import { IconPencil } from "@tabler/icons-react-native";
@@ -99,23 +99,16 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>Profile</Text>
             <Pressable
               style={styles.menuItem}
-              onPress={() => router.push("/my-profile")}
+              onPress={() => router.push("/profile-audit")}
             >
-              <Text style={styles.menuText}>View Profile</Text>
+              <Text style={styles.menuText}>My Profile</Text>
               <Text style={styles.menuArrow}>→</Text>
             </Pressable>
             <Pressable
               style={styles.menuItem}
-              onPress={() => router.push("/mini-profile")}
+              onPress={() => router.push("/edit-answers")}
             >
-              <Text style={styles.menuText}>View Mini Profile</Text>
-              <Text style={styles.menuArrow}>→</Text>
-            </Pressable>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push({ pathname: "/(tabs)/questions", params: { editing: "true" } })}
-            >
-              <Text style={styles.menuText}>Edit Profile</Text>
+              <Text style={styles.menuText}>Edit Answers</Text>
               <Text style={styles.menuArrow}>→</Text>
             </Pressable>
           </View>
@@ -220,7 +213,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   modalHeaderSpacer: { width: 60 },
-  modalTitle: { fontFamily: fonts.serif, fontSize: fontSizes.lg, color: colors.text },
+  modalTitle: { ...textStyles.pageTitle },
   modalDoneButton: { width: 60, alignItems: "flex-end" },
   modalDoneText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primary },
   modalContent: { flex: 1, paddingTop: spacing.lg },

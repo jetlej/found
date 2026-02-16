@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 
 // Preference object validator (reusable)
 const preferenceValidator = v.optional(v.object({
@@ -225,6 +225,29 @@ export const getByUserInternal = internalQuery({
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
+  },
+});
+
+// Client-callable mutation to update hidden fields
+export const updateHiddenFields = mutation({
+  args: { hiddenFields: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    if (!profile) throw new Error("Profile not found");
+
+    await ctx.db.patch(profile._id, { hiddenFields: args.hiddenFields });
   },
 });
 

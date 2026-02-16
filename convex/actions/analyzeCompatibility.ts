@@ -10,13 +10,16 @@ import {
   calculateCost,
   type TokenUsage,
 } from "../lib/openai";
+import { filterProfile as applyHiddenFilter } from "../lib/filterProfile";
 
 // Build profile summary string for the prompt
 function formatProfile(
   name: string,
   user: any,
-  profile: any,
+  rawProfile: any,
 ): string {
+  // Strip hidden fields before building the compatibility prompt
+  const profile = applyHiddenFilter(rawProfile, rawProfile.hiddenFields ?? undefined);
   const age = user.birthdate
     ? Math.floor((Date.now() - new Date(user.birthdate).getTime()) / 31557600000)
     : "unknown";

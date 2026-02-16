@@ -181,6 +181,11 @@ export default function VoiceQuestionsScreen() {
   );
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
+  const hasProfile = useQuery(
+    api.userProfiles.hasProfile,
+    currentUser?._id ? { userId: currentUser._id } : "skip",
+  );
+
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -476,6 +481,7 @@ export default function VoiceQuestionsScreen() {
   const canProceed = hasRecording || saving;
 
   if (submitted) {
+    const profileReady = hasProfile === true;
     return (
       <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
         <View style={styles.celebrationContainer}>
@@ -484,20 +490,32 @@ export default function VoiceQuestionsScreen() {
             <IconSparkles size={48} color={colors.text} />
             <Text style={styles.celebrationTitle}>Thanks for sharing!</Text>
             <Text style={styles.celebrationSubtitle}>
-              We're using AI to craft your profile and compatibility scores. This usually takes about a minute.
+              {profileReady
+                ? "Your profile is ready! Review what we learned about you."
+                : "We're using AI to craft your profile and compatibility scores. This usually takes about a minute."}
             </Text>
-            <ActivityIndicator
-              size="small"
-              color={colors.textMuted}
-              style={{ marginTop: spacing.xl }}
-            />
+            {!profileReady && (
+              <ActivityIndicator
+                size="small"
+                color={colors.textMuted}
+                style={{ marginTop: spacing.xl }}
+              />
+            )}
           </CelebrationText>
           <View style={styles.footer}>
             <Pressable
               style={styles.nextButton}
-              onPress={() => router.back()}
+              onPress={() => {
+                if (profileReady) {
+                  router.push({ pathname: "/profile-audit", params: { firstTime: "true" } });
+                } else {
+                  router.back();
+                }
+              }}
             >
-              <Text style={styles.nextButtonText}>Go to Matches</Text>
+              <Text style={styles.nextButtonText}>
+                {profileReady ? "Review Your Profile" : "Go to Matches"}
+              </Text>
             </Pressable>
           </View>
         </View>

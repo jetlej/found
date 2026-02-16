@@ -30,10 +30,11 @@ app/                    # Expo Router screens
 │   ├── matches.tsx     # Browse matches (visible after questions complete)
 │   ├── chats.tsx       # Chats placeholder (visible after questions complete)
 │   ├── settings.tsx    # Profile/settings tab (always visible)
-│   ├── waitlist.tsx    # Waitlist screen (hidden, for future use)
+│   ├── waitlist.tsx    # Waitlist screen with shareable profile card
 │   └── journey.tsx     # Journey screen (hidden, for future use)
 ├── profile.tsx         # Profile modal (legacy, kept for compat)
-└── my-profile.tsx      # View own profile modal
+├── my-profile.tsx      # View own profile modal
+└── mini-profile.tsx    # Shareable mini profile (full-page view + share button)
 convex/                 # Backend: schema, mutations, queries, actions
 components/             # Reusable UI components
 lib/                    # Utilities, theme, matching algorithm
@@ -67,3 +68,26 @@ bunx convex run actions/seedVoiceTestUsers:seedHighCompatUsers     # 3 high-comp
 bunx convex run actions/seedTestPhotos:seedCelebPhotos             # Photos (separate step)
 bunx convex run seedTestUsers:deleteAllBots                        # Wipe all bots
 ```
+
+## Shareable Mini Profile
+
+Screenshot-friendly profile card showing AI-generated profile data. Purely frontend — no backend changes needed, all data comes from existing `users`, `userProfiles`, and `photos` tables.
+
+### Files
+- `components/ShareableProfileCard.tsx` — Reusable card component with two variants:
+  - `"card"` (default): White card with shadow, short bio quote, watermark. Used on waitlist.
+  - `"fullPage"`: No card chrome, close button hidden during capture. Used in mini-profile screen.
+- `app/mini-profile.tsx` — Full-page view with floating "Share Profile" button. Accessible from Settings > "View Mini Profile" (gated behind `questionsComplete`).
+- `app/(tabs)/waitlist.tsx` — Shows the card variant + share button + countdown/referral below.
+
+### Share Flow
+Uses `react-native-view-shot` (`captureRef`) to capture the card as a PNG image. During capture, `capturing` prop flips to `true` which: (1) adds white background, (2) hides the close button. The captured image is shared via the native share sheet.
+
+### Card Content (all from existing profile data)
+- "Found. The AI Matchmaker." header
+- Photo + name/age + location
+- Basics at a glance (height, hometown, kids, pets, ethnicity, religion, politics, relationship goal) — wrapping row with dot separators
+- Matchmaker's note (`generatedBio`)
+- What defines them: raw values + passions (blue pills, prefers non-canonical freeform values)
+- Looking for: must-haves (green pills)
+- Dealbreakers (red pills, separate labeled section)

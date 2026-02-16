@@ -19,6 +19,7 @@ import type * as answers from "../answers.js";
 import type * as compatibilityAnalyses from "../compatibilityAnalyses.js";
 import type * as config from "../config.js";
 import type * as lib_canonicalValues from "../lib/canonicalValues.js";
+import type * as lib_filterProfile from "../lib/filterProfile.js";
 import type * as lib_interests from "../lib/interests.js";
 import type * as lib_openai from "../lib/openai.js";
 import type * as lib_prompts from "../lib/prompts.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   compatibilityAnalyses: typeof compatibilityAnalyses;
   config: typeof config;
   "lib/canonicalValues": typeof lib_canonicalValues;
+  "lib/filterProfile": typeof lib_filterProfile;
   "lib/interests": typeof lib_interests;
   "lib/openai": typeof lib_openai;
   "lib/prompts": typeof lib_prompts;

@@ -331,6 +331,9 @@ export default defineSchema({
     // Keywords for search/display
     keywords: v.array(v.string()), // All extracted keywords combined
 
+    // User-controlled visibility (dot-paths of hidden items, e.g. "values.2", "generatedBio")
+    hiddenFields: v.optional(v.array(v.string())),
+
     // Processing metadata
     processedAt: v.number(),
     openaiModel: v.string(),

@@ -481,6 +481,20 @@ function RootLayoutNav() {
                 }}
               />
               <Stack.Screen
+                name="profile-audit"
+                options={{
+                  headerShown: false,
+                  animation: "default",
+                }}
+              />
+              <Stack.Screen
+                name="edit-answers"
+                options={{
+                  headerShown: false,
+                  animation: "default",
+                }}
+              />
+              <Stack.Screen
                 name="mini-profile"
                 options={{
                   headerShown: false,

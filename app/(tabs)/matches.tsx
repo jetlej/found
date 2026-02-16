@@ -2,6 +2,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { filterProfile } from "@/lib/filterProfile";
 import { type CategoryScores } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
@@ -1655,7 +1656,7 @@ export default function MatchesScreen() {
 
         return {
           user,
-          profile,
+          profile: filterProfile(profile, profile.hiddenFields ?? undefined),
           photoUrl: getFirstPhotoUrl(user._id),
           photos: getUserPhotos(user._id),
           analysis,

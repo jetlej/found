@@ -1,7 +1,7 @@
 import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
 import {
   TOTAL_VOICE_QUESTIONS,
   VOICE_QUESTIONS,
@@ -14,6 +14,7 @@ import {
   IconDiamond,
   IconHeart,
   IconLeaf,
+  IconChevronLeft,
   IconListCheck,
   IconLock,
   IconPlant,
@@ -183,11 +184,11 @@ const ICONS: Record<
   sparkles: IconSparkles,
 };
 
-export default function QuestionsScreen() {
+export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?: boolean } = {}) {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
+  const isEditing = forceEditing || editing === "true";
 
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
@@ -322,11 +323,22 @@ export default function QuestionsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
-        <AppHeader showLevelLink={false} />
+        {isEditing ? (
+          <View style={styles.editingNavBar}>
+            <Pressable onPress={() => forceEditing ? router.back() : router.replace("/(tabs)/settings")} style={styles.editingBackButton}>
+              <IconChevronLeft size={24} color={colors.text} />
+            </Pressable>
+            <Text style={styles.editingNavTitle}>Edit Answers</Text>
+            <View style={styles.editingBackButton} />
+          </View>
+        ) : (
+          <AppHeader showLevelLink={false} />
+        )}
         <View style={styles.header}>
           <Text style={styles.subtitle}>
-            Answer 8 questions with your voice. Be yourself — no editing, no
-            second-guessing.
+            {isEditing
+              ? "Re-record voice answers or update your basics."
+              : "Answer 8 questions with your voice. Be yourself — no editing, no second-guessing."}
           </Text>
         </View>
 
@@ -504,10 +516,28 @@ export default function QuestionsScreen() {
   );
 }
 
+export default function QuestionsScreen() {
+  return <QuestionsScreenContent />;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  editingNavBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  editingBackButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editingNavTitle: { ...textStyles.pageTitle },
   header: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,

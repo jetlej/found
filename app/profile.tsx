@@ -6,7 +6,7 @@ import {
   promptForNotifications,
   scheduleDailyReminder,
 } from "@/hooks/usePushNotifications";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
 import { useOfflineStore } from "@/stores/offline";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -428,11 +428,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: colors.textMuted,
   },
-  navTitle: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes.lg,
-    color: colors.text,
-  },
+  navTitle: { ...textStyles.pageTitle },
   header: {
     alignItems: "center",
     paddingVertical: spacing["2xl"],
@@ -652,10 +648,7 @@ const styles = StyleSheet.create({
   modalHeaderSpacer: {
     width: 60,
   },
-  modalTitle: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes.lg,
-    color: colors.text,
+  modalTitle: { ...textStyles.pageTitle,
   },
   modalDoneButton: {
     width: 60,

@@ -98,3 +98,12 @@ export const shadows = {
     elevation: 4,
   },
 } as const;
+
+// Shared text styles
+export const textStyles = {
+  pageTitle: {
+    fontFamily: 'Figtree-Bold',
+    fontSize: 18 as number,
+    color: '#1A1A1A',
+  },
+} as const;

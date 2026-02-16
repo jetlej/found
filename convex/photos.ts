@@ -14,6 +14,10 @@ async function getAuthUser(ctx: QueryCtx | MutationCtx) {
 export const getByUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     return await ctx.db
       .query("photos")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -24,6 +28,10 @@ export const getByUser = query({
 export const countByUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     const photos = await ctx.db
       .query("photos")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))

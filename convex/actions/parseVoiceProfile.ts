@@ -13,6 +13,7 @@ import {
 } from "../lib/openai";
 import { CANONICAL_VALUES } from "../lib/canonicalValues";
 import { VOICE_QUESTIONS } from "./voiceQuestionDefinitions";
+import { requireAdmin } from "../lib/admin";
 
 // Cost tracking helper
 interface ExtractionCost {
@@ -516,8 +517,11 @@ export const transcribeRecording = internalAction({
 export const triggerVoiceProfileParsing = action({
   args: {
     userId: v.id("users"),
+    adminSecret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     await ctx.scheduler.runAfter(0, internal.actions.parseVoiceProfile.parseVoiceProfile, {
       userId: args.userId,
     });
@@ -527,8 +531,10 @@ export const triggerVoiceProfileParsing = action({
 
 // Benchmark: clear transcriptions, re-run Whisper + GPT extraction, report costs
 export const benchmarkOnboardingCost = action({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), adminSecret: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     // Clear existing transcriptions so Whisper runs fresh
     const cleared = await ctx.runMutation(
       internal.voiceRecordings.clearTranscriptionsForUser,
@@ -548,8 +554,10 @@ export const benchmarkOnboardingCost = action({
 
 // Re-parse all users who have completed 9 voice recordings
 export const reparseAllProfiles = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const users = await ctx.runQuery(internal.voiceRecordings.getUsersWithCompleteRecordings);
     console.log(`Found ${users.length} users with complete voice recordings`);
     for (let i = 0; i < users.length; i++) {

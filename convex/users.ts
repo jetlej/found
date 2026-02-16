@@ -6,6 +6,8 @@ import {
   QueryCtx,
   MutationCtx,
 } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
+import { requireAdmin } from "./lib/admin";
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -401,8 +403,10 @@ export const completeCategory = mutation({
 
 // Search users by name or phone (for dev admin)
 export const searchUsers = query({
-  args: { query: v.string() },
+  args: { query: v.string(), adminSecret: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const allUsers = await ctx.db.query("users").collect();
     const q = args.query.toLowerCase();
     return allUsers
@@ -415,8 +419,10 @@ export const searchUsers = query({
 
 // Create fresh test user for onboarding testing
 export const createDevTestUser = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const clerkId = `dev_test_${Date.now()}`;
     await ctx.db.insert("users", {
       clerkId,
@@ -430,8 +436,10 @@ export const createDevTestUser = mutation({
 
 // Delete user and all related data (for dev/testing)
 export const deleteUserByPhone = mutation({
-  args: { phone: v.string() },
+  args: { phone: v.string(), adminSecret: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const user = await ctx.db
       .query("users")
       .withIndex("by_phone", (q) => q.eq("phone", args.phone))
@@ -481,5 +489,13 @@ export const deleteUserByPhone = mutation({
     await ctx.db.delete(user._id);
 
     return { success: true, deletedUserId: user._id };
+  },
+});
+
+// Internal paginated users list for bounded background processing.
+export const listPaginated = internalQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db.query("users").paginate(args.paginationOpts);
   },
 });

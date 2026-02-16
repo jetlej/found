@@ -15,8 +15,11 @@ async function getAuthUserOptional(ctx: QueryCtx) {
 // Returns fully-joined match data for the authenticated user.
 // Filters by gender/sexuality/age server-side so no raw data leaks.
 export const getMatchesForCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const DEFAULT_LIMIT = 30;
+    const MAX_LIMIT = 100;
+
     const currentUser = await getAuthUserOptional(ctx);
     if (!currentUser) return null;
 
@@ -29,13 +32,19 @@ export const getMatchesForCurrentUser = query({
       .query("compatibilityAnalyses")
       .withIndex("by_user2", (q) => q.eq("user2Id", currentUser._id))
       .collect();
-    const analyses = [...asUser1, ...asUser2];
+    const analyses = [...asUser1, ...asUser2].sort(
+      (a, b) => b.overallScore - a.overallScore,
+    );
 
     if (analyses.length === 0) return [];
 
+    const requestedLimit = args.limit ?? DEFAULT_LIMIT;
+    const safeLimit = Math.max(1, Math.min(requestedLimit, MAX_LIMIT));
+    const limitedAnalyses = analyses.slice(0, safeLimit);
+
     // Collect the other user IDs from analyses
-    const otherUserIds = analyses.map((a) =>
-      a.user1Id === currentUser._id ? a.user2Id : a.user1Id
+    const otherUserIds = limitedAnalyses.map((a) =>
+      a.user1Id === currentUser._id ? a.user2Id : a.user1Id,
     );
 
     // Fetch users, profiles, photos for matched users only
@@ -73,7 +82,7 @@ export const getMatchesForCurrentUser = query({
           user,
           profile,
           photos: photoUrls,
-          analysis: analyses[i],
+          analysis: limitedAnalyses[i],
         };
       })
     );

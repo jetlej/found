@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { api, internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 import {
   extractStructuredDataWithUsage,
   DEFAULT_MODEL,
@@ -12,6 +13,7 @@ import {
 } from "../lib/openai";
 import { isGenderCompatible } from "../lib/compatibility";
 import { filterProfile as applyHiddenFilter } from "../lib/filterProfile";
+import { requireAdmin } from "../lib/admin";
 
 // Build profile summary string for the prompt
 function formatProfile(
@@ -186,6 +188,112 @@ interface AnalysisResult {
   };
 }
 
+type AnalyzeArgs = {
+  user1Id: Id<"users">;
+  user2Id: Id<"users">;
+  model?: string;
+};
+
+async function runCompatibilityAnalysis(
+  ctx: {
+    runQuery: any;
+    runMutation: any;
+  },
+  args: AnalyzeArgs,
+) {
+  const model = args.model ?? DEFAULT_MODEL;
+
+  // Check if already exists (skip unless model override = forced re-run)
+  if (!args.model) {
+    const existing = await ctx.runQuery(
+      internal.compatibilityAnalyses.getForPairInternal,
+      { user1Id: args.user1Id, user2Id: args.user2Id },
+    );
+    if (existing) {
+      console.log(`Analysis already exists for pair, skipping`);
+      return { docId: existing._id, usage: null, cost: 0 };
+    }
+  }
+
+  // Fetch both profiles and users
+  const [user1, user2, profile1, profile2] = await Promise.all([
+    ctx.runQuery(internal.users.getById, { userId: args.user1Id }),
+    ctx.runQuery(internal.users.getById, { userId: args.user2Id }),
+    ctx.runQuery(internal.userProfiles.getByUserInternal, { userId: args.user1Id }),
+    ctx.runQuery(internal.userProfiles.getByUserInternal, { userId: args.user2Id }),
+  ]);
+
+  if (!user1 || !user2 || !profile1 || !profile2) {
+    throw new Error("Missing user or profile data");
+  }
+
+  const name1 = user1.name?.split(" ")[0] || "Person A";
+  const name2 = user2.name?.split(" ")[0] || "Person B";
+
+  // Build prompt
+  const userContent = [
+    formatProfile(name1, user1, profile1),
+    "\n---\n",
+    formatProfile(name2, user2, profile2),
+  ].join("\n");
+
+  console.log(`Analyzing compatibility [${model}]: ${name1} <-> ${name2}`);
+
+  // Call LLM via OpenRouter
+  const result = await extractStructuredDataWithUsage<AnalysisResult>(
+    SYSTEM_PROMPT,
+    userContent,
+    { model, maxTokens: 4000 },
+  );
+
+  const analysis = result.data;
+  console.log(`Compatibility analysis complete [${model}] (${formatCost(result.cost)})`);
+
+  // Calculate overall score
+  const scores = analysis.categoryScores;
+  let overallScore =
+    scores.coreValues +
+    scores.lifestyleAlignment +
+    scores.relationshipGoals +
+    scores.communicationStyle +
+    scores.emotionalCompatibility +
+    scores.familyPlanning +
+    scores.socialLifestyle +
+    scores.conflictResolution +
+    scores.intimacyAlignment +
+    scores.growthMindset;
+
+  // Dealbreaker penalty: red flags tank the score
+  // First red flag: x0.6, each additional: x0.75
+  const redFlagCount = analysis.redFlags.length;
+  if (redFlagCount > 0) {
+    overallScore *= 0.6; // first red flag
+    for (let i = 1; i < redFlagCount; i++) {
+      overallScore *= 0.75; // each additional
+    }
+  }
+  overallScore = Math.round(overallScore);
+
+  // Store result (upserts — replaces existing for same pair)
+  const docId = await ctx.runMutation(
+    internal.compatibilityAnalyses.store,
+    {
+      user1Id: args.user1Id,
+      user2Id: args.user2Id,
+      summary: analysis.summary,
+      greenFlags: analysis.greenFlags,
+      yellowFlags: analysis.yellowFlags,
+      redFlags: analysis.redFlags,
+      categoryScores: analysis.categoryScores,
+      overallScore,
+      openaiModel: model,
+    },
+  );
+
+  console.log(`Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`);
+  return { docId, usage: result.usage, cost: result.cost };
+}
+
 export const analyzeCompatibility = action({
   args: {
     user1Id: v.id("users"),
@@ -193,97 +301,27 @@ export const analyzeCompatibility = action({
     model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const model = args.model ?? DEFAULT_MODEL;
-
-    // Check if already exists (skip unless model override = forced re-run)
-    if (!args.model) {
-      const existing = await ctx.runQuery(
-        internal.compatibilityAnalyses.getForPairInternal,
-        { user1Id: args.user1Id, user2Id: args.user2Id },
-      );
-      if (existing) {
-        console.log(`Analysis already exists for pair, skipping`);
-        return { docId: existing._id, usage: null, cost: 0 };
-      }
+    const currentUser = await ctx.runQuery(api.users.current, {});
+    if (!currentUser) throw new Error("Not authenticated");
+    if (currentUser._id !== args.user1Id && currentUser._id !== args.user2Id) {
+      throw new Error("Forbidden");
     }
 
-    // Fetch both profiles and users
-    const [user1, user2, profile1, profile2] = await Promise.all([
-      ctx.runQuery(internal.users.getById, { userId: args.user1Id }),
-      ctx.runQuery(internal.users.getById, { userId: args.user2Id }),
-      ctx.runQuery(internal.userProfiles.getByUserInternal, { userId: args.user1Id }),
-      ctx.runQuery(internal.userProfiles.getByUserInternal, { userId: args.user2Id }),
-    ]);
-
-    if (!user1 || !user2 || !profile1 || !profile2) {
-      throw new Error("Missing user or profile data");
-    }
-
-    const name1 = user1.name?.split(" ")[0] || "Person A";
-    const name2 = user2.name?.split(" ")[0] || "Person B";
-
-    // Build prompt
-    const userContent = [
-      formatProfile(name1, user1, profile1),
-      "\n---\n",
-      formatProfile(name2, user2, profile2),
-    ].join("\n");
-
-    console.log(`Analyzing compatibility [${model}]: ${name1} <-> ${name2}`);
-
-    // Call LLM via OpenRouter
-    const result = await extractStructuredDataWithUsage<AnalysisResult>(
-      SYSTEM_PROMPT,
-      userContent,
-      { model, maxTokens: 4000 },
+    return await ctx.runAction(
+      internal.actions.analyzeCompatibility.analyzeCompatibilityInternal,
+      args,
     );
+  },
+});
 
-    const analysis = result.data;
-    console.log(`Compatibility analysis complete [${model}] (${formatCost(result.cost)})`);
-
-    // Calculate overall score
-    const scores = analysis.categoryScores;
-    let overallScore =
-      scores.coreValues +
-      scores.lifestyleAlignment +
-      scores.relationshipGoals +
-      scores.communicationStyle +
-      scores.emotionalCompatibility +
-      scores.familyPlanning +
-      scores.socialLifestyle +
-      scores.conflictResolution +
-      scores.intimacyAlignment +
-      scores.growthMindset;
-
-    // Dealbreaker penalty: red flags tank the score
-    // First red flag: x0.6, each additional: x0.75
-    const redFlagCount = analysis.redFlags.length;
-    if (redFlagCount > 0) {
-      overallScore *= 0.6; // first red flag
-      for (let i = 1; i < redFlagCount; i++) {
-        overallScore *= 0.75; // each additional
-      }
-    }
-    overallScore = Math.round(overallScore);
-
-    // Store result (upserts — replaces existing for same pair)
-    const docId = await ctx.runMutation(
-      internal.compatibilityAnalyses.store,
-      {
-        user1Id: args.user1Id,
-        user2Id: args.user2Id,
-        summary: analysis.summary,
-        greenFlags: analysis.greenFlags,
-        yellowFlags: analysis.yellowFlags,
-        redFlags: analysis.redFlags,
-        categoryScores: analysis.categoryScores,
-        overallScore,
-        openaiModel: model,
-      },
-    );
-
-    console.log(`Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`);
-    return { docId, usage: result.usage, cost: result.cost };
+export const analyzeCompatibilityInternal = internalAction({
+  args: {
+    user1Id: v.id("users"),
+    user2Id: v.id("users"),
+    model: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await runCompatibilityAnalysis(ctx, args);
   },
 });
 
@@ -291,55 +329,109 @@ export const analyzeCompatibility = action({
 
 // Run compatibility analyses for a newly-profiled user against all eligible users
 export const analyzeAllForUser = internalAction({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), cursor: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const [newUser, allUsers, allProfiles] = await Promise.all([
-      ctx.runQuery(internal.users.getById, { userId: args.userId }),
-      ctx.runQuery(internal.users.listAll),
-      ctx.runQuery(internal.userProfiles.listAll),
-    ]);
+    const MAX_ELIGIBLE_PER_RUN = 20;
+    const USERS_PAGE_SIZE = 100;
+    const ANALYSIS_BATCH_SIZE = 4;
+    const newUser = await ctx.runQuery(internal.users.getById, {
+      userId: args.userId,
+    });
 
     if (!newUser) {
       console.error(`analyzeAllForUser: user ${args.userId} not found`);
       return;
     }
 
-    // Build set of user IDs that have profiles
-    const usersWithProfiles = new Set(allProfiles.map((p) => p.userId));
-
-    // Filter eligible users: has profile, not self, gender-compatible
-    const eligible = allUsers.filter(
-      (u) =>
-        u._id !== args.userId &&
-        usersWithProfiles.has(u._id) &&
-        isGenderCompatible(newUser, u),
+    const existingAnalyses = await ctx.runQuery(
+      internal.compatibilityAnalyses.listForUserInternal,
+      { userId: args.userId },
     );
+    const existingOtherUserIds = new Set(
+      existingAnalyses.map((a) =>
+        a.user1Id === args.userId ? a.user2Id : a.user1Id,
+      ),
+    );
+
+    const eligible: Id<"users">[] = [];
+    let cursor = args.cursor ?? null;
+    let isDone = false;
+
+    while (!isDone && eligible.length < MAX_ELIGIBLE_PER_RUN) {
+      const page = await ctx.runQuery(internal.users.listPaginated, {
+        paginationOpts: { numItems: USERS_PAGE_SIZE, cursor },
+      });
+
+      cursor = page.continueCursor;
+      isDone = page.isDone;
+
+      for (const user of page.page) {
+        if (eligible.length >= MAX_ELIGIBLE_PER_RUN) break;
+        if (user._id === args.userId) continue;
+        if (existingOtherUserIds.has(user._id)) continue;
+        if (!isGenderCompatible(newUser, user)) continue;
+
+        const hasProfile = await ctx.runQuery(
+          internal.userProfiles.hasProfileInternal,
+          { userId: user._id },
+        );
+        if (!hasProfile) continue;
+
+        eligible.push(user._id);
+      }
+    }
 
     console.log(`analyzeAllForUser: ${newUser.name} — ${eligible.length} eligible matches`);
 
     let analyzed = 0;
-    for (const user of eligible) {
-      try {
-        await ctx.runAction(
-          api.actions.analyzeCompatibility.analyzeCompatibility,
-          { user1Id: args.userId, user2Id: user._id },
-        );
-        analyzed++;
-      } catch (err) {
-        console.error(`Failed to analyze ${newUser.name} <-> ${user.name}:`, err);
+    for (let i = 0; i < eligible.length; i += ANALYSIS_BATCH_SIZE) {
+      const batch = eligible.slice(i, i + ANALYSIS_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((otherUserId) =>
+          ctx.runAction(
+            internal.actions.analyzeCompatibility.analyzeCompatibilityInternal,
+            { user1Id: args.userId, user2Id: otherUserId },
+          ),
+        ),
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          analyzed++;
+        } else {
+          console.error(
+            `Failed to analyze ${newUser.name} compatibility pair:`,
+            result.reason,
+          );
+        }
       }
     }
 
+    const shouldContinue = !isDone && !!cursor;
+    if (shouldContinue) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        { userId: args.userId, cursor: cursor! },
+      );
+    }
+
     console.log(`analyzeAllForUser: completed ${analyzed}/${eligible.length} analyses for ${newUser.name}`);
-    return { analyzed, total: eligible.length };
+    return {
+      analyzed,
+      total: eligible.length,
+      continuationScheduled: shouldContinue,
+    };
   },
 });
 
 // Benchmark: re-run ALL existing analyses with a specific model.
 // Runs each pair inline (no nested actions) to avoid overhead, batched to stay under timeout.
 export const rerunAllAnalyses = action({
-  args: { model: v.string() },
+  args: { model: v.string(), adminSecret: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const allAnalyses = await ctx.runQuery(
       internal.compatibilityAnalyses.listAllInternal,
       {},

@@ -8,7 +8,7 @@ echo "=== E2E Test Setup ==="
 
 # Delete test user from Convex (if exists)
 echo "Cleaning Convex test user..."
-bunx convex run users:deleteUserByPhone '{"phone": "+15555550100"}' 2>/dev/null || true
+bun run convex:admin -- users:deleteUserByPhone '{"phone": "+15555550100"}' 2>/dev/null || true
 
 echo "=== Setup complete ==="
 echo ""

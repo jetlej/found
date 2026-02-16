@@ -5,6 +5,7 @@ import { action, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { extractStructuredData } from "../lib/openai";
 import { VOICE_QUESTIONS } from "./voiceQuestionDefinitions";
+import { requireAdmin } from "../lib/admin";
 
 const TARGET_COUNT = 10;
 
@@ -277,8 +278,10 @@ export const seedSingleVoiceTestUser = internalAction({
 // ── Batch entry points ───────────────────────────────────────────────────────
 
 export const seedVoiceProfilesForTestUsers = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     console.log("Generating persona batch...");
     const personaBatch = await extractStructuredData<{ personas: Persona[] }>(
       PERSONA_BATCH_PROMPT,
@@ -310,8 +313,10 @@ export const seedVoiceProfilesForTestUsers = action({
 // Backfill basics for existing test users that were seeded before this fix.
 // For NEW seeds, basics are generated inline — this is only needed for old data.
 export const backfillTestUserBasics = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const testUsers = await ctx.runQuery(internal.seedTestUsers.getTestUsers);
     console.log(`Found ${testUsers.length} test users to backfill`);
 
@@ -475,8 +480,10 @@ const CELEB_PERSONAS: Persona[] = [
 ];
 
 export const seedCelebProfiles = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     console.log("Seeding 10 celebrity personas...");
 
     for (const [index, persona] of CELEB_PERSONAS.entries()) {
@@ -496,8 +503,10 @@ export const seedCelebProfiles = action({
 
 // Seed the 3 high-compatibility test users
 export const seedHighCompatUsers = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     console.log("Seeding 3 high-compatibility female personas...");
 
     for (const [index, persona] of HIGH_COMPAT_PERSONAS.entries()) {

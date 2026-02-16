@@ -118,6 +118,10 @@ export const getRecordingsForUser = query({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     const recordings = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -134,6 +138,10 @@ export const getRecordingForQuestion = query({
     questionIndex: v.number(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     const recording = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user_question", (q) =>
@@ -151,6 +159,10 @@ export const getCompletedCount = query({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     const recordings = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))

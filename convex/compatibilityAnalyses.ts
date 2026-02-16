@@ -21,6 +21,12 @@ function makePairKey(id1: string, id2: string): string {
 export const getForPair = query({
   args: { user1Id: v.id("users"), user2Id: v.id("users") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.user1Id && user._id !== args.user2Id) {
+      throw new Error("Forbidden");
+    }
+
     const pairKey = makePairKey(args.user1Id, args.user2Id);
     return await ctx.db
       .query("compatibilityAnalyses")
@@ -31,6 +37,26 @@ export const getForPair = query({
 
 // Public query: list all analyses for a user
 export const listForUser = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
+    const asUser1 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user1", (q) => q.eq("user1Id", args.userId))
+      .collect();
+    const asUser2 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user2", (q) => q.eq("user2Id", args.userId))
+      .collect();
+    return [...asUser1, ...asUser2];
+  },
+});
+
+// Internal query: list all analyses for a user
+export const listForUserInternal = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const asUser1 = await ctx.db

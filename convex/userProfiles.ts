@@ -1,5 +1,22 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  QueryCtx,
+  MutationCtx,
+} from "./_generated/server";
+
+/** Get the authenticated user from ctx.auth, or throw. */
+async function getAuthUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
 
 // Preference object validator (reusable)
 const preferenceValidator = v.optional(v.object({
@@ -190,6 +207,10 @@ export const upsertProfile = internalMutation({
 export const getByUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     return await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -201,6 +222,10 @@ export const getByUser = query({
 export const hasProfile = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    if (user._id !== args.userId) throw new Error("Forbidden");
+
     const profile = await ctx.db
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -225,6 +250,18 @@ export const getByUserInternal = internalQuery({
       .query("userProfiles")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
+  },
+});
+
+// Internal query: check if a user has a profile
+export const hasProfileInternal = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+    return !!profile;
   },
 });
 

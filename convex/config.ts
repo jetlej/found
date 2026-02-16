@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./lib/admin";
 
 export const getMinBuildNumber = query({
   args: {},
@@ -13,8 +14,10 @@ export const getMinBuildNumber = query({
 });
 
 export const setMinBuildNumber = mutation({
-  args: { build: v.number() },
-  handler: async (ctx, { build }) => {
+  args: { build: v.number(), adminSecret: v.optional(v.string()) },
+  handler: async (ctx, { build, adminSecret }) => {
+    await requireAdmin(ctx, adminSecret);
+
     const existing = await ctx.db
       .query("config")
       .withIndex("by_key", (q) => q.eq("key", "minBuildNumber"))

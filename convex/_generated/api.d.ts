@@ -15,6 +15,7 @@ import type * as actions_seedVoiceTestUsers from "../actions/seedVoiceTestUsers.
 import type * as actions_voiceQuestionDefinitions from "../actions/voiceQuestionDefinitions.js";
 import type * as compatibilityAnalyses from "../compatibilityAnalyses.js";
 import type * as config from "../config.js";
+import type * as lib_admin from "../lib/admin.js";
 import type * as lib_canonicalValues from "../lib/canonicalValues.js";
 import type * as lib_compatibility from "../lib/compatibility.js";
 import type * as lib_filterProfile from "../lib/filterProfile.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   "actions/voiceQuestionDefinitions": typeof actions_voiceQuestionDefinitions;
   compatibilityAnalyses: typeof compatibilityAnalyses;
   config: typeof config;
+  "lib/admin": typeof lib_admin;
   "lib/canonicalValues": typeof lib_canonicalValues;
   "lib/compatibility": typeof lib_compatibility;
   "lib/filterProfile": typeof lib_filterProfile;

@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
+import { requireAdmin } from "../lib/admin";
 
 // ---------------------------------------------------------------------------
 // DuckDuckGo image search (raw fetch, no npm dependency)
@@ -153,8 +154,10 @@ export const seedPhotosForUser = internalAction({
 
 // Seed photos for ALL test users (fictional + celeb + high-compat)
 export const seedAllPhotos = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const testUsers = await ctx.runQuery(internal.seedTestUsers.getTestUsers);
     const nameToId = new Map(testUsers.map((u: any) => [u.name, u._id]));
 
@@ -195,8 +198,14 @@ export const seedAllPhotos = action({
 
 // Seed photos for a single user by name (useful for retrying one)
 export const seedPhotosForName = action({
-  args: { name: v.string(), count: v.optional(v.number()) },
+  args: {
+    name: v.string(),
+    count: v.optional(v.number()),
+    adminSecret: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
     const query = PHOTO_QUERIES[args.name];
     if (!query) throw new Error(`No photo query for "${args.name}"`);
 

@@ -85,6 +85,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_question", ["userId", "questionIndex"]),
 
+  // DEPRECATED: Old written-questions system, replaced by voiceRecordings.
+  // Tables kept for data compatibility only — no code reads/writes these.
   questions: defineTable({
     order: v.number(), // 1-91, determines display sequence
     questionKey: v.optional(v.string()), // Stable identifier (e.g., "relationship_goals_self")
@@ -112,6 +114,7 @@ export default defineSchema({
   }).index("by_order", ["order"])
     .index("by_key", ["questionKey"]),
 
+  // DEPRECATED: See questions above.
   answers: defineTable({
     userId: v.id("users"),
     questionId: v.id("questions"),

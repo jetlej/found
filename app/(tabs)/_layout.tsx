@@ -123,7 +123,6 @@ export default function TabLayout() {
 
             {/* Hidden tabs */}
             <Tabs.Screen name="waitlist" options={{ href: null, headerShown: false }} />
-            <Tabs.Screen name="journey" options={{ href: null, headerShown: false }} />
           </Tabs>
         </Animated.View>
       </GradientBackground>

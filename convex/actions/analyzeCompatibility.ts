@@ -10,6 +10,7 @@ import {
   calculateCost,
   type TokenUsage,
 } from "../lib/openai";
+import { isGenderCompatible } from "../lib/compatibility";
 import { filterProfile as applyHiddenFilter } from "../lib/filterProfile";
 
 // Build profile summary string for the prompt
@@ -286,26 +287,7 @@ export const analyzeCompatibility = action({
   },
 });
 
-// Gender/sexuality compatibility check (server-side version)
-function isGenderCompatible(
-  me: { sexuality?: string; gender?: string },
-  them: { sexuality?: string; gender?: string },
-): boolean {
-  if (!me.sexuality || !me.gender || !them.sexuality || !them.gender) return true;
-  const attractedTo = (sexuality: string, gender: string): string[] => {
-    const s = sexuality.toLowerCase();
-    if (s === "women") return ["woman"];
-    if (s === "men") return ["man"];
-    if (s === "everyone") return ["man", "woman", "non-binary"];
-    if (s === "bisexual" || s === "pansexual" || s === "queer") return ["man", "woman", "non-binary"];
-    if (s === "straight" || s === "heterosexual") return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
-    if (s === "gay" || s === "lesbian" || s === "homosexual") return [gender.toLowerCase()];
-    return ["man", "woman", "non-binary"];
-  };
-  const iWant = attractedTo(me.sexuality, me.gender);
-  const theyWant = attractedTo(them.sexuality, them.gender);
-  return iWant.includes(them.gender.toLowerCase()) && theyWant.includes(me.gender.toLowerCase());
-}
+// Gender/sexuality compatibility imported from shared lib
 
 // Run compatibility analyses for a newly-profiled user against all eligible users
 export const analyzeAllForUser = internalAction({

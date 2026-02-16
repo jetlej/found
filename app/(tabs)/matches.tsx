@@ -2,12 +2,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { type CategoryScores } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
   IconAlertTriangle,
   IconBabyCarriage,
-  IconBookFilled,
   IconBuildingChurch,
   IconBuildingCommunity,
   IconCannabis,
@@ -17,7 +15,6 @@ import {
   IconFlame,
   IconGlass,
   IconHeart,
-  IconHeartFilled,
   IconHome,
   IconMessageCircle,
   IconMoodSmile,
@@ -28,7 +25,6 @@ import {
   IconSeedlingFilled,
   IconShield,
   IconSmokingNo,
-  IconStarFilled,
   IconTarget,
   IconUserFilled,
   IconUsers,
@@ -243,29 +239,6 @@ const fullscreenStyles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 });
-
-// Category icons (filled versions) - old 6-category system
-const CATEGORY_ICONS: Record<
-  string,
-  React.ComponentType<{ size: number; color: string }>
-> = {
-  the_basics: IconUserFilled,
-  who_you_are: IconDiamondFilled,
-  relationship_style: IconHeartFilled,
-  lifestyle: IconSeedlingFilled,
-  life_future: IconBookFilled,
-  deeper_stuff: IconStarFilled,
-};
-
-// Map category IDs (snake_case) to score keys (camelCase)
-const SCORE_KEY_TO_CATEGORY_ID: Record<keyof CategoryScores, string> = {
-  theBasics: "the_basics",
-  whoYouAre: "who_you_are",
-  relationshipStyle: "relationship_style",
-  lifestyle: "lifestyle",
-  lifeFuture: "life_future",
-  theDeeperStuff: "deeper_stuff",
-};
 
 // AI compatibility analysis - 10 category system
 type AICategoryKey =
@@ -792,55 +765,6 @@ function checkDealbreakers(
   });
 }
 
-// Get friction points (low-scoring areas) - updated for 6-category system
-function getFrictionPoints(
-  p1: UserProfile,
-  p2: UserProfile,
-  categoryScores: CategoryScores,
-): string[] {
-  const frictions: string[] = [];
-
-  // Check for low scores in each category
-  if (categoryScores.theBasics < 60) {
-    frictions.push("Some preference mismatches in basics");
-  }
-
-  if (categoryScores.whoYouAre < 50) {
-    frictions.push("Different personality traits or values");
-  }
-
-  if (categoryScores.relationshipStyle < 60) {
-    if (
-      p1.relationshipStyle.conflictStyle !== p2.relationshipStyle.conflictStyle
-    ) {
-      frictions.push(
-        `Different conflict styles (${p1.relationshipStyle.conflictStyle} vs ${p2.relationshipStyle.conflictStyle})`,
-      );
-    }
-  }
-
-  if (categoryScores.lifestyle < 60) {
-    if (p1.lifestyle.sleepSchedule !== p2.lifestyle.sleepSchedule) {
-      frictions.push(
-        `Different sleep schedules (${p1.lifestyle.sleepSchedule} vs ${p2.lifestyle.sleepSchedule})`,
-      );
-    }
-  }
-
-  if (categoryScores.lifeFuture < 60) {
-    if (p1.familyPlans.wantsKids !== p2.familyPlans.wantsKids) {
-      frictions.push("Different views on having kids");
-    }
-  }
-
-  // Independence mismatch
-  if (Math.abs(p1.traits.independenceNeed - p2.traits.independenceNeed) >= 4) {
-    frictions.push("Different needs for independence/togetherness");
-  }
-
-  return frictions.slice(0, 4); // Limit to 4 friction points
-}
-
 // Score color based on value (10% increments) - red to green gradient (saturated/dark)
 function getScoreColor(score: number): string {
   if (score >= 90) return "#0B9D4F"; // Deep green
@@ -1175,23 +1099,6 @@ function DealbreakersSection({
           </View>
         </View>
       )}
-    </View>
-  );
-}
-
-// Watch Out For Section Component
-function WatchOutSection({ frictions }: { frictions: string[] }) {
-  if (frictions.length === 0) return null;
-
-  return (
-    <View style={styles.watchOutSection}>
-      <Text style={styles.watchOutTitle}>👀 Watch Out For</Text>
-      {frictions.map((friction, i) => (
-        <View key={i} style={styles.watchOutItem}>
-          <Text style={styles.watchOutBullet}>•</Text>
-          <Text style={styles.watchOutText}>{friction}</Text>
-        </View>
-      ))}
     </View>
   );
 }

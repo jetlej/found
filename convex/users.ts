@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 import {
   internalQuery,
   mutation,
@@ -222,13 +221,6 @@ export const completeOnboarding = mutation({
       }
     }
 
-    // Schedule AI profile parsing in the background
-    await ctx.scheduler.runAfter(
-      0, // Run immediately
-      internal.actions.parseProfile.parseUserProfile,
-      { userId: user._id }
-    );
-
     return { referralCode, waitlistEndsAt };
   },
 });
@@ -404,45 +396,6 @@ export const completeCategory = mutation({
   },
 });
 
-// Uncomplete a category (for testing)
-export const uncompleteCategory = mutation({
-  args: {
-    categoryId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
-    if (!user) return;
-
-    const completedCategories = user.completedCategories ?? [];
-    const newCompletedCategories = completedCategories.filter(
-      (id) => id !== args.categoryId
-    );
-    const newLevel = Math.max(1, newCompletedCategories.length);
-
-    await ctx.db.patch(user._id, {
-      completedCategories: newCompletedCategories,
-      level: newLevel,
-    });
-
-    return { level: newLevel, completedCategories: newCompletedCategories };
-  },
-});
-
-// Reset journey progress (for testing)
-export const resetJourney = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const user = await getAuthUser(ctx);
-    if (!user) return;
-
-    await ctx.db.patch(user._id, {
-      completedCategories: [],
-      level: 1,
-    });
-
-    return { level: 1, completedCategories: [] };
-  },
-});
 
 // ============ Dev Admin Panel ============
 

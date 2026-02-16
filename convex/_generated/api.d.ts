@@ -23,6 +23,7 @@ import type * as lib_filterProfile from "../lib/filterProfile.js";
 import type * as lib_interests from "../lib/interests.js";
 import type * as lib_openai from "../lib/openai.js";
 import type * as lib_prompts from "../lib/prompts.js";
+import type * as lib_voiceConfig from "../lib/voiceConfig.js";
 import type * as matching from "../matching.js";
 import type * as photos from "../photos.js";
 import type * as questions from "../questions.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   "lib/interests": typeof lib_interests;
   "lib/openai": typeof lib_openai;
   "lib/prompts": typeof lib_prompts;
+  "lib/voiceConfig": typeof lib_voiceConfig;
   matching: typeof matching;
   photos: typeof photos;
   questions: typeof questions;

@@ -2,7 +2,6 @@ import { AppHeader } from "@/components/AppHeader";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { filterProfile } from "@/lib/filterProfile";
 import { type CategoryScores } from "@/lib/matching";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import {
@@ -38,7 +37,7 @@ import {
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -1534,144 +1533,23 @@ export default function MatchesScreen() {
   // Get current user
   const currentUser = useQuery(api.users.current, userId ? {} : "skip");
 
-  // Get all profiles (we'll filter to test users)
-  const allProfiles = useQuery(api.userProfiles.listAll);
-
-  // Get all users to get names
-  const allUsers = useQuery(api.users.listAll);
-
-  // Get all photos to show profile pics
-  const allPhotos = useQuery(api.photos.listAll);
-
-  // Get AI compatibility analyses for current user
-  const aiAnalyses = useQuery(
-    api.compatibilityAnalyses.listForUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+  // Server-side filtered matches (replaces client-side listAll queries)
+  const matchesData = useQuery(
+    api.matching.getMatchesForCurrentUser,
+    userId ? {} : "skip",
   );
 
-  // Helper to get first photo URL for a user
-  const getFirstPhotoUrl = (uId: string): string | null => {
-    if (!allPhotos) return null;
-    const userPhotos = allPhotos
-      .filter((p: any) => p.userId === uId)
-      .sort((a: any, b: any) => a.order - b.order);
-    return userPhotos[0]?.url || null;
-  };
+  // Build match list from server data
+  const testUserMatches = matchesData
+    ? matchesData.map((m: any) => ({
+        user: m.user,
+        profile: m.profile,
+        photos: m.photos,
+        analysis: m.analysis,
+      }))
+    : null;
 
-  // Helper to get all photo URLs for a user (deduplicated by order slot)
-  const getUserPhotos = (uId: string): string[] => {
-    if (!allPhotos) return [];
-    const seen = new Set<number>();
-    return allPhotos
-      .filter((p: any) => p.userId === uId)
-      .sort((a: any, b: any) => a.order - b.order)
-      .filter((p: any) => {
-        if (seen.has(p.order)) return false;
-        seen.add(p.order);
-        return true;
-      })
-      .map((p: any) => p.url);
-  };
-
-  // Gender/sexuality compatibility check
-  // Returns which genders a person is attracted to, then checks both directions
-  const isGenderCompatible = (
-    me: typeof currentUser,
-    them: typeof currentUser,
-  ): boolean => {
-    if (!me?.sexuality || !me?.gender || !them?.sexuality || !them?.gender)
-      return true; // pass through incomplete profiles
-    const attractedTo = (sexuality: string, gender: string): string[] => {
-      const s = sexuality.toLowerCase();
-      // Direct gender values from picker: "Women", "Men", "Everyone"
-      if (s === "women") return ["woman"];
-      if (s === "men") return ["man"];
-      if (s === "everyone") return ["man", "woman", "non-binary"];
-      // Orientation labels
-      if (s === "bisexual" || s === "pansexual" || s === "queer")
-        return ["man", "woman", "non-binary"];
-      if (s === "straight" || s === "heterosexual")
-        return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
-      if (s === "gay" || s === "lesbian" || s === "homosexual")
-        return [gender.toLowerCase()];
-      return ["man", "woman", "non-binary"]; // unknown = open to all
-    };
-    const iWant = attractedTo(me.sexuality, me.gender);
-    const theyWant = attractedTo(them.sexuality, them.gender);
-    const imIntoThem = iWant.includes(them.gender.toLowerCase());
-    const theyreIntoMe = theyWant.includes(me.gender.toLowerCase());
-    return imIntoThem && theyreIntoMe;
-  };
-
-  // Age range compatibility check (hard filter when dealbreaker)
-  const isAgeCompatible = (
-    me: typeof currentUser,
-    them: typeof currentUser,
-  ): boolean => {
-    if (!me?.ageRangeDealbreaker) return true;
-    if (!them?.birthdate) return true; // pass through incomplete profiles
-    const theirAge = Math.floor(
-      (Date.now() - new Date(them.birthdate).getTime()) / 31557600000,
-    );
-    return (
-      theirAge >= (me.ageRangeMin ?? 18) && theirAge <= (me.ageRangeMax ?? 99)
-    );
-  };
-
-  // Helper: find AI analysis for a given user pair
-  const getAnalysis = useCallback(
-    (theirUserId: string) => {
-      if (!aiAnalyses || !currentUser?._id) return null;
-      return (
-        aiAnalyses.find(
-          (a) =>
-            (a.user1Id === currentUser._id && a.user2Id === theirUserId) ||
-            (a.user2Id === currentUser._id && a.user1Id === theirUserId),
-        ) ?? null
-      );
-    },
-    [aiAnalyses, currentUser?._id],
-  );
-
-  // Filter to bot users and build match list
-  const testUserMatches = (() => {
-    if (!allProfiles || !allUsers) return null;
-
-    const testUsers = allUsers.filter(
-      (u) =>
-        u.type === "bot" &&
-        u._id !== currentUser?._id &&
-        isGenderCompatible(currentUser, u) &&
-        isAgeCompatible(currentUser, u),
-    );
-
-    const matches = testUsers
-      .map((user) => {
-        const profile = allProfiles.find((p) => p.userId === user._id);
-        if (!profile) return null;
-
-        const analysis = getAnalysis(user._id);
-        // Only include matches that have a completed AI analysis
-        if (!analysis) return null;
-
-        return {
-          user,
-          profile: filterProfile(profile, profile.hiddenFields ?? undefined),
-          photoUrl: getFirstPhotoUrl(user._id),
-          photos: getUserPhotos(user._id),
-          analysis,
-        };
-      })
-      .filter(Boolean);
-
-    // Sort by AI overall score (descending)
-    return matches.sort(
-      (a, b) =>
-        (b?.analysis.overallScore ?? 0) - (a?.analysis.overallScore ?? 0),
-    );
-  })();
-
-  const isLoading = !currentUser || !testUserMatches;
+  const isLoading = !currentUser || matchesData === undefined;
   const isEmpty = testUserMatches && testUserMatches.length === 0;
   const isReady = !isLoading && !isEmpty;
 

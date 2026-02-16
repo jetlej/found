@@ -107,7 +107,6 @@ export default function AIPasteScreen() {
         const questionId = questionMap.get(order);
         if (questionId) {
           await upsertAnswer({
-            userId: currentUser._id,
             questionId: questionId as any,
             value: value,
             source: "ai",

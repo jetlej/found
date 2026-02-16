@@ -5,24 +5,38 @@ import {
   internalQuery,
   mutation,
   query,
+  QueryCtx,
+  MutationCtx,
 } from "./_generated/server";
+import { TOTAL_VOICE_QUESTIONS } from "./lib/voiceConfig";
 
-const TOTAL_VOICE_QUESTIONS = 8;
+/** Get the authenticated user from ctx.auth, or throw. */
+async function getAuthUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
 
 // Save a voice recording
 export const saveRecording = mutation({
   args: {
-    userId: v.id("users"),
     questionIndex: v.number(),
     storageId: v.id("_storage"),
     durationSeconds: v.number(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    const userId = user._id;
+
     // Check if there's an existing recording for this question
     const existing = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user_question", (q) =>
-        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex),
+        q.eq("userId", userId).eq("questionIndex", args.questionIndex),
       )
       .first();
 
@@ -35,7 +49,7 @@ export const saveRecording = mutation({
 
     // Insert the new recording
     const id = await ctx.db.insert("voiceRecordings", {
-      userId: args.userId,
+      userId,
       questionIndex: args.questionIndex,
       storageId: args.storageId,
       durationSeconds: args.durationSeconds,
@@ -49,30 +63,23 @@ export const saveRecording = mutation({
       { recordingId: id },
     );
 
-    // Check if all 9 questions are now complete
+    // Check if all questions are now complete
     const allRecordings = await ctx.db
       .query("voiceRecordings")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     if (allRecordings.length === TOTAL_VOICE_QUESTIONS) {
-      // All 8 complete - schedule voice profile parsing
-      // This runs both on initial completion AND when updating any recording
+      // All complete - schedule voice profile parsing
       await ctx.scheduler.runAfter(
         0,
         internal.actions.parseVoiceProfile.parseVoiceProfile,
-        {
-          userId: args.userId,
-        },
+        { userId },
       );
 
       // Update user's onboarding type to "voice"
-      const user = await ctx.db
-        .query("users")
-        .filter((q) => q.eq(q.field("_id"), args.userId))
-        .first();
-      if (user && user.onboardingType !== "voice") {
-        await ctx.db.patch(user._id, { onboardingType: "voice" });
+      if (user.onboardingType !== "voice") {
+        await ctx.db.patch(userId, { onboardingType: "voice" });
       }
     }
 
@@ -83,14 +90,16 @@ export const saveRecording = mutation({
 // Delete a voice recording
 export const deleteRecording = mutation({
   args: {
-    userId: v.id("users"),
     questionIndex: v.number(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+
     const recording = await ctx.db
       .query("voiceRecordings")
       .withIndex("by_user_question", (q) =>
-        q.eq("userId", args.userId).eq("questionIndex", args.questionIndex),
+        q.eq("userId", user._id).eq("questionIndex", args.questionIndex),
       )
       .first();
 
@@ -158,6 +167,15 @@ export const updateTranscription = mutation({
     transcription: v.string(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    // Verify the recording belongs to this user
+    const recording = await ctx.db.get(args.recordingId);
+    if (!recording || recording.userId !== user._id) {
+      throw new Error("Recording not found");
+    }
+
     await ctx.db.patch(args.recordingId, {
       transcription: args.transcription,
     });
@@ -266,7 +284,7 @@ export const replaceSeedRecordings = internalMutation({
   },
 });
 
-// Get all user IDs that have exactly 10 voice recordings (complete)
+// Get all user IDs that have complete voice recordings
 export const getUsersWithCompleteRecordings = internalQuery({
   args: {},
   handler: async (ctx) => {
@@ -277,7 +295,7 @@ export const getUsersWithCompleteRecordings = internalQuery({
     }
     const completeUsers: string[] = [];
     for (const [userId, count] of countByUser) {
-      if (count >= 9) completeUsers.push(userId);
+      if (count >= TOTAL_VOICE_QUESTIONS) completeUsers.push(userId);
     }
     return completeUsers;
   },

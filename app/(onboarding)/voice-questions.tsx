@@ -360,7 +360,6 @@ export default function VoiceQuestionsScreen() {
 
       // Save recording metadata
       await saveRecording({
-        userId: currentUser._id,
         questionIndex: currentIndex,
         storageId,
         durationSeconds: finalDuration,
@@ -415,7 +414,6 @@ export default function VoiceQuestionsScreen() {
 
     try {
       await deleteRecordingMutation({
-        userId: currentUser._id,
         questionIndex: currentIndex,
       });
     } catch (err) {

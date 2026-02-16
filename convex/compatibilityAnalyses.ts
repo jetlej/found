@@ -1,6 +1,16 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, QueryCtx, MutationCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+
+/** Get the authenticated user from ctx.auth, or throw. */
+async function getAuthUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
 
 // Build a deterministic pair key from two user IDs
 function makePairKey(id1: string, id2: string): string {
@@ -43,8 +53,8 @@ export const listAllInternal = internalQuery({
   },
 });
 
-// Query: list just user ID pairs (lightweight, for benchmark scripts)
-export const listPairs = query({
+// Internal query: list just user ID pairs (for benchmark scripts)
+export const listPairs = internalQuery({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("compatibilityAnalyses").collect();
@@ -52,8 +62,8 @@ export const listPairs = query({
   },
 });
 
-// Query: count analyses by model (for benchmark progress tracking)
-export const modelStats = query({
+// Internal query: count analyses by model (for benchmark progress tracking)
+export const modelStats = internalQuery({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("compatibilityAnalyses").collect();
@@ -134,17 +144,21 @@ export const store = internalMutation({
   },
 });
 
-// Mutation to clear all analyses for a user (for re-generation)
+// Mutation to clear all analyses for the authenticated user (for re-generation)
 export const clearForUser = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    const userId = user._id;
+
     const asUser1 = await ctx.db
       .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", args.userId))
+      .withIndex("by_user1", (q) => q.eq("user1Id", userId))
       .collect();
     const asUser2 = await ctx.db
       .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", args.userId))
+      .withIndex("by_user2", (q) => q.eq("user2Id", userId))
       .collect();
     const all = [...asUser1, ...asUser2];
     for (const doc of all) {

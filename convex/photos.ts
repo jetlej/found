@@ -1,5 +1,15 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
+
+/** Get the authenticated user from ctx.auth, or throw. */
+async function getAuthUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
 
 export const getByUser = query({
   args: { userId: v.id("users") },
@@ -24,23 +34,25 @@ export const countByUser = query({
 
 export const add = mutation({
   args: {
-    userId: v.id("users"),
     storageId: v.id("_storage"),
     order: v.number(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    const userId = user._id;
+
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) throw new Error("Failed to get storage URL");
 
     // Find ALL existing photos at this order (handles duplicates from concurrent uploads)
     const existing = await ctx.db
       .query("photos")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("order"), args.order))
       .collect();
 
     if (existing.length > 0) {
-      // Patch the first one, delete any extras
       await ctx.db.patch(existing[0]._id, { storageId: args.storageId, url });
       for (let i = 1; i < existing.length; i++) {
         await ctx.db.delete(existing[i]._id);
@@ -49,7 +61,7 @@ export const add = mutation({
     }
 
     return await ctx.db.insert("photos", {
-      userId: args.userId,
+      userId,
       storageId: args.storageId,
       url,
       order: args.order,
@@ -60,24 +72,40 @@ export const add = mutation({
 export const remove = mutation({
   args: { photoId: v.id("photos") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    // Verify the photo belongs to this user
+    const photo = await ctx.db.get(args.photoId);
+    if (!photo || photo.userId !== user._id) {
+      throw new Error("Photo not found");
+    }
+
     await ctx.db.delete(args.photoId);
   },
 });
 
 export const reorder = mutation({
   args: {
-    userId: v.id("users"),
     orders: v.array(v.object({ photoId: v.id("photos"), order: v.number() })),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    // Verify all photos belong to this user
     for (const { photoId, order } of args.orders) {
+      const photo = await ctx.db.get(photoId);
+      if (!photo || photo.userId !== user._id) {
+        throw new Error("Photo not found");
+      }
       await ctx.db.patch(photoId, { order });
     }
   },
 });
 
-// Get all photos (for batch loading on matches screen)
-export const listAll = query({
+// Internal: get all photos (for server-side use only)
+export const listAll = internalQuery({
   handler: async (ctx) => {
     return await ctx.db.query("photos").collect();
   },

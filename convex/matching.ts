@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, internalQuery } from "./_generated/server";
+import { query, internalQuery, QueryCtx } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 
 // Weights for different compatibility factors (must sum to 1.0)
@@ -583,5 +583,128 @@ export const getTopMatches = internalQuery({
     return matches
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
+  },
+});
+
+// ── Gender/sexuality compatibility (shared logic) ───────────────────────
+
+function attractedTo(sexuality: string, gender: string): string[] {
+  const s = sexuality.toLowerCase();
+  if (s === "women") return ["woman"];
+  if (s === "men") return ["man"];
+  if (s === "everyone") return ["man", "woman", "non-binary"];
+  if (s === "bisexual" || s === "pansexual" || s === "queer")
+    return ["man", "woman", "non-binary"];
+  if (s === "straight" || s === "heterosexual")
+    return gender.toLowerCase() === "man" ? ["woman"] : ["man"];
+  if (s === "gay" || s === "lesbian" || s === "homosexual")
+    return [gender.toLowerCase()];
+  return ["man", "woman", "non-binary"];
+}
+
+function isGenderCompatible(
+  me: { sexuality?: string; gender?: string },
+  them: { sexuality?: string; gender?: string },
+): boolean {
+  if (!me.sexuality || !me.gender || !them.sexuality || !them.gender) return true;
+  const iWant = attractedTo(me.sexuality, me.gender);
+  const theyWant = attractedTo(them.sexuality, them.gender);
+  return iWant.includes(them.gender.toLowerCase()) && theyWant.includes(me.gender.toLowerCase());
+}
+
+function isAgeCompatible(
+  me: { ageRangeDealbreaker?: boolean; ageRangeMin?: number; ageRangeMax?: number },
+  them: { birthdate?: string },
+): boolean {
+  if (!me.ageRangeDealbreaker) return true;
+  if (!them.birthdate) return true;
+  const theirAge = Math.floor(
+    (Date.now() - new Date(them.birthdate).getTime()) / 31557600000,
+  );
+  return theirAge >= (me.ageRangeMin ?? 18) && theirAge <= (me.ageRangeMax ?? 99);
+}
+
+// ── Auth-gated matches query (replaces client-side listAll) ─────────────
+
+/** Get the authenticated user from ctx.auth, or return null. */
+async function getAuthUserOptional(ctx: QueryCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
+
+// Returns fully-joined match data for the authenticated user.
+// Filters by gender/sexuality/age server-side so no raw data leaks.
+export const getMatchesForCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthUserOptional(ctx);
+    if (!currentUser) return null;
+
+    // Get AI analyses for this user
+    const asUser1 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user1", (q) => q.eq("user1Id", currentUser._id))
+      .collect();
+    const asUser2 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user2", (q) => q.eq("user2Id", currentUser._id))
+      .collect();
+    const analyses = [...asUser1, ...asUser2];
+
+    if (analyses.length === 0) return [];
+
+    // Collect the other user IDs from analyses
+    const otherUserIds = analyses.map((a) =>
+      a.user1Id === currentUser._id ? a.user2Id : a.user1Id
+    );
+
+    // Fetch users, profiles, photos for matched users only
+    const results = await Promise.all(
+      otherUserIds.map(async (uid, i) => {
+        const user = await ctx.db.get(uid);
+        if (!user) return null;
+        if (user.type !== "bot") return null; // Only show bot matches for now
+        if (!isGenderCompatible(currentUser, user)) return null;
+        if (!isAgeCompatible(currentUser, user)) return null;
+
+        const profile = await ctx.db
+          .query("userProfiles")
+          .withIndex("by_user", (q) => q.eq("userId", uid))
+          .first();
+        if (!profile) return null;
+
+        const photos = await ctx.db
+          .query("photos")
+          .withIndex("by_user", (q) => q.eq("userId", uid))
+          .collect();
+
+        const sortedPhotos = photos.sort((a, b) => a.order - b.order);
+        // Deduplicate by order slot
+        const seen = new Set<number>();
+        const photoUrls = sortedPhotos
+          .filter((p) => {
+            if (seen.has(p.order)) return false;
+            seen.add(p.order);
+            return true;
+          })
+          .map((p) => p.url);
+
+        return {
+          user,
+          profile,
+          photos: photoUrls,
+          analysis: analyses[i],
+        };
+      })
+    );
+
+    // Filter nulls, sort by AI score descending
+    return results
+      .filter(Boolean)
+      .sort((a, b) => (b!.analysis.overallScore) - (a!.analysis.overallScore));
   },
 });

@@ -209,8 +209,8 @@ export const hasProfile = query({
   },
 });
 
-// Query to list all profiles (for compatibility screen)
-export const listAll = query({
+// Internal query to list all profiles (for server-side actions only)
+export const listAll = internalQuery({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("userProfiles").collect();

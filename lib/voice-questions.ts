@@ -79,7 +79,15 @@ export const VOICE_QUESTIONS: VoiceQuestion[] = [
   },
 ];
 
+// Must match convex/lib/voiceConfig.ts — single source of truth for the count
 export const TOTAL_VOICE_QUESTIONS = VOICE_QUESTIONS.length;
+
+// Verify at import time that the array matches the expected count
+if (VOICE_QUESTIONS.length !== 8) {
+  throw new Error(
+    `Expected 8 voice questions but found ${VOICE_QUESTIONS.length}. Update convex/lib/voiceConfig.ts if intentional.`
+  );
+}
 
 export function getVoiceQuestion(index: number): VoiceQuestion | undefined {
   return VOICE_QUESTIONS.find((q) => q.index === index);

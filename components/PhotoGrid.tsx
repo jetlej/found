@@ -364,7 +364,6 @@ export function PhotoGrid({
 
       if (uploadResult.storageId) {
         await addPhoto({
-          userId,
           storageId: uploadResult.storageId,
           order: slotOrder,
         });
@@ -424,7 +423,7 @@ export function PhotoGrid({
         .filter((s) => s.photoId)
         .map((s) => ({ photoId: s.photoId!, order: s.order }));
       if (orders.length > 0) {
-        reorderPhotos({ userId, orders })
+        reorderPhotos({ orders })
           .catch(console.error)
           .finally(() =>
             setTimeout(() => { reorderPendingRef.current = false; }, 500)
@@ -457,7 +456,7 @@ export function PhotoGrid({
         .filter((item) => item.photoId)
         .map((item) => ({ photoId: item.photoId!, order: item.order }));
       if (orders.length > 0) {
-        reorderPhotos({ userId, orders })
+        reorderPhotos({ orders })
           .catch(console.error)
           .finally(() =>
             setTimeout(() => {

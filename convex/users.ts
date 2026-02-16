@@ -319,8 +319,8 @@ export const updateNotificationSettings = mutation({
   },
 });
 
-// Query to list all users (for compatibility screen)
-export const listAll = query({
+// Internal query to list all users (for server-side actions only)
+export const listAll = internalQuery({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("users").collect();

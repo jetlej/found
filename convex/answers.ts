@@ -1,5 +1,15 @@
 import { v } from "convex/values";
-import { internalQuery, mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
+
+/** Get the authenticated user from ctx.auth, or throw. */
+async function getAuthUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .first();
+}
 
 export const getByUser = query({
   args: { userId: v.id("users") },
@@ -65,22 +75,24 @@ export const countByUserForCategory = query({
 
 export const upsert = mutation({
   args: {
-    userId: v.id("users"),
     questionId: v.id("questions"),
     value: v.string(),
     source: v.optional(v.union(v.literal("ai"), v.literal("manual"))),
     isDealbreaker: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+    const userId = user._id;
+
     const existing = await ctx.db
       .query("answers")
       .withIndex("by_user_question", (q) =>
-        q.eq("userId", args.userId).eq("questionId", args.questionId)
+        q.eq("userId", userId).eq("questionId", args.questionId)
       )
       .first();
 
     if (existing) {
-      // When updating, also update source and isDealbreaker if provided
       const updates: { value: string; source?: "ai" | "manual"; isDealbreaker?: boolean } = { value: args.value };
       if (args.source) {
         updates.source = args.source;
@@ -93,7 +105,7 @@ export const upsert = mutation({
     }
 
     return await ctx.db.insert("answers", {
-      userId: args.userId,
+      userId,
       questionId: args.questionId,
       value: args.value,
       source: args.source ?? "manual",
@@ -105,19 +117,30 @@ export const upsert = mutation({
 export const remove = mutation({
   args: { answerId: v.id("answers") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    // Verify the answer belongs to this user
+    const answer = await ctx.db.get(args.answerId);
+    if (!answer || answer.userId !== user._id) {
+      throw new Error("Answer not found");
+    }
+
     await ctx.db.delete(args.answerId);
   },
 });
 
 export const clearAiAnswers = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+
     const answers = await ctx.db
       .query("answers")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
-    // Delete all AI-sourced answers
     for (const answer of answers) {
       if (answer.source === "ai") {
         await ctx.db.delete(answer._id);

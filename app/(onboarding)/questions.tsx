@@ -144,7 +144,6 @@ export default function QuestionsScreen() {
     setSaving(true);
     try {
       await upsertAnswer({
-        userId: currentUser._id,
         questionId: currentQuestion._id as any,
         value: currentAnswer,
         source: "manual",

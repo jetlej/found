@@ -313,8 +313,8 @@ export const analyzeAllForUser = internalAction({
   handler: async (ctx, args) => {
     const [newUser, allUsers, allProfiles] = await Promise.all([
       ctx.runQuery(internal.users.getById, { userId: args.userId }),
-      ctx.runQuery(api.users.listAll),
-      ctx.runQuery(api.userProfiles.listAll),
+      ctx.runQuery(internal.users.listAll),
+      ctx.runQuery(internal.userProfiles.listAll),
     ]);
 
     if (!newUser) {

@@ -86,8 +86,13 @@ function deriveRouteState(p: {
 
   // Offline with cached user — use cached data
   if (!p.isOnline && p.cachedUser) {
-    if (p.cachedUser.onboardingComplete) return { status: "ready" };
-    return { status: "onboarding", route: "/(onboarding)/referral" };
+    if (!p.cachedUser.onboardingComplete) {
+      return { status: "onboarding", route: "/(onboarding)/referral" };
+    }
+    if (!p.cachedUser.voiceQuestionsComplete) {
+      return { status: "voice_questions" };
+    }
+    return { status: "ready" };
   }
 
   // Still creating the user doc
@@ -205,7 +210,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Get cached user from offline store
   const { cachedUser, setCachedUser: setOfflineUser } = useOfflineStore();
 
-  // Cache user data when we get it from Convex
+  // Cache user data when we get it from Convex (including voice question state)
+  const voiceQuestionsComplete =
+    voiceRecordingCount !== undefined && voiceRecordingCount >= TOTAL_VOICE_QUESTIONS;
+
   useEffect(() => {
     if (currentUser && currentUser._id) {
       const userToCache = {
@@ -214,11 +222,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         name: currentUser.name,
         avatarUrl: currentUser.avatarUrl,
         onboardingComplete: currentUser.onboardingComplete,
+        voiceQuestionsComplete,
       };
       setCachedUser(userToCache);
       setOfflineUser(userToCache);
     }
-  }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl, currentUser?.onboardingComplete]);
+  }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl, currentUser?.onboardingComplete, voiceQuestionsComplete]);
 
   // Initialize offline sync and push notifications
   useOfflineSync();

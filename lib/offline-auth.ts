@@ -14,6 +14,8 @@ interface CachedUser {
   clerkId: string;
   name?: string;
   avatarUrl?: string;
+  onboardingComplete?: boolean;
+  voiceQuestionsComplete?: boolean;
 }
 
 export async function getCachedAuth(): Promise<CachedAuth | null> {

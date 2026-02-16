@@ -33,7 +33,6 @@ alwaysApply: false
 All seeding uses the **voice pipeline** (`convex/actions/seedVoiceTestUsers.ts`). Each seeded user goes through: generate basics + voice answers (parallel GPT) → create user with full demographics → save recordings → schedule `parseVoiceProfile` (which triggers compatibility analysis). Profile parsing runs as a separate scheduled action to avoid timeouts.
 
 ```bash
-bunx convex run seedQuestions:seedQuestions                                    # Seed questions (run once)
 bunx convex run actions/seedVoiceTestUsers:seedCelebProfiles                  # 10 celebrity personas
 bunx convex run actions/seedVoiceTestUsers:seedHighCompatUsers                # 3 high-compat personas
 bunx convex run actions/seedVoiceTestUsers:seedVoiceProfilesForTestUsers      # 10 random GPT personas
@@ -43,7 +42,6 @@ bunx convex run seedTestUsers:deleteAllBots                                   # 
 bunx convex run actions/seedVoiceTestUsers:backfillTestUserBasics             # Backfill basics on old users only
 ```
 
-- `convex/actions/seedTestUsers.ts` is **LEGACY** (written-answer path) — do not use for new seeding.
 - Persona definitions: celebrities + high-compat in `seedVoiceTestUsers.ts`, photo URLs in `seedTestPhotos.ts` (keyed by name, not ID).
 - `createTestUser` accepts optional basics args; when provided, user is created with real demographics instead of placeholders.
 

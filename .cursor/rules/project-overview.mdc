@@ -42,11 +42,23 @@ hooks/                  # Custom React hooks
 stores/                 # Zustand stores
 ```
 
+## Backwards Compatibility (CRITICAL)
+
+This app is deployed to real devices. **Backend changes must never break old clients.**
+
+- **NEVER** convert a public `query`/`mutation` to `internalQuery`/`internalMutation` if any deployed client calls it. Old app versions will crash instantly.
+- **NEVER** remove or rename a public function's export that deployed clients use.
+- **NEVER** change a function's args in a way that breaks existing callers (removing required args, changing types).
+- To retire a public endpoint, follow this 3-phase process:
+  1. **Add** the new endpoint alongside the old one. Deploy backend.
+  2. **Update client** to use the new endpoint. Push OTA / app update.
+  3. **Remove** old endpoint only after all clients have migrated (check Convex dashboard for zero traffic).
+- Mark deprecated endpoints with `// DEPRECATED:` comment and a `// TODO:` for when to remove.
+
 ## Critical Conventions
 
-- **Convex does NOT auto-sync.** After ANY change to `convex/` files, the AI must run `bunx convex dev` once to push. `convex dev` is not kept running in a separate terminal -- just run it once after changes and let it complete.
+- **Convex does NOT auto-sync.** After ANY change to `convex/` files, the AI must run `bunx convex dev --once` to push. `convex dev` is not kept running in a separate terminal -- just run it once after changes and let it complete.
 - **Auth is server-side.** Convex functions use `ctx.auth.getUserIdentity()` to identify the caller. Do NOT pass `clerkId` as a function argument. Client queries use `userId ? {} : "skip"` to gate on sign-in state.
-- Always reference questions by `questionKey`, never by `order` number.
 - All screens use `useEffectiveUserId()` instead of `useAuth()` directly (gates query skipping).
 - Env: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CONVEX_URL` in `.env.local`; `OPENAI_API_KEY`, `CLERK_JWT_ISSUER_DOMAIN` set via `bunx convex env set`.
 

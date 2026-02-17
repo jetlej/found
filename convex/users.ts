@@ -518,6 +518,73 @@ export const deleteUserByPhone = mutation({
   },
 });
 
+export const deleteCurrentUserAccount = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    if (!user) {
+      return { success: false };
+    }
+
+    // Delete related photos.
+    const photos = await ctx.db
+      .query("photos")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const photo of photos) {
+      await ctx.db.delete(photo._id);
+    }
+
+    // Delete related voice recordings.
+    const recordings = await ctx.db
+      .query("voiceRecordings")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const recording of recordings) {
+      await ctx.db.delete(recording._id);
+    }
+
+    // Delete related answers.
+    const answers = await ctx.db
+      .query("answers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const answer of answers) {
+      await ctx.db.delete(answer._id);
+    }
+
+    // Delete related user profile rows.
+    const profiles = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const profile of profiles) {
+      await ctx.db.delete(profile._id);
+    }
+
+    // Delete compatibility analyses where this user appears in either side.
+    const analysesAsUser1 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+      .collect();
+    const analysesAsUser2 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+      .collect();
+    const analysisIds = new Set(
+      [...analysesAsUser1, ...analysesAsUser2].map((analysis) => analysis._id),
+    );
+    for (const analysisId of analysisIds) {
+      await ctx.db.delete(analysisId);
+    }
+
+    // Delete the user account.
+    await ctx.db.delete(user._id);
+
+    return { success: true };
+  },
+});
+
 // Internal paginated users list for bounded background processing.
 export const listPaginated = internalQuery({
   args: { paginationOpts: paginationOptsValidator },

@@ -6,11 +6,12 @@ import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
 import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
 import { IconPencil } from "@tabler/icons-react-native";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -30,8 +31,11 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const router = useRouter();
   const userId = useEffectiveUserId();
+  const deleteCurrentUserAccount = useMutation(api.users.deleteCurrentUserAccount);
 
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const versionTapCountRef = useRef(0);
+  const versionTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentUser = useQuery(api.users.current, userId ? {} : "skip");
 
@@ -65,6 +69,64 @@ export default function SettingsScreen() {
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const resetVersionTapState = () => {
+    versionTapCountRef.current = 0;
+    if (versionTapTimeoutRef.current) {
+      clearTimeout(versionTapTimeoutRef.current);
+      versionTapTimeoutRef.current = null;
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert("Delete Account", "Are you sure?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+        onPress: resetVersionTapState,
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteCurrentUserAccount({});
+            await signOut();
+          } catch {
+            Alert.alert("Error", "Could not delete account. Please try again.");
+          } finally {
+            resetVersionTapState();
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleVersionPress = () => {
+    if (versionTapTimeoutRef.current) {
+      clearTimeout(versionTapTimeoutRef.current);
+    }
+
+    versionTapCountRef.current += 1;
+
+    if (versionTapCountRef.current >= 5) {
+      resetVersionTapState();
+      handleDeleteAccount();
+      return;
+    }
+
+    versionTapTimeoutRef.current = setTimeout(() => {
+      resetVersionTapState();
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (versionTapTimeoutRef.current) {
+        clearTimeout(versionTapTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (isUserLoading) {
     return (
@@ -141,7 +203,9 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>
 
-        <Text style={styles.version}>v1.0.0</Text>
+        <Pressable onPress={handleVersionPress} hitSlop={8}>
+          <Text style={styles.version}>v1.0.0</Text>
+        </Pressable>
       </ScrollView>
 
       </Animated.View>

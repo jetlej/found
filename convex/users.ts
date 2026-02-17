@@ -8,6 +8,9 @@ import {
 } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { requireAdmin } from "./lib/admin";
+import { internal } from "./_generated/api";
+
+const PROFILE_UPDATE_COOLDOWN_MS = 5 * 60 * 1000;
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -44,21 +47,6 @@ export const getOrCreate = mutation({
       return existingByClerk._id;
     }
 
-    // Then check by phone - link existing user to new clerkId
-    // This handles the case where Clerk generates a different ID on a different device
-    if (args.phone) {
-      const existingByPhone = await ctx.db
-        .query("users")
-        .withIndex("by_phone", (q) => q.eq("phone", args.phone))
-        .first();
-
-      if (existingByPhone) {
-        // Update the existing user with the new clerkId
-        await ctx.db.patch(existingByPhone._id, { clerkId });
-        return existingByPhone._id;
-      }
-    }
-
     // No existing user - create new
     return await ctx.db.insert("users", {
       clerkId,
@@ -68,6 +56,16 @@ export const getOrCreate = mutation({
     });
   },
 });
+
+function assertProfileUpdateAllowed(user: { onboardingComplete?: boolean; lastProfileUpdateAt?: number }) {
+  if (!user.onboardingComplete) return;
+  const lastUpdatedAt = user.lastProfileUpdateAt ?? 0;
+  const elapsedMs = Date.now() - lastUpdatedAt;
+  if (elapsedMs < PROFILE_UPDATE_COOLDOWN_MS) {
+    const retryInSeconds = Math.ceil((PROFILE_UPDATE_COOLDOWN_MS - elapsedMs) / 1000);
+    throw new Error(`Profile updates are rate limited. Try again in ${retryInSeconds}s.`);
+  }
+}
 
 export const current = query({
   args: {},
@@ -115,8 +113,22 @@ export const updateProfile = mutation({
       }
     }
 
-    if (Object.keys(updates).length > 0) {
-      await ctx.db.patch(user._id, updates);
+    if (Object.keys(updates).length === 0) return;
+
+    assertProfileUpdateAllowed(user);
+    const now = Date.now();
+    const patch = user.onboardingComplete
+      ? { ...updates, lastProfileUpdateAt: now }
+      : updates;
+    await ctx.db.patch(user._id, patch);
+
+    // Keep compatibility analyses fresh after profile edits.
+    if (user.onboardingComplete) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        { userId: user._id },
+      );
     }
   },
 });
@@ -163,8 +175,22 @@ export const updateBasics = mutation({
       if (value !== undefined) updates[key] = value;
     }
 
-    if (Object.keys(updates).length > 0) {
-      await ctx.db.patch(user._id, updates);
+    if (Object.keys(updates).length === 0) return;
+
+    assertProfileUpdateAllowed(user);
+    const now = Date.now();
+    const patch = user.onboardingComplete
+      ? { ...updates, lastProfileUpdateAt: now }
+      : updates;
+    await ctx.db.patch(user._id, patch);
+
+    // Keep compatibility analyses fresh after profile edits.
+    if (user.onboardingComplete) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        { userId: user._id },
+      );
     }
   },
 });

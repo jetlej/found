@@ -61,6 +61,8 @@ export default defineSchema({
     onboardingType: v.optional(v.union(v.literal("journey"), v.literal("voice"))),
     // User type: human (real user) or bot (seeded test user)
     type: v.optional(v.union(v.literal("human"), v.literal("bot"))),
+    // Rate limit profile edits after onboarding completes
+    lastProfileUpdateAt: v.optional(v.number()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_phone", ["phone"])

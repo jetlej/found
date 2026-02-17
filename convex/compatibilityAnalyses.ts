@@ -37,37 +37,43 @@ export const getForPair = query({
 
 // Public query: list all analyses for a user
 export const listForUser = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error("User not found");
     if (user._id !== args.userId) throw new Error("Forbidden");
+    const requestedLimit = args.limit ?? 500;
+    const safeLimit = Math.max(1, Math.min(requestedLimit, 2000));
+    const perSideLimit = Math.ceil(safeLimit / 2);
 
     const asUser1 = await ctx.db
       .query("compatibilityAnalyses")
       .withIndex("by_user1", (q) => q.eq("user1Id", args.userId))
-      .collect();
+      .take(perSideLimit);
     const asUser2 = await ctx.db
       .query("compatibilityAnalyses")
       .withIndex("by_user2", (q) => q.eq("user2Id", args.userId))
-      .collect();
-    return [...asUser1, ...asUser2];
+      .take(perSideLimit);
+    return [...asUser1, ...asUser2].slice(0, safeLimit);
   },
 });
 
 // Internal query: list all analyses for a user
 export const listForUserInternal = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    const requestedLimit = args.limit ?? 500;
+    const safeLimit = Math.max(1, Math.min(requestedLimit, 5000));
+    const perSideLimit = Math.ceil(safeLimit / 2);
     const asUser1 = await ctx.db
       .query("compatibilityAnalyses")
       .withIndex("by_user1", (q) => q.eq("user1Id", args.userId))
-      .collect();
+      .take(perSideLimit);
     const asUser2 = await ctx.db
       .query("compatibilityAnalyses")
       .withIndex("by_user2", (q) => q.eq("user2Id", args.userId))
-      .collect();
-    return [...asUser1, ...asUser2];
+      .take(perSideLimit);
+    return [...asUser1, ...asUser2].slice(0, safeLimit);
   },
 });
 

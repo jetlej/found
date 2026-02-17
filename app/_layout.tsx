@@ -200,12 +200,56 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // case where verify.tsx's createUser call failed due to JWT timing.
   const getOrCreate = useMutation(api.users.getOrCreate);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [getOrCreateAttempts, setGetOrCreateAttempts] = useState(0);
+  const [nextGetOrCreateAt, setNextGetOrCreateAt] = useState(0);
+  const MAX_GET_OR_CREATE_ATTEMPTS = 5;
+
   useEffect(() => {
-    if (isConvexAuthenticated && effectiveIsSignedIn && currentUser === null && !creatingUser && !isDevImpersonating) {
-      setCreatingUser(true);
-      getOrCreate({}).finally(() => setCreatingUser(false));
+    if (currentUser || !effectiveIsSignedIn) {
+      setGetOrCreateAttempts(0);
+      setNextGetOrCreateAt(0);
     }
-  }, [isConvexAuthenticated, effectiveIsSignedIn, currentUser, creatingUser]);
+  }, [currentUser, effectiveIsSignedIn]);
+
+  useEffect(() => {
+    if (!isConvexAuthenticated || !effectiveIsSignedIn || currentUser !== null || creatingUser || isDevImpersonating) {
+      return;
+    }
+
+    if (getOrCreateAttempts >= MAX_GET_OR_CREATE_ATTEMPTS) {
+      return;
+    }
+
+    const now = Date.now();
+    if (nextGetOrCreateAt > now) {
+      const waitMs = nextGetOrCreateAt - now;
+      const timer = setTimeout(() => setNextGetOrCreateAt(0), waitMs);
+      return () => clearTimeout(timer);
+    }
+
+    setCreatingUser(true);
+    getOrCreate({})
+      .then(() => {
+        setGetOrCreateAttempts(0);
+        setNextGetOrCreateAt(0);
+      })
+      .catch(() => {
+        const nextAttempt = getOrCreateAttempts + 1;
+        setGetOrCreateAttempts(nextAttempt);
+        const delayMs = Math.min(60000, 1000 * Math.pow(2, nextAttempt - 1));
+        setNextGetOrCreateAt(Date.now() + delayMs);
+      })
+      .finally(() => setCreatingUser(false));
+  }, [
+    isConvexAuthenticated,
+    effectiveIsSignedIn,
+    currentUser,
+    creatingUser,
+    isDevImpersonating,
+    getOrCreateAttempts,
+    nextGetOrCreateAt,
+    getOrCreate,
+  ]);
 
   // Get cached user from offline store
   const { cachedUser, setCachedUser: setOfflineUser } = useOfflineStore();

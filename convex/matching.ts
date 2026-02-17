@@ -19,6 +19,9 @@ export const getMatchesForCurrentUser = query({
   handler: async (ctx, args) => {
     const DEFAULT_LIMIT = 30;
     const MAX_LIMIT = 100;
+    const requestedLimit = args.limit ?? DEFAULT_LIMIT;
+    const safeLimit = Math.max(1, Math.min(requestedLimit, MAX_LIMIT));
+    const perSideScanLimit = Math.min(Math.max(safeLimit * 3, 100), 500);
 
     const currentUser = await getAuthUserOptional(ctx);
     if (!currentUser) return null;
@@ -27,19 +30,17 @@ export const getMatchesForCurrentUser = query({
     const asUser1 = await ctx.db
       .query("compatibilityAnalyses")
       .withIndex("by_user1", (q) => q.eq("user1Id", currentUser._id))
-      .collect();
+      .take(perSideScanLimit);
     const asUser2 = await ctx.db
       .query("compatibilityAnalyses")
       .withIndex("by_user2", (q) => q.eq("user2Id", currentUser._id))
-      .collect();
+      .take(perSideScanLimit);
     const analyses = [...asUser1, ...asUser2].sort(
       (a, b) => b.overallScore - a.overallScore,
     );
 
     if (analyses.length === 0) return [];
 
-    const requestedLimit = args.limit ?? DEFAULT_LIMIT;
-    const safeLimit = Math.max(1, Math.min(requestedLimit, MAX_LIMIT));
     const limitedAnalyses = analyses.slice(0, safeLimit);
 
     // Collect the other user IDs from analyses

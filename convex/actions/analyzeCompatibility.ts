@@ -300,17 +300,27 @@ export const analyzeCompatibility = action({
     user2Id: v.id("users"),
     model: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ docId: Id<"compatibilityAnalyses"> | null; usage: null; cost: number; queued: boolean }> => {
     const currentUser = await ctx.runQuery(api.users.current, {});
     if (!currentUser) throw new Error("Not authenticated");
     if (currentUser._id !== args.user1Id && currentUser._id !== args.user2Id) {
       throw new Error("Forbidden");
     }
-
-    return await ctx.runAction(
-      internal.actions.analyzeCompatibility.analyzeCompatibilityInternal,
-      args,
+    // DEPRECATED: Public trigger is intentionally disabled to prevent abuse.
+    // Compatibility generation is backend-triggered on profile parse/update.
+    const existing: { _id: Id<"compatibilityAnalyses"> } | null = await ctx.runQuery(
+      internal.compatibilityAnalyses.getForPairInternal,
+      { user1Id: args.user1Id, user2Id: args.user2Id },
     );
+    return {
+      docId: existing?._id ?? null,
+      usage: null,
+      cost: 0,
+      queued: false,
+    };
   },
 });
 
@@ -345,7 +355,7 @@ export const analyzeAllForUser = internalAction({
 
     const existingAnalyses = await ctx.runQuery(
       internal.compatibilityAnalyses.listForUserInternal,
-      { userId: args.userId },
+      { userId: args.userId, limit: 2000 },
     );
     const existingOtherUserIds = new Set(
       existingAnalyses.map((a) =>

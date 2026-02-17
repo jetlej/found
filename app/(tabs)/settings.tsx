@@ -1,15 +1,16 @@
 import { AppHeader } from "@/components/AppHeader";
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { api } from "@/convex/_generated/api";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
 import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
-import { useOfflineStore } from "@/stores/offline";
 import { useAuth } from "@clerk/clerk-expo";
 import { IconPencil } from "@tabler/icons-react-native";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -26,11 +27,9 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
-  const { signOut, userId: clerkUserId } = useAuth();
+  const { signOut } = useAuth();
   const router = useRouter();
-  const { devClerkId } = useOfflineStore();
-
-  const userId = __DEV__ && devClerkId ? devClerkId : clerkUserId;
+  const userId = useEffectiveUserId();
 
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
 
@@ -40,12 +39,13 @@ export default function SettingsScreen() {
   const fadeOpacity = useSharedValue(0);
   const hasFaded = useRef(false);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
+  const isUserLoading = !!userId && currentUser === undefined;
   useEffect(() => {
-    if (currentUser && !hasFaded.current) {
+    if (!isUserLoading && !hasFaded.current) {
       hasFaded.current = true;
       fadeOpacity.value = withTiming(1, { duration: 150 });
     }
-  }, [currentUser]);
+  }, [isUserLoading]);
 
   const userPhotos = useQuery(
     api.photos.getByUser,
@@ -65,6 +65,17 @@ export default function SettingsScreen() {
   const handleSignOut = async () => {
     await signOut();
   };
+
+  if (isUserLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <AppHeader />
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.text} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -165,6 +176,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   scrollView: { flex: 1 },
   header: {
     alignItems: "center",

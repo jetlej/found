@@ -21,7 +21,9 @@
     "test:e2e": "bun run test:e2e:setup; $HOME/.maestro/bin/maestro test .maestro/flows/full_flow.yaml",
     "test:e2e:auth": "$HOME/.maestro/bin/maestro test .maestro/flows/02_auth.yaml",
     "test:e2e:onboarding": "$HOME/.maestro/bin/maestro test .maestro/flows/03_onboarding.yaml",
-    "test:e2e:edge": "$HOME/.maestro/bin/maestro test .maestro/edge_cases/"
+    "test:e2e:edge": "$HOME/.maestro/bin/maestro test .maestro/edge_cases/",
+    "test": "vitest",
+    "test:once": "vitest run"
   },
   "dependencies": {
     "@bsky.app/expo-image-crop-tool": "^0.5.0",
@@ -80,9 +82,12 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@types/react": "~19.1.0",
+    "convex-test": "^0.0.41",
     "react-test-renderer": "19.1.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.18"
   },
   "private": true
 }

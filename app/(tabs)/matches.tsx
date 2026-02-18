@@ -1445,6 +1445,10 @@ export default function MatchesScreen() {
     api.matching.getMatchesForCurrentUser,
     userId ? {} : "skip",
   );
+  const matchGenerationStatus = useQuery(
+    api.matching.getMatchGenerationStatusForCurrentUser,
+    userId ? {} : "skip",
+  );
 
   // Build match list from server data
   const testUserMatches = matchesData
@@ -1458,6 +1462,8 @@ export default function MatchesScreen() {
 
   const isLoading = !currentUser || matchesData === undefined;
   const isEmpty = testUserMatches && testUserMatches.length === 0;
+  const isAnalyzingFirstMatch =
+    !!isEmpty && matchGenerationStatus?.isAnalyzing === true;
   const isReady = !isLoading && !isEmpty;
 
   // Trigger fade once data is ready (or empty state)
@@ -1475,6 +1481,14 @@ export default function MatchesScreen() {
           <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.text} />
           </View>
+        ) : isAnalyzingFirstMatch ? (
+          <>
+            <AppHeader />
+            <View style={styles.processingContainer}>
+              <ActivityIndicator size="large" color={colors.text} />
+              <Text style={styles.processingText}>Analyzing compatibility...</Text>
+            </View>
+          </>
         ) : isEmpty ? (
           <>
             <AppHeader />

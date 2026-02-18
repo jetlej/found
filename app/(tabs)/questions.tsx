@@ -23,10 +23,10 @@ import {
   IconTarget,
   IconUsers,
 } from "@tabler/icons-react-native";
-import { useAction, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -43,7 +43,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Confetti - explosive burst from center
 const CONFETTI_COLORS = [
@@ -187,6 +187,7 @@ const ICONS: Record<
 export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?: boolean } = {}) {
   const userId = useEffectiveUserId();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
   const isEditing = forceEditing || editing === "true";
 
@@ -219,15 +220,14 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
 
-  const triggerParsing = useAction(
-    api.actions.parseVoiceProfile.triggerVoiceProfileParsing,
-  );
+  const regenerateProfile = useMutation(api.users.regenerateProfile);
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(
     null,
   );
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
 
-  // Auto-dismiss celebration when profile is updated after regeneration
+  // When profile parse completes after regeneration, navigate to audit
   useEffect(() => {
     if (
       regenerating &&
@@ -237,6 +237,7 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     ) {
       setRegenerating(false);
       setRegenerateStartedAt(null);
+      router.push({ pathname: "/profile-audit", params: { fromRegenerate: "true" } });
     }
   }, [regenerating, regenerateStartedAt, myProfile?.processedAt]);
 
@@ -309,16 +310,28 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     return "locked";
   };
 
-  const allComplete = completedCount === TOTAL_VOICE_QUESTIONS;
+  const allComplete = completedCount >= TOTAL_VOICE_QUESTIONS;
+  const regenerateCooldownMs = 30 * 1000; // 30s for dev, raise to 60*60*1000 for prod
+  const remainingCooldownMs = currentUser?.lastProfileRegeneratedAt
+    ? Math.max(
+        0,
+        currentUser.lastProfileRegeneratedAt + regenerateCooldownMs - Date.now(),
+      )
+    : 0;
+  const isCooldownActive = remainingCooldownMs > 0;
+  const cooldownLabel = `Try again in ${Math.ceil(remainingCooldownMs / (60 * 1000))}m.`;
+  const lastRegeneratedAt = currentUser?.lastProfileRegeneratedAt ?? 0;
+  const lastEditedAt = currentUser?.lastProfileEditedAt ?? 0;
+  const latestRecordingAt = recordings
+    ? recordings.reduce((max, r) => Math.max(max, r.createdAt), 0)
+    : 0;
+  const hasChangesSinceLastRegeneration =
+    lastRegeneratedAt === 0 ||
+    lastEditedAt > lastRegeneratedAt ||
+    latestRecordingAt > lastRegeneratedAt;
+  const canRegenerate =
+    allComplete && hasChangesSinceLastRegeneration && !isCooldownActive && !regenerating;
 
-  // Auto-redirect to matches tab when all questions are complete (not in editing mode)
-  const hasRedirected = useRef(false);
-  useEffect(() => {
-    if (allComplete && !isEditing && !hasRedirected.current && !regenerating) {
-      hasRedirected.current = true;
-      router.replace("/(tabs)/matches");
-    }
-  }, [allComplete, isEditing, regenerating]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -476,22 +489,42 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
               </View>
             );
           })}
-          {allComplete && currentUser?._id && (
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+
+        {(allComplete || isEditing) && currentUser?._id && (
+          <View style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <Pressable
-              style={styles.regenerateButton}
+              style={[styles.regenerateButton, !canRegenerate && styles.buttonDisabled]}
+              disabled={!canRegenerate}
               onPress={async () => {
-                setRegenerateStartedAt(Date.now());
+                setRegenerateError(null);
+                const startedAt = Date.now();
+                setRegenerateStartedAt(startedAt);
                 setRegenerating(true);
-                await triggerParsing({ userId: currentUser._id });
+                try {
+                  await regenerateProfile({});
+                } catch (error) {
+                  const message =
+                    error instanceof Error ? error.message : "Failed to regenerate profile.";
+                  console.error("Failed to regenerate profile:", error);
+                  setRegenerateError(message);
+                  setRegenerating(false);
+                  setRegenerateStartedAt(null);
+                }
               }}
             >
               <Text style={styles.regenerateButtonText}>
                 Regenerate Profile
               </Text>
             </Pressable>
-          )}
-          <View style={styles.bottomPadding} />
-        </ScrollView>
+            {regenerateError ? (
+              <Text style={styles.regenerateHelpText}>{regenerateError}</Text>
+            ) : isCooldownActive ? (
+              <Text style={styles.regenerateHelpText}>{cooldownLabel}</Text>
+            ) : null}
+          </View>
+        )}
 
         {regenerating && (
           <View style={styles.celebrationOverlay}>
@@ -636,17 +669,32 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: "600",
   },
+  stickyFooter: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
   regenerateButton: {
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
     alignItems: "center",
-    marginTop: spacing.xl,
   },
   regenerateButtonText: {
     fontSize: fontSizes.base,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  regenerateHelpText: {
+    marginTop: spacing.sm,
+    fontSize: fontSizes.sm,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   celebrationOverlay: {
     ...StyleSheet.absoluteFillObject,

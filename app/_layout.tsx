@@ -69,6 +69,7 @@ type RouteState =
   | { status: "unauthenticated" }
   | { status: "onboarding"; route: string }
   | { status: "voice_questions" }
+  | { status: "profile_audit" }
   | { status: "ready" };
 
 function deriveRouteState(p: {
@@ -80,6 +81,7 @@ function deriveRouteState(p: {
   currentUser: any;
   cachedUser: any;
   voiceRecordingCount: number | undefined;
+  hasProfile: boolean | undefined;
 }): RouteState {
   if (!p.authReady) return { status: "loading" };
   if (!p.effectiveIsSignedIn) return { status: "unauthenticated" };
@@ -91,6 +93,9 @@ function deriveRouteState(p: {
     }
     if (!p.cachedUser.voiceQuestionsComplete) {
       return { status: "voice_questions" };
+    }
+    if (!p.cachedUser.profileAuditCompletedAt) {
+      return { status: "profile_audit" };
     }
     return { status: "ready" };
   }
@@ -113,6 +118,9 @@ function deriveRouteState(p: {
   // Onboarding complete — check voice questions
   if (p.voiceRecordingCount === undefined) return { status: "loading" };
   if (p.voiceRecordingCount < TOTAL_VOICE_QUESTIONS) return { status: "voice_questions" };
+  if (p.hasProfile === undefined) return { status: "loading" };
+  if (!p.hasProfile) return { status: "voice_questions" };
+  if (!p.currentUser.profileAuditCompletedAt) return { status: "profile_audit" };
 
   return { status: "ready" };
 }
@@ -195,6 +203,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     api.voiceRecordings.getCompletedCount,
     currentUser?._id ? { userId: currentUser._id } : "skip"
   );
+  const hasProfile = useQuery(
+    api.userProfiles.hasProfile,
+    currentUser?._id ? { userId: currentUser._id } : "skip"
+  );
 
   // If signed in but no Convex user doc exists, create one. This handles the
   // case where verify.tsx's createUser call failed due to JWT timing.
@@ -267,11 +279,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         avatarUrl: currentUser.avatarUrl,
         onboardingComplete: currentUser.onboardingComplete,
         voiceQuestionsComplete,
+        profileAuditCompletedAt: currentUser.profileAuditCompletedAt,
       };
       setCachedUser(userToCache);
       setOfflineUser(userToCache);
     }
-  }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl, currentUser?.onboardingComplete, voiceQuestionsComplete]);
+  }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl, currentUser?.onboardingComplete, currentUser?.profileAuditCompletedAt, voiceQuestionsComplete]);
 
   // Initialize offline sync and push notifications
   useOfflineSync();
@@ -293,6 +306,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     currentUser,
     cachedUser,
     voiceRecordingCount,
+    hasProfile,
   });
 
   // ── Routing effect (simple switch, setHasRouted always called) ──────────
@@ -321,6 +335,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         break;
       case "voice_questions":
         if (inAuthGroup || onLandingPage) router.replace("/(tabs)/questions");
+        break;
+      case "profile_audit":
+        if (segments[0] !== "profile-audit") {
+          router.replace("/profile-audit?firstTime=true");
+        }
         break;
       case "ready":
         if (inAuthGroup || onLandingPage) router.replace("/(tabs)/matches");

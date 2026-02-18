@@ -9,8 +9,11 @@ import {
 import { paginationOptsValidator } from "convex/server";
 import { requireAdmin } from "./lib/admin";
 import { internal } from "./_generated/api";
+import { TOTAL_VOICE_QUESTIONS } from "./lib/voiceConfig";
 
-const PROFILE_UPDATE_COOLDOWN_MS = 5 * 60 * 1000;
+const REGENERATE_PROFILE_COOLDOWN_MS = 30 * 1000; // 30s for dev, raise to 60*60*1000 for prod
+const analyzeAllForUserInternal = (internal as any).actions.analyzeCompatibility
+  .analyzeAllForUser;
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -56,16 +59,6 @@ export const getOrCreate = mutation({
     });
   },
 });
-
-function assertProfileUpdateAllowed(user: { onboardingComplete?: boolean; lastProfileUpdateAt?: number }) {
-  if (!user.onboardingComplete) return;
-  const lastUpdatedAt = user.lastProfileUpdateAt ?? 0;
-  const elapsedMs = Date.now() - lastUpdatedAt;
-  if (elapsedMs < PROFILE_UPDATE_COOLDOWN_MS) {
-    const retryInSeconds = Math.ceil((PROFILE_UPDATE_COOLDOWN_MS - elapsedMs) / 1000);
-    throw new Error(`Profile updates are rate limited. Try again in ${retryInSeconds}s.`);
-  }
-}
 
 export const current = query({
   args: {},
@@ -115,18 +108,16 @@ export const updateProfile = mutation({
 
     if (Object.keys(updates).length === 0) return;
 
-    assertProfileUpdateAllowed(user);
-    const now = Date.now();
-    const patch = user.onboardingComplete
-      ? { ...updates, lastProfileUpdateAt: now }
-      : updates;
-    await ctx.db.patch(user._id, patch);
+    await ctx.db.patch(user._id, {
+      ...updates,
+      lastProfileEditedAt: Date.now(),
+    });
 
     // Keep compatibility analyses fresh after profile edits.
     if (user.onboardingComplete) {
       await ctx.scheduler.runAfter(
         0,
-        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        analyzeAllForUserInternal,
         { userId: user._id },
       );
     }
@@ -177,18 +168,16 @@ export const updateBasics = mutation({
 
     if (Object.keys(updates).length === 0) return;
 
-    assertProfileUpdateAllowed(user);
-    const now = Date.now();
-    const patch = user.onboardingComplete
-      ? { ...updates, lastProfileUpdateAt: now }
-      : updates;
-    await ctx.db.patch(user._id, patch);
+    await ctx.db.patch(user._id, {
+      ...updates,
+      lastProfileEditedAt: Date.now(),
+    });
 
     // Keep compatibility analyses fresh after profile edits.
     if (user.onboardingComplete) {
       await ctx.scheduler.runAfter(
         0,
-        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        analyzeAllForUserInternal,
         { userId: user._id },
       );
     }
@@ -287,6 +276,70 @@ export const applyReferralCode = mutation({
     });
 
     return { success: true, referrerName: referrer.name };
+  },
+});
+
+// First-time profile audit confirmation gate for voice onboarding.
+// Marks audit complete and triggers compatibility generation.
+export const completeProfileAudit = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    if (!profile) throw new Error("Profile not ready");
+
+    if (!user.profileAuditCompletedAt) {
+      await ctx.db.patch(user._id, { profileAuditCompletedAt: Date.now() });
+    }
+
+    await ctx.scheduler.runAfter(
+      0,
+      analyzeAllForUserInternal,
+      { userId: user._id },
+    );
+
+    return { started: true };
+  },
+});
+
+export const regenerateProfile = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error("User not found");
+
+    const lastRegeneratedAt = user.lastProfileRegeneratedAt ?? 0;
+    const elapsedMs = Date.now() - lastRegeneratedAt;
+    if (elapsedMs < REGENERATE_PROFILE_COOLDOWN_MS) {
+      const retryInMinutes = Math.ceil(
+        (REGENERATE_PROFILE_COOLDOWN_MS - elapsedMs) / (60 * 1000),
+      );
+      throw new Error(
+        `You can regenerate once per hour. Try again in ${retryInMinutes}m.`,
+      );
+    }
+
+    const recordings = await ctx.db
+      .query("voiceRecordings")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    if (recordings.length < TOTAL_VOICE_QUESTIONS) {
+      throw new Error("Complete all voice answers before regenerating.");
+    }
+
+    await ctx.db.patch(user._id, { lastProfileRegeneratedAt: Date.now() });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.actions.parseVoiceProfile.parseVoiceProfile,
+      { userId: user._id },
+    );
+
+    return { scheduled: true };
   },
 });
 

@@ -171,8 +171,10 @@ function AuditTag({ label, isHidden, style, textStyle, onToggle }: {
 export default function ProfileAuditScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
-  const { firstTime } = useLocalSearchParams<{ firstTime?: string }>();
+  const { firstTime, fromRegenerate } = useLocalSearchParams<{ firstTime?: string; fromRegenerate?: string }>();
   const isFirstTime = firstTime === "true";
+  const isFromRegenerate = fromRegenerate === "true";
+  const isMandatory = isFirstTime || isFromRegenerate;
 
   const currentUser = useQuery(api.users.current, userId ? {} : "skip");
   const myProfile = useQuery(
@@ -184,6 +186,7 @@ export default function ProfileAuditScreen() {
     currentUser?._id ? { userId: currentUser._id } : "skip",
   );
   const updateHiddenFields = useMutation(api.userProfiles.updateHiddenFields);
+  const completeProfileAudit = useMutation(api.users.completeProfileAudit);
 
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [initialized, setInitialized] = useState(false);
@@ -215,8 +218,13 @@ export default function ProfileAuditScreen() {
     setSaving(true);
     try {
       await updateHiddenFields({ hiddenFields: Array.from(hidden) });
+      if (isMandatory) {
+        await completeProfileAudit({});
+      }
     } catch (e) {
       console.error("Failed to save hidden fields:", e);
+      setSaving(false);
+      return;
     }
     setSaving(false);
     if (isFirstTime) {
@@ -289,11 +297,15 @@ export default function ProfileAuditScreen() {
     <SafeAreaView style={s.container} edges={["top"]}>
       {/* Nav bar */}
       <View style={s.navBar}>
-        <Pressable onPress={() => router.back()} style={s.navButton}>
-          <IconChevronLeft size={24} color={colors.text} />
-        </Pressable>
+        {isMandatory ? (
+          <View style={s.navButton} />
+        ) : (
+          <Pressable onPress={() => router.back()} style={s.navButton}>
+            <IconChevronLeft size={24} color={colors.text} />
+          </Pressable>
+        )}
         <Text style={s.navTitle}>
-          {isFirstTime ? "Review Your Profile" : "My Profile"}
+          {isMandatory ? "Review Your Profile" : "My Profile"}
         </Text>
         <View style={s.navButton} />
       </View>
@@ -524,7 +536,7 @@ export default function ProfileAuditScreen() {
           {saving ? (
             <ActivityIndicator color={colors.primaryText} size="small" />
           ) : (
-            <Text style={s.doneButtonText}>{isFirstTime ? "Looks Good" : "Done"}</Text>
+            <Text style={s.doneButtonText}>{isMandatory ? "Looks Good" : "Done"}</Text>
           )}
         </Pressable>
       </View>

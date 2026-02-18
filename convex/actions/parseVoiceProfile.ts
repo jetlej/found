@@ -123,7 +123,7 @@ Respond with JSON in this exact format:
     "passions": ["passion1", ...]
   },
   "keywords": ["keyword1", "keyword2", ...],
-  "generatedBio": "<150-200 word third-person bio written as a professional matchmaker selling this person as an amazing potential partner. Warm, specific, compelling. Use their name and he/she/they pronouns. Highlight what makes them special and why someone would be lucky to date them.>",
+  "generatedBio": "<150-200 word third-person bio written as a professional matchmaker selling this person as an amazing potential partner. Warm, specific, compelling. When Name is provided, start with '<Name> is ...' and use that exact Name only. If Name is missing or empty, do not invent a name and use pronouns only. Highlight what makes them special and why someone would be lucky to date them.>",
   "shortBio": "<single punchy sentence, third-person, written like a matchmaker's pitch. Start with 'A' or 'An' followed by their role, e.g. 'A startup founder who...' Make it memorable and intriguing.>",
   "confidence": <0-1>
 }
@@ -142,6 +142,22 @@ Trait scales explanation:
 - planningStyle: 1=spontaneous, 10=structured
 
 Use 5 as default when information is insufficient.`;
+
+function enforceGeneratedBioName(
+  generatedBio: string | undefined,
+  expectedName: string | undefined,
+): string | undefined {
+  if (!generatedBio) return generatedBio;
+  const name = expectedName?.trim();
+  if (!name) return generatedBio;
+
+  if (generatedBio.toLowerCase().includes(name.toLowerCase())) return generatedBio;
+
+  const replacedLeadingName = generatedBio.replace(/^([A-Z][a-z]+)\s+is\b/, `${name} is`);
+  if (replacedLeadingName !== generatedBio) return replacedLeadingName;
+
+  return `${name}. ${generatedBio}`;
+}
 
 // Transcribe audio using OpenAI Whisper (with retries)
 const WHISPER_MAX_RETRIES = 3;
@@ -285,6 +301,15 @@ export const parseVoiceProfile = internalAction({
       })
       .join("\n\n---\n\n");
 
+    const extractionInput = [
+      "PROFILE CONTEXT:",
+      `Name: ${user.name?.trim() || ""}`,
+      `Gender: ${user.gender || "unknown"}`,
+      "",
+      "VOICE TRANSCRIPTS:",
+      formattedTranscripts,
+    ].join("\n");
+
     // Run the comprehensive extraction
     console.log("Running profile extraction from transcripts...");
     
@@ -294,7 +319,7 @@ export const parseVoiceProfile = internalAction({
     try {
       const result = await extractStructuredDataWithUsage<any>(
         VOICE_PROFILE_EXTRACTION_PROMPT,
-        formattedTranscripts,
+        extractionInput,
       );
       extractedProfile = result.data;
       costs.push({
@@ -456,7 +481,7 @@ export const parseVoiceProfile = internalAction({
           }
         : undefined,
       // Generated content
-      generatedBio: extractedProfile.generatedBio ?? undefined,
+      generatedBio: enforceGeneratedBioName(extractedProfile.generatedBio ?? undefined, user.name),
       shortBio: extractedProfile.shortBio ?? undefined,
       keywords: extractedProfile.keywords || [],
       // Metadata
@@ -467,13 +492,6 @@ export const parseVoiceProfile = internalAction({
 
     // Save the profile
     await ctx.runMutation(internal.userProfiles.upsertProfile, { profile });
-
-    // Schedule compatibility analyses against all eligible users
-    await ctx.scheduler.runAfter(
-      0,
-      internal.actions.analyzeCompatibility.analyzeAllForUser,
-      { userId: args.userId },
-    );
 
     console.log(`Voice profile parsing complete for user ${args.userId}`);
     return { success: true, confidence: extractedProfile.confidence };

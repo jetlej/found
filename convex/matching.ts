@@ -94,3 +94,57 @@ export const getMatchesForCurrentUser = query({
       .sort((a, b) => (b!.analysis.overallScore) - (a!.analysis.overallScore));
   },
 });
+
+// Returns whether the first match set is still being generated.
+export const getMatchGenerationStatusForCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await getAuthUserOptional(ctx);
+    if (!currentUser) return null;
+
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+      .first();
+
+    const auditCompleted = !!currentUser.profileAuditCompletedAt;
+    const hasProfile = !!profile;
+
+    const asUser1 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user1", (q) => q.eq("user1Id", currentUser._id))
+      .take(1);
+    const asUser2 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user2", (q) => q.eq("user2Id", currentUser._id))
+      .take(1);
+    const hasAnyAnalyses = asUser1.length > 0 || asUser2.length > 0;
+
+    let hasEligibleCandidates = false;
+    if (auditCompleted && hasProfile && !hasAnyAnalyses) {
+      const users = await ctx.db.query("users").collect();
+      for (const user of users) {
+        if (user._id === currentUser._id) continue;
+        if (user.type !== "bot") continue;
+        if (!isGenderCompatible(currentUser, user)) continue;
+        if (!isAgeCompatible(currentUser, user)) continue;
+
+        const userProfile = await ctx.db
+          .query("userProfiles")
+          .withIndex("by_user", (q) => q.eq("userId", user._id))
+          .first();
+        if (!userProfile) continue;
+
+        hasEligibleCandidates = true;
+        break;
+      }
+    }
+
+    return {
+      isAnalyzing: auditCompleted && hasProfile && !hasAnyAnalyses && hasEligibleCandidates,
+      auditCompleted,
+      hasProfile,
+      hasAnyAnalyses,
+    };
+  },
+});

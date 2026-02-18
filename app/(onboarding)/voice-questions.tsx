@@ -502,17 +502,16 @@ export default function VoiceQuestionsScreen() {
           </CelebrationText>
           <View style={styles.footer}>
             <Pressable
-              style={styles.nextButton}
+              style={[styles.nextButton, !profileReady && styles.buttonDisabled]}
               onPress={() => {
                 if (profileReady) {
                   router.push({ pathname: "/profile-audit", params: { firstTime: "true" } });
-                } else {
-                  router.back();
                 }
               }}
+              disabled={!profileReady}
             >
               <Text style={styles.nextButtonText}>
-                {profileReady ? "Review Your Profile" : "Go to Matches"}
+                {profileReady ? "Review Your Profile" : "Building Your Profile..."}
               </Text>
             </Pressable>
           </View>

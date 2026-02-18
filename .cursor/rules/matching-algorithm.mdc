@@ -69,7 +69,8 @@ Server-side GPT call per pair. Stored in `compatibilityAnalyses` table. Both use
 
 ### Match Visibility
 - **Only matches with a completed AI analysis appear** on the page
-- While analyses are generating, shows "Analyzing compatibility..." banner with count
+- **All user types** (human and bot) are shown — no type filter
+- While analyses are generating (audit complete, no analyses yet, eligible candidates exist), shows full-screen "Analyzing compatibility..." spinner via `getMatchGenerationStatusForCurrentUser` query
 - Matches appear one by one as analyses complete (reactive via `useQuery`)
 - Sorted by AI `overallScore` descending
 
@@ -94,11 +95,14 @@ Server-side GPT call per pair. Stored in `compatibilityAnalyses` table. Both use
   7. Relationship Style (love language, conflict style, alone time need)
   8. Family & Future (family closeness bar, conditional kids timeline)
 
-### Auto-Trigger (Backend)
-- After `parseVoiceProfile` saves a profile, it schedules `analyzeAllForUser` (internal action in `convex/actions/analyzeCompatibility.ts`)
-- `analyzeAllForUser` finds all users with profiles, filters by gender/sexuality compatibility, and runs `analyzeCompatibility` for each missing pair
-- Action itself dedupes (checks if analysis exists before calling GPT)
-- No frontend trigger — analyses happen automatically in the background after profile creation
+### Audit-Gated Trigger (Button-Triggered, NOT Automatic)
+- Compatibility generation is **never automatic**. It is triggered only by `completeProfileAudit` mutation, which is called when the user taps "Looks Good" on the mandatory profile-audit screen.
+- This happens in two flows:
+  1. **First-time onboarding**: voice questions done -> profile parsed -> forced `/profile-audit?firstTime=true` -> "Looks Good" -> `completeProfileAudit` schedules `analyzeAllForUser` -> navigates to matches.
+  2. **After regeneration**: user taps "Regenerate Profile" on Edit Answers -> profile re-parsed -> auto-navigates to `/profile-audit?fromRegenerate=true` -> "Looks Good" -> `completeProfileAudit` re-runs compatibility -> returns to Edit Answers.
+- `parseVoiceProfile` does **NOT** schedule compatibility — it only parses the profile.
+- `analyzeAllForUser` finds all users with profiles, filters by gender/sexuality/age compatibility, and runs `analyzeCompatibility` for each missing pair. Dedupes by checking if analysis already exists.
+- The profile-audit screen ensures hidden-field choices are applied before compatibility descriptions are created (so AI doesn't reference data the user wanted private).
 
 ## Canonical Values (~30 items in `convex/lib/canonicalValues.ts`)
 honesty, loyalty, family, growth, adventure, independence, security, creativity, ambition, kindness, humor, faith, authenticity, empathy, respect, integrity, balance, passion, curiosity, optimism, resilience, patience, generosity, compassion, courage, wisdom, freedom, tradition, equality, justice

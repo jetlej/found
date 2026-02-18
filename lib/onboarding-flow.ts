@@ -66,11 +66,19 @@ export function goToNextStep(router: Router, current: OnboardingStep, editing?: 
   }
 }
 
-// Get progress as a fraction (0 to 1)
+// Steps excluded from visible progress (still in flow for navigation)
+const PROGRESS_EXCLUDED: readonly OnboardingStep[] = ["referral"];
+
+// Visible steps only (for progress bar / step counter)
+export const ONBOARDING_VISIBLE_STEPS = ONBOARDING_FLOW.filter(
+  (s) => !PROGRESS_EXCLUDED.includes(s),
+);
+
+// Get progress as a fraction (0 to 1), excluding non-visible steps
 export function getProgress(current: OnboardingStep): number {
-  const index = ONBOARDING_FLOW.indexOf(current);
+  const index = ONBOARDING_VISIBLE_STEPS.indexOf(current);
   if (index === -1) return 0;
-  return (index + 1) / ONBOARDING_FLOW.length;
+  return (index + 1) / ONBOARDING_VISIBLE_STEPS.length;
 }
 
 // Check if a step is valid

@@ -38,4 +38,12 @@ Users answer 8 open-ended questions by recording voice memos. AI transcribes and
 3. Save transcriptions to `voiceRecordings` table
 4. Extract structured profile via GPT (values, traits, bios, relationship style, etc.)
 5. Save to `userProfiles` table
-6. **Batch reparse**: `reparseAllProfiles` action finds all users with 8 recordings and schedules reparsing (5s stagger)
+6. **Does NOT schedule compatibility** — compatibility is triggered separately via `completeProfileAudit` after the user reviews their profile on the audit screen
+7. **Batch reparse**: `reparseAllProfiles` action finds all users with 8 recordings and schedules reparsing (5s stagger)
+
+## Regeneration Flow
+
+- User triggers via `api.users.regenerateProfile` mutation (rate-limited: 1 hour cooldown via `lastProfileRegeneratedAt`)
+- Mutation validates recordings count, sets cooldown timestamp, schedules `parseVoiceProfile`
+- Client shows celebration overlay, watches `myProfile.processedAt`, then navigates to mandatory profile-audit
+- Audit screen calls `completeProfileAudit` on "Looks Good" which schedules compatibility generation

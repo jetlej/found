@@ -189,7 +189,6 @@ export default function VoiceQuestionsScreen() {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -201,11 +200,17 @@ export default function VoiceQuestionsScreen() {
   // Reanimated values
   const pulseScale = useSharedValue(1);
   const screenOpacity = useSharedValue(0);
+  const questionOpacity = useSharedValue(1);
   const [screenReady, setScreenReady] = useState(false);
   const hasAnimated = useRef(false);
+  const prevIndexRef = useRef(startIndex);
 
   const fadeStyle = useAnimatedStyle(() => ({
     opacity: screenOpacity.value,
+  }));
+
+  const questionFadeStyle = useAnimatedStyle(() => ({
+    opacity: questionOpacity.value,
   }));
 
   // Create a map of questionIndex -> recording for quick lookup
@@ -225,6 +230,15 @@ export default function VoiceQuestionsScreen() {
       setInitialized(true);
     }
   }, [recordings, initialized, startIndex]);
+
+  // Fade question content on index change
+  useEffect(() => {
+    if (prevIndexRef.current !== currentIndex) {
+      prevIndexRef.current = currentIndex;
+      questionOpacity.value = 0;
+      questionOpacity.value = withTiming(1, { duration: 250 });
+    }
+  }, [currentIndex]);
 
   // Pulse animation while recording
   useEffect(() => {
@@ -294,17 +308,15 @@ export default function VoiceQuestionsScreen() {
 
   const startRecording = async () => {
     try {
-      // Check current permission status first
       const { status: existingStatus } = await Audio.getPermissionsAsync();
 
       if (existingStatus === "granted") {
-        // Already have permission, start immediately
         await beginRecording();
       } else {
-        // Request permission
         const { granted } = await Audio.requestPermissionsAsync();
         if (granted) {
-          // Permission just granted, auto-start recording
+          // Brief pause lets iOS audio session settle after permission grant
+          await new Promise((r) => setTimeout(r, 300));
           await beginRecording();
         } else {
           console.error("Audio permission not granted");
@@ -318,60 +330,50 @@ export default function VoiceQuestionsScreen() {
   const stopRecording = async () => {
     if (!recordingRef.current) return;
 
-    // Haptic feedback for stop
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+
+    setIsRecording(false);
+    setIsPaused(false);
+
+    const recording = recordingRef.current;
+    recordingRef.current = null;
+    const finalDuration = recordingDuration;
+    const questionIdx = currentIndex;
 
     try {
-      // Stop duration counter
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = null;
-      }
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      if (!uri || !currentUser?._id) return;
 
-      setIsRecording(false);
-      setIsPaused(false);
-      setSaving(true);
-
-      // Stop recording
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
-
-      if (!uri || !currentUser?._id) {
-        setSaving(false);
-        return;
-      }
-
-      // Get final duration
-      const finalDuration = recordingDuration;
-
-      // Upload to Convex storage
-      const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uri, { method: "GET" });
-      const blob = await response.blob();
-
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": blob.type || "audio/m4a" },
-        body: blob,
-      });
-
-      const { storageId } = await uploadResponse.json();
-
-      // Save recording metadata
-      await saveRecording({
-        questionIndex: currentIndex,
-        storageId,
-        durationSeconds: finalDuration,
-      });
-
-      // Success haptic
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      setSaving(false);
+      // Upload + save in background — don't block navigation
+      (async () => {
+        try {
+          const uploadUrl = await generateUploadUrl();
+          const resp = await fetch(uri, { method: "GET" });
+          const blob = await resp.blob();
+          const uploadResp = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": blob.type || "audio/m4a" },
+            body: blob,
+          });
+          const { storageId } = await uploadResp.json();
+          await saveRecording({
+            questionIndex: questionIdx,
+            storageId,
+            durationSeconds: finalDuration,
+          });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (err) {
+          console.error("Failed to upload recording:", err);
+        }
+      })();
     } catch (err) {
       console.error("Failed to stop recording:", err);
-      setSaving(false);
     }
   };
 
@@ -421,10 +423,9 @@ export default function VoiceQuestionsScreen() {
     }
   };
 
-  const handleNext = useCallback(async () => {
-    // If paused mid-recording, stop and save first
+  const handleNext = useCallback(() => {
     if (isPaused && recordingRef.current) {
-      await stopRecording();
+      stopRecording();
     }
     setShowTranscript(false);
     if (isLastQuestion) {
@@ -476,7 +477,7 @@ export default function VoiceQuestionsScreen() {
   }
 
   const hasRecording = !!existingRecording;
-  const canProceed = hasRecording || saving;
+  const canProceed = hasRecording;
 
   if (submitted) {
     const profileReady = hasProfile === true;
@@ -548,7 +549,7 @@ export default function VoiceQuestionsScreen() {
           </View>
         </View>
 
-        <View style={styles.content}>
+        <Animated.View style={[styles.content, questionFadeStyle]}>
           <Text style={styles.questionText}>{currentQuestion.text}</Text>
 
           <View style={styles.recordingArea}>
@@ -572,11 +573,6 @@ export default function VoiceQuestionsScreen() {
                   <IconFileText size={14} color={colors.textMuted} />
                   <Text style={styles.transcriptLinkText}>Show transcript</Text>
                 </Pressable>
-              </View>
-            ) : saving ? (
-              // Saving state
-              <View style={styles.savingState}>
-                <Text style={styles.savingText}>Saving...</Text>
               </View>
             ) : (
               // Ready / recording / paused — unified layout, no shift
@@ -620,14 +616,14 @@ export default function VoiceQuestionsScreen() {
               </View>
             )}
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
             <Pressable
               style={styles.backButton}
               onPress={handleBack}
-              disabled={isRecording || saving}
+              disabled={isRecording}
             >
               <Text style={styles.backButtonText}>Back</Text>
             </Pressable>
@@ -891,13 +887,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.base,
     color: colors.text,
     lineHeight: 24,
-  },
-  savingState: {
-    alignItems: "center",
-  },
-  savingText: {
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
   },
   footer: {
     paddingHorizontal: spacing.xl,

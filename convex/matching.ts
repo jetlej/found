@@ -53,7 +53,6 @@ export const getMatchesForCurrentUser = query({
       otherUserIds.map(async (uid, i) => {
         const user = await ctx.db.get(uid);
         if (!user) return null;
-        if (user.type !== "bot") return null; // Only show bot matches for now
         if (!isGenderCompatible(currentUser, user)) return null;
         if (!isAgeCompatible(currentUser, user)) return null;
 
@@ -125,7 +124,6 @@ export const getMatchGenerationStatusForCurrentUser = query({
       const users = await ctx.db.query("users").collect();
       for (const user of users) {
         if (user._id === currentUser._id) continue;
-        if (user.type !== "bot") continue;
         if (!isGenderCompatible(currentUser, user)) continue;
         if (!isAgeCompatible(currentUser, user)) continue;
 

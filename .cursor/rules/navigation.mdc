@@ -25,9 +25,10 @@ Landing (/) -> Auth -> Onboarding -> (tabs)
 1. Not signed in -> `/` (landing page)
 2. Signed in, onboarding incomplete -> `/(onboarding)/<step>`
 3. Signed in, onboarding complete, voice questions incomplete -> `/(tabs)/questions`
-4. Signed in, onboarding complete, voice questions complete -> `/(tabs)/matches`
+4. Signed in, voice complete + profile parsed, audit NOT completed -> `/profile-audit?firstTime=true`
+5. Signed in, onboarding complete, voice questions complete, audit complete -> `/(tabs)/matches`
 
-AuthGate queries `voiceRecordings.getCompletedCount` to determine voice question completion. `hasRouted` state resets when `effectiveIsSignedIn` changes to handle sign-out/sign-in cycles. `onLandingPage` check includes `segments[0] === "index"` for proper root detection.
+AuthGate queries `voiceRecordings.getCompletedCount` and `userProfiles.hasProfile` to determine completion. The `profile_audit` route state forces users through profile review before they can reach matches. `hasRouted` state resets when `effectiveIsSignedIn` changes to handle sign-out/sign-in cycles. `onLandingPage` check includes `segments[0] === "index"` for proper root detection.
 
 ### Dynamic Tab Bar (`app/(tabs)/_layout.tsx`)
 
@@ -40,7 +41,7 @@ Tab bar: black background, white active icons, icon-only (no labels), `lazy: fal
 
 ### Settings Tab (`app/(tabs)/settings.tsx`)
 
-Always visible. Contains profile photo, name editing, notifications, sign-out. "View Profile" and "Edit Profile" links are conditionally hidden until voice questions are complete. Edit Profile navigates to `/(tabs)/questions` with `editing=true`. View Profile opens `/my-profile` modal.
+Always visible. Contains profile photo, name editing, notifications, sign-out. "My Profile" and "Edit Answers" links are conditionally hidden until voice questions are complete. "My Profile" navigates to `/profile-audit` (casual edit mode). "Edit Answers" navigates to `/edit-answers` which renders `QuestionsScreenContent` with `forceEditing`.
 
 ### Sign Out
 

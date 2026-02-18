@@ -52,7 +52,7 @@ The Basics card on the Questions screen has three states:
 - **Has unanswered** (`completedCategories` includes `"the_basics"` but `basicsComplete` is false): Warning triangle + "Update" -> basics-summary (never forces back into linear onboarding)
 - **First time** (never completed onboarding): "Answer" button -> first unanswered step in linear flow
 
-When all 8 voice questions are complete and not in editing mode, the Questions screen auto-redirects to `/(tabs)/matches`.
+No auto-redirect from questions screen — AuthGate handles routing based on completion state.
 
 ## Auto-Advance
 
@@ -63,5 +63,21 @@ During initial onboarding, single-question screens (no visibility toggle, no imp
 - States: idle -> recording (waveform) -> preview
 - Haptic feedback on start/stop/save/delete
 - Auto-saves recordings to Convex storage
-- All 8 complete -> auto-triggers `parseVoiceProfile` action
+- All 8 complete -> auto-triggers `parseVoiceProfile` action (profile parsing only, no compatibility)
 - Re-recording any question re-triggers full parsing
+- **Celebration screen after Done**: waits for profile to be parsed (disabled button: "Building Your Profile..."), then enables "Review Your Profile" -> navigates to `/profile-audit?firstTime=true`. No `router.back()` fallback.
+
+## Profile Audit Screen (`profile-audit.tsx`)
+- Shows the user's AI-generated profile with toggle-able visibility on each field
+- **Mandatory mode** (`firstTime=true` or `fromRegenerate=true`): no back button, "Looks Good" button calls `completeProfileAudit` (saves hidden fields + schedules compatibility generation), then navigates to matches (first-time) or back (regeneration)
+- **Casual mode** (from Settings > My Profile): back button visible, "Done" button only saves hidden fields
+- Hidden fields are stored as dot-paths in `userProfiles.hiddenFields` and stripped before compatibility prompt via `filterProfile()`
+
+## Regenerate Profile (`(tabs)/questions.tsx`)
+- "Regenerate Profile" button in sticky footer on Edit Answers screen
+- Always visible when voice questions are complete; grayed out unless:
+  - User has made a change since last regeneration (`lastProfileEditedAt > lastProfileRegeneratedAt` or new recording `createdAt > lastProfileRegeneratedAt`)
+  - Cooldown not active (1 hour between regenerations, `REGENERATE_PROFILE_COOLDOWN_MS`)
+- Calls `api.users.regenerateProfile` mutation (rate-limited server-side)
+- Shows celebration overlay while parsing; when `myProfile.processedAt` updates, navigates to `/profile-audit?fromRegenerate=true`
+- Profile updates (`updateBasics`, `updateProfile`) are NOT rate-limited; only regeneration is

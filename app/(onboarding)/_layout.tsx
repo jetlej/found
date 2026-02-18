@@ -1,4 +1,4 @@
-import { ONBOARDING_FLOW, OnboardingStep, getPrevStep, getProgress } from "@/lib/onboarding-flow";
+import { ONBOARDING_FLOW, ONBOARDING_VISIBLE_STEPS, OnboardingStep, getPrevStep, getProgress } from "@/lib/onboarding-flow";
 import { colors, fontSizes, spacing } from "@/lib/theme";
 import { IconChevronLeft } from "@tabler/icons-react-native";
 import { Stack, useGlobalSearchParams, usePathname, useRouter } from "expo-router";
@@ -13,9 +13,10 @@ export default function OnboardingLayout() {
 
   const screenName = pathname.split("/").pop() as OnboardingStep;
   const isInFlow = ONBOARDING_FLOW.includes(screenName);
+  const isVisible = ONBOARDING_VISIBLE_STEPS.includes(screenName);
   const showBack = isInFlow && screenName !== "referral";
-  const stepIndex = ONBOARDING_FLOW.indexOf(screenName);
-  const totalSteps = ONBOARDING_FLOW.length;
+  const stepIndex = ONBOARDING_VISIBLE_STEPS.indexOf(screenName);
+  const totalSteps = ONBOARDING_VISIBLE_STEPS.length;
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -33,7 +34,7 @@ export default function OnboardingLayout() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {isInFlow && !isEditing && (
+      {isVisible && !isEditing && (
         <View style={styles.header}>
           {showBack ? (
             <Pressable style={styles.iconButton} onPress={handleBack}>

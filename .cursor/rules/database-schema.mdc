@@ -16,6 +16,9 @@ alwaysApply: false
 - `type`: optional "human" | "bot" — real users get "human", seeded test users get "bot"
 - `level`: optional number (1-6), `completedCategories`: optional string[]
 - `waitlistPosition`, `pushToken`, `notificationsEnabled`, `reminderHour`, `reminderMinute`: optional
+- `profileAuditCompletedAt`: optional number — timestamp when user first completed profile audit (gates routing to matches)
+- `lastProfileEditedAt`: optional number — updated on every `updateBasics`/`updateProfile` call
+- `lastProfileRegeneratedAt`: optional number — updated when regenerate profile runs (cooldown reference)
 
 ## photos
 - `userId`: Id<"users">, `storageId`: Id<"_storage">, `url`: string, `order`: number (0-5)

@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Found - AI Matchmaking Dating App
 
-AI matchmaking app for serious partnerships. Voice-first onboarding with 9 open-ended questions. AI extracts structured profiles via Whisper + GPT. Two-tier matching: rule-based pre-filter (`lib/matching.ts`) then AI compatibility analysis (`convex/actions/analyzeCompatibility.ts`) with per-pair GPT scoring, flags, and summary stored in `compatibilityAnalyses` table.
+AI matchmaking app for serious partnerships. Voice-first onboarding with 8 open-ended questions. AI extracts structured profiles via Whisper + GPT. Mandatory profile audit gate before matches: user reviews AI-generated profile, hides unwanted fields, then "Looks Good" triggers compatibility generation. Two-tier matching: rule-based pre-filter (`lib/matching.ts`) then AI compatibility analysis (`convex/actions/analyzeCompatibility.ts`) with per-pair GPT scoring, flags, and summary stored in `compatibilityAnalyses` table. Compatibility is button-triggered (never automatic).
 
 ## Tech Stack
 
@@ -32,6 +32,8 @@ app/                    # Expo Router screens
 │   ├── settings.tsx    # Profile/settings tab (always visible)
 │   ├── waitlist.tsx    # Waitlist screen with shareable profile card
 │   └── journey.tsx     # Journey screen (hidden, for future use)
+├── profile-audit.tsx   # Mandatory profile review (first-time + post-regeneration) & casual edit
+├── edit-answers.tsx    # Edit Answers screen (wraps QuestionsScreenContent with forceEditing)
 ├── profile.tsx         # Profile modal (legacy, kept for compat)
 ├── my-profile.tsx      # View own profile modal
 └── mini-profile.tsx    # Shareable mini profile (full-page view + share button)

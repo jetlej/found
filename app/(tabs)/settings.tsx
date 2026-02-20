@@ -5,6 +5,7 @@ import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
 import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
 import { useAuth } from "@clerk/clerk-expo";
+import { useIsFocused } from "@react-navigation/native";
 import { IconPencil } from "@tabler/icons-react-native";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
@@ -43,13 +44,14 @@ export default function SettingsScreen() {
   const fadeOpacity = useSharedValue(0);
   const hasFaded = useRef(false);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
+  const isFocused = useIsFocused();
   const isUserLoading = !!userId && currentUser === undefined;
   useEffect(() => {
-    if (!isUserLoading && !hasFaded.current) {
+    if (!isUserLoading && isFocused && !hasFaded.current) {
       hasFaded.current = true;
       fadeOpacity.value = withTiming(1, { duration: 150 });
     }
-  }, [isUserLoading]);
+  }, [isUserLoading, isFocused]);
 
   const userPhotos = useQuery(
     api.photos.getByUser,

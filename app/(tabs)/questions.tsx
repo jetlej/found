@@ -12,6 +12,8 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconDiamond,
+  IconEraser,
+  IconEyeOff,
   IconHeart,
   IconLeaf,
   IconChevronLeft,
@@ -226,8 +228,8 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     null,
   );
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const [regenerateReady, setRegenerateReady] = useState(false);
 
-  // When profile parse completes after regeneration, navigate to audit
   useEffect(() => {
     if (
       regenerating &&
@@ -237,7 +239,7 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     ) {
       setRegenerating(false);
       setRegenerateStartedAt(null);
-      router.push({ pathname: "/profile-audit", params: { fromRegenerate: "true" } });
+      setRegenerateReady(true);
     }
   }, [regenerating, regenerateStartedAt, myProfile?.processedAt]);
 
@@ -526,22 +528,46 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
           </View>
         )}
 
-        {regenerating && (
+        {(regenerating || regenerateReady) && (
           <View style={styles.celebrationOverlay}>
             <Confetti />
             <CelebrationText>
-              <IconSparkles size={48} color={colors.text} />
-              <Text style={styles.celebrationTitle}>Regenerating!</Text>
-              <Text style={styles.celebrationSubtitle}>
-                We're using AI to craft your updated profile and compatibility
-                scores. This usually takes about a minute.
+              {regenerateReady
+                ? <IconSparkles size={48} color={colors.text} />
+                : <ActivityIndicator size="large" color={colors.text} style={{ marginBottom: spacing.sm }} />}
+              <Text style={styles.celebrationTitle}>
+                {regenerateReady ? "Time to Review Your Profile" : "Regenerating!"}
               </Text>
-              <ActivityIndicator
-                size="small"
-                color={colors.textMuted}
-                style={{ marginTop: spacing.xl }}
-              />
+              {regenerateReady ? (
+                <View style={styles.checkmarkList}>
+                  <View style={styles.checkmarkRow}>
+                    <IconEyeOff size={20} color={colors.text} />
+                    <Text style={styles.checkmarkText}>Hide anything that feels inaccurate</Text>
+                  </View>
+                  <View style={styles.checkmarkRow}>
+                    <IconEraser size={20} color={colors.text} />
+                    <Text style={styles.checkmarkText}>Remove things you'd rather keep private</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.celebrationSubtitle}>
+                  We're using AI to craft your updated profile and compatibility scores. This usually takes about a minute.
+                </Text>
+              )}
             </CelebrationText>
+            {regenerateReady && (
+              <View style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+                <Pressable
+                  style={styles.regenerateButton}
+                  onPress={() => {
+                    setRegenerateReady(false);
+                    router.push({ pathname: "/profile-audit", params: { fromRegenerate: "true" } });
+                  }}
+                >
+                  <Text style={styles.regenerateButtonText}>Edit My Profile</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         )}
       </Animated.View>
@@ -722,6 +748,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 24,
     paddingHorizontal: spacing.lg,
+  },
+  checkmarkList: {
+    marginTop: spacing.lg,
+    gap: 9,
+    paddingHorizontal: spacing.xl,
+  },
+  checkmarkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  checkmarkText: {
+    fontSize: fontSizes.lg,
+    color: colors.text,
+    lineHeight: 26,
+    flexShrink: 1,
   },
   bottomPadding: {
     height: spacing["2xl"],

@@ -188,10 +188,16 @@ export default function ProfileAuditScreen() {
   const updateHiddenFields = useMutation(api.userProfiles.updateHiddenFields);
   const completeProfileAudit = useMutation(api.users.completeProfileAudit);
 
+  const matchGenStatus = useQuery(
+    api.matching.getMatchGenerationStatusForCurrentUser,
+    userId ? {} : "skip",
+  );
+
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [analyzingCompat, setAnalyzingCompat] = useState(false);
 
   useEffect(() => {
     if (myProfile && !initialized) {
@@ -220,6 +226,9 @@ export default function ProfileAuditScreen() {
       await updateHiddenFields({ hiddenFields: Array.from(hidden) });
       if (isMandatory) {
         await completeProfileAudit({});
+        setSaving(false);
+        setAnalyzingCompat(true);
+        return;
       }
     } catch (e) {
       console.error("Failed to save hidden fields:", e);
@@ -227,17 +236,33 @@ export default function ProfileAuditScreen() {
       return;
     }
     setSaving(false);
-    if (isFirstTime) {
-      router.replace("/(tabs)/matches");
-    } else {
-      router.back();
-    }
+    router.back();
   };
+
+  useEffect(() => {
+    if (analyzingCompat && matchGenStatus?.hasAnyAnalyses) {
+      router.replace("/(tabs)/matches");
+    }
+  }, [analyzingCompat, matchGenStatus?.hasAnyAnalyses]);
 
   if (!currentUser || !myProfile || !initialized) {
     return (
-      <SafeAreaView style={s.container} edges={["top"]}>
+      <SafeAreaView style={s.container} edges={["top", "bottom"]}>
         <View style={s.loading}><ActivityIndicator color={colors.textMuted} /></View>
+      </SafeAreaView>
+    );
+  }
+
+  if (analyzingCompat) {
+    return (
+      <SafeAreaView style={s.container} edges={["top", "bottom"]}>
+        <View style={s.analyzingContainer}>
+          <ActivityIndicator size="large" color={colors.text} style={{ marginBottom: spacing.sm }} />
+          <Text style={s.analyzingTitle}>Finding Your Matches</Text>
+          <Text style={s.analyzingSubtitle}>
+            We're analyzing your compatibility with other profiles. This usually takes about a minute.
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -294,7 +319,7 @@ export default function ProfileAuditScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container} edges={["top"]}>
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
       {/* Nav bar */}
       <View style={s.navBar}>
         {isMandatory ? (
@@ -590,6 +615,9 @@ const basicsStyles = StyleSheet.create({
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
+  analyzingContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing["2xl"] },
+  analyzingTitle: { fontFamily: fonts.serifBold, fontSize: fontSizes["4xl"], color: colors.text, textAlign: "center", marginTop: spacing.xl, marginBottom: spacing.lg },
+  analyzingSubtitle: { fontSize: fontSizes.base, color: colors.textSecondary, textAlign: "center", lineHeight: 24, paddingHorizontal: spacing.lg },
   navBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   navButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
   navTitle: { ...textStyles.pageTitle },

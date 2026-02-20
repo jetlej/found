@@ -280,7 +280,7 @@ export const applyReferralCode = mutation({
 });
 
 // First-time profile audit confirmation gate for voice onboarding.
-// Marks audit complete and triggers compatibility generation.
+// Marks audit complete, clears old analyses, and triggers fresh compatibility generation.
 export const completeProfileAudit = mutation({
   args: {},
   handler: async (ctx) => {
@@ -295,6 +295,19 @@ export const completeProfileAudit = mutation({
 
     if (!user.profileAuditCompletedAt) {
       await ctx.db.patch(user._id, { profileAuditCompletedAt: Date.now() });
+    }
+
+    // Clear existing analyses so they get regenerated fresh
+    const asUser1 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+      .collect();
+    const asUser2 = await ctx.db
+      .query("compatibilityAnalyses")
+      .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+      .collect();
+    for (const doc of [...asUser1, ...asUser2]) {
+      await ctx.db.delete(doc._id);
     }
 
     await ctx.scheduler.runAfter(

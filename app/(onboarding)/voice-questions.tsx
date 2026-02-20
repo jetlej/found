@@ -3,6 +3,8 @@ import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from "@/lib/voice-questions";
 import {
+  IconEraser,
+  IconEyeOff,
   IconMicrophone,
   IconPlayerPause,
   IconTrash,
@@ -213,6 +215,11 @@ export default function VoiceQuestionsScreen() {
     opacity: questionOpacity.value,
   }));
 
+  const progressWidth = useSharedValue((startIndex + 1) / TOTAL_VOICE_QUESTIONS);
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progressWidth.value * 100}%`,
+  }));
+
   // Create a map of questionIndex -> recording for quick lookup
   const recordingMap = useMemo(() => {
     if (!recordings) return new Map();
@@ -231,12 +238,13 @@ export default function VoiceQuestionsScreen() {
     }
   }, [recordings, initialized, startIndex]);
 
-  // Fade question content on index change
+  // Animate question content + progress bar on index change
   useEffect(() => {
     if (prevIndexRef.current !== currentIndex) {
       prevIndexRef.current = currentIndex;
       questionOpacity.value = 0;
-      questionOpacity.value = withTiming(1, { duration: 250 });
+      questionOpacity.value = withTiming(1, { duration: 400 });
+      progressWidth.value = withTiming((currentIndex + 1) / TOTAL_VOICE_QUESTIONS, { duration: 300 });
     }
   }, [currentIndex]);
 
@@ -486,36 +494,39 @@ export default function VoiceQuestionsScreen() {
         <View style={styles.celebrationContainer}>
           <Confetti />
           <CelebrationText>
-            <IconSparkles size={48} color={colors.text} />
-            <Text style={styles.celebrationTitle}>Thanks for sharing!</Text>
-            <Text style={styles.celebrationSubtitle}>
-              {profileReady
-                ? "Your profile is ready! Review what we learned about you."
-                : "We're using AI to craft your profile and compatibility scores. This usually takes about a minute."}
+            {profileReady
+              ? <IconSparkles size={48} color={colors.text} />
+              : <ActivityIndicator size="large" color={colors.text} style={{ marginBottom: spacing.sm }} />}
+            <Text style={styles.celebrationTitle}>
+              {profileReady ? "Time to Review Your Profile" : "Thanks for sharing!"}
             </Text>
-            {!profileReady && (
-              <ActivityIndicator
-                size="small"
-                color={colors.textMuted}
-                style={{ marginTop: spacing.xl }}
-              />
+            {profileReady ? (
+              <View style={styles.checkmarkList}>
+                <View style={styles.checkmarkRow}>
+                  <IconEyeOff size={20} color={colors.text} />
+                  <Text style={styles.checkmarkText}>Hide anything that feels inaccurate</Text>
+                </View>
+                <View style={styles.checkmarkRow}>
+                  <IconEraser size={20} color={colors.text} />
+                  <Text style={styles.checkmarkText}>Remove things you'd rather keep private</Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.celebrationSubtitle}>
+                We're using AI to craft your profile and compatibility scores. This usually takes about a minute.
+              </Text>
             )}
           </CelebrationText>
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.nextButton, !profileReady && styles.buttonDisabled]}
-              onPress={() => {
-                if (profileReady) {
-                  router.push({ pathname: "/profile-audit", params: { firstTime: "true" } });
-                }
-              }}
-              disabled={!profileReady}
-            >
-              <Text style={styles.nextButtonText}>
-                {profileReady ? "Review Your Profile" : "Building Your Profile..."}
-              </Text>
-            </Pressable>
-          </View>
+          {profileReady && (
+            <View style={styles.footer}>
+              <Pressable
+                style={styles.nextButton}
+                onPress={() => router.push({ pathname: "/profile-audit", params: { firstTime: "true" } })}
+              >
+                <Text style={styles.nextButtonText}>Edit My Profile</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -534,14 +545,7 @@ export default function VoiceQuestionsScreen() {
           </View>
           <View style={styles.progressRow}>
             <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${((currentIndex + 1) / TOTAL_VOICE_QUESTIONS) * 100}%`,
-                  },
-                ]}
-              />
+              <Animated.View style={[styles.progressFill, progressBarStyle]} />
             </View>
             <Text style={styles.progressText}>
               {currentIndex + 1}/{TOTAL_VOICE_QUESTIONS}
@@ -952,5 +956,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 24,
     paddingHorizontal: spacing.lg,
+  },
+  checkmarkList: {
+    marginTop: spacing.lg,
+    gap: 9,
+    paddingHorizontal: spacing.xl,
+  },
+  checkmarkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  checkmarkText: {
+    fontSize: fontSizes.lg,
+    color: colors.text,
+    lineHeight: 26,
+    flexShrink: 1,
   },
 });

@@ -32,20 +32,22 @@ import {
 import { useQuery } from 'convex/react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
+  FlatList,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  ViewToken,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_INNER_WIDTH = SCREEN_WIDTH - spacing.lg * 4; // card padding + margin
@@ -88,7 +90,7 @@ function PhotoStrip({
               ]}
             >
               {url ? (
-                <Image source={{ uri: url }} style={photoStripStyles.photo} resizeMode="cover" />
+                <Image source={{ uri: url }} style={photoStripStyles.photo} contentFit="cover" />
               ) : (
                 <View style={photoStripStyles.placeholder}>
                   <IconUserFilled size={40} color="#BDBDBD" />
@@ -161,7 +163,7 @@ function FullscreenPhotoViewer({
         >
           {photos.map((url, i) => (
             <View key={i} style={fullscreenStyles.page}>
-              <Image source={{ uri: url }} style={fullscreenStyles.image} resizeMode="contain" />
+              <Image source={{ uri: url }} style={fullscreenStyles.image} contentFit="contain" />
             </View>
           ))}
         </ScrollView>
@@ -1306,6 +1308,17 @@ export default function MatchesScreen() {
   } | null>(null);
   // Track which tab is active per user: "compatibility" (default) or "profile"
   const [activeTab, setActiveTab] = useState<Record<string, 'compatibility' | 'profile'>>({});
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (viewableItems.length > 0 && viewableItems[0].index != null) {
+        setCurrentPage(viewableItems[0].index);
+      }
+    },
+    []
+  );
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
   // Get current user
   const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
@@ -1371,271 +1384,284 @@ export default function MatchesScreen() {
           <>
             <AppHeader />
 
-            <ScrollView style={styles.scrollView}>
-              {/* Match list */}
-              {testUserMatches.map((match) => {
-                if (!match) return null;
+            <FlatList
+              data={testUserMatches.filter(Boolean)}
+              keyExtractor={(match) => match.user._id}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={viewabilityConfig}
+              renderItem={({ item: match }) => {
                 const isExpanded = expandedUser === match.user._id;
 
                 return (
-                  <View key={match.user._id} style={styles.matchCard}>
-                    <Pressable
-                      style={styles.matchCardInner}
-                      onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
-                    >
-                      <View style={styles.matchHeader}>
-                        <View style={styles.matchInfo}>
-                          <Text style={styles.matchName}>
-                            {match.user.name?.split(' ')[0] || 'Unknown'}
-                          </Text>
-                          <Text style={styles.matchLocation}>
-                            {match.user.birthdate
-                              ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
-                              : ''}
-                            {match.user.location || 'Unknown location'}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.scoreBadge,
-                            {
-                              backgroundColor: getScoreColor(match.analysis.overallScore),
-                            },
-                          ]}
-                        >
-                          <Text style={styles.scoreText}>{match.analysis.overallScore}</Text>
-                        </View>
-                      </View>
-
-                      <PhotoStrip
-                        photos={match.photos}
-                        onPhotoPress={(i) => {
-                          if (match.photos.length > 0)
-                            setFullscreenPhotos({
-                              urls: match.photos,
-                              startIndex: i,
-                            });
-                        }}
-                      />
-                    </Pressable>
-
-                    {/* Basics at a glance - outside Pressable so scroll works */}
-                    <BasicsAtAGlance user={match.user} />
-
-                    <Pressable
-                      style={{
-                        paddingHorizontal: spacing.md,
-                        paddingBottom: spacing.md,
-                      }}
-                      onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
-                    >
-                      {/* Bio - always visible */}
-                      {match.profile.generatedBio && (
-                        <Text style={styles.shortBio}>
-                          {!isExpanded && match.profile.generatedBio.length > 375
-                            ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, '') +
-                              '...'
-                            : match.profile.generatedBio}
-                        </Text>
-                      )}
-
-                      {/* Expanded view with tabs */}
-                      {isExpanded && (
-                        <View style={styles.breakdown}>
-                          {/* Toggle tabs - Compatibility first (default) */}
-                          <View style={styles.toggleContainer}>
-                            <View style={styles.toggleTrack}>
-                              <Pressable
-                                style={[
-                                  styles.toggleOption,
-                                  (activeTab[match.user._id] || 'compatibility') ===
-                                    'compatibility' && styles.toggleOptionActive,
-                                ]}
-                                onPress={() =>
-                                  setActiveTab({
-                                    ...activeTab,
-                                    [match.user._id]: 'compatibility',
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={[
-                                    styles.toggleText,
-                                    (activeTab[match.user._id] || 'compatibility') ===
-                                      'compatibility' && styles.toggleTextActive,
-                                  ]}
-                                >
-                                  Compatibility
-                                </Text>
-                              </Pressable>
-                              <Pressable
-                                style={[
-                                  styles.toggleOption,
-                                  activeTab[match.user._id] === 'profile' &&
-                                    styles.toggleOptionActive,
-                                ]}
-                                onPress={() =>
-                                  setActiveTab({
-                                    ...activeTab,
-                                    [match.user._id]: 'profile',
-                                  })
-                                }
-                              >
-                                <Text
-                                  style={[
-                                    styles.toggleText,
-                                    activeTab[match.user._id] === 'profile' &&
-                                      styles.toggleTextActive,
-                                  ]}
-                                >
-                                  Full Profile
-                                </Text>
-                              </Pressable>
-                            </View>
+                  <ScrollView
+                    style={styles.pageContainer}
+                    contentContainerStyle={styles.pageContent}
+                  >
+                    <View style={styles.matchCard}>
+                      <Pressable
+                        style={styles.matchCardInner}
+                        onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
+                      >
+                        <View style={styles.matchHeader}>
+                          <View style={styles.matchInfo}>
+                            <Text style={styles.matchName}>
+                              {match.user.name?.split(' ')[0] || 'Unknown'}
+                            </Text>
+                            <Text style={styles.matchLocation}>
+                              {match.user.birthdate
+                                ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
+                                : ''}
+                              {match.user.location || 'Unknown location'}
+                            </Text>
                           </View>
-
-                          {/* Compatibility Tab (AI-powered) */}
-                          {(activeTab[match.user._id] || 'compatibility') === 'compatibility' && (
-                            <View>
-                              {/* AI Summary */}
-                              <Text style={styles.aiSummary}>{match.analysis.summary}</Text>
-
-                              {/* 10 AI Category Bars */}
-                              {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
-                                const score = match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
-                                const scoreColor = getScoreColor(score);
-                                const isFull = score === 100;
-                                const summaryText = match.analysis.categorySummaries?.[key];
-                                const isExpanded = expandedCategories[match.user._id]?.has(key);
-                                return (
-                                  <View key={key}>
-                                    <Pressable
-                                      style={styles.categoryRow}
-                                      onPress={() => {
-                                        if (!summaryText) return;
-                                        setExpandedCategories((prev) => {
-                                          const set = new Set(prev[match.user._id]);
-                                          if (set.has(key)) set.delete(key);
-                                          else set.add(key);
-                                          return { ...prev, [match.user._id]: set };
-                                        });
-                                      }}
-                                    >
-                                      <View style={styles.categoryBar}>
-                                        <View
-                                          style={[
-                                            styles.categoryBarFill,
-                                            {
-                                              width: `${score}%`,
-                                              borderTopRightRadius: isFull ? 10 : 0,
-                                              borderBottomRightRadius: isFull ? 10 : 0,
-                                            },
-                                          ]}
-                                        >
-                                          <LinearGradient
-                                            colors={[`${scoreColor}4D`, `${scoreColor}99`]}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={styles.categoryBarGradient}
-                                          />
-                                          {!isFull && (
-                                            <View
-                                              style={[
-                                                styles.categoryBarEdge,
-                                                {
-                                                  backgroundColor: scoreColor,
-                                                },
-                                              ]}
-                                            />
-                                          )}
-                                        </View>
-                                        <View style={styles.categoryBarContent}>
-                                          <CatIcon size={20} color={colors.text} />
-                                          <Text style={styles.categoryBarLabel}>{label}</Text>
-                                        </View>
-                                      </View>
-                                      <Text
-                                        style={[styles.categoryBarScore, { color: scoreColor }]}
-                                      >
-                                        {match.analysis.categoryScores[key]}
-                                        /10
-                                      </Text>
-                                    </Pressable>
-                                    {isExpanded && summaryText && (
-                                      <Text style={styles.categorySummaryText}>{summaryText}</Text>
-                                    )}
-                                  </View>
-                                );
-                              })}
-
-                              {/* Green Flags */}
-                              {match.analysis.greenFlags.length > 0 && (
-                                <View style={styles.flagSection}>
-                                  <Text style={styles.flagTitle}>Green Flags</Text>
-                                  <View style={styles.tagsRow}>
-                                    {match.analysis.greenFlags.map((flag, i) => (
-                                      <View key={i} style={styles.tagGreenFlag}>
-                                        <IconCheck size={12} color="#166534" />
-                                        <Text style={styles.tagGreenFlagText}>{flag}</Text>
-                                      </View>
-                                    ))}
-                                  </View>
-                                </View>
-                              )}
-
-                              {/* Yellow Flags */}
-                              {match.analysis.yellowFlags.length > 0 && (
-                                <View style={styles.flagSection}>
-                                  <Text style={styles.flagTitle}>Yellow Flags</Text>
-                                  <View style={styles.tagsRow}>
-                                    {match.analysis.yellowFlags.map((flag, i) => (
-                                      <View key={i} style={styles.tagYellowFlag}>
-                                        <IconAlertTriangle size={12} color="#92400e" />
-                                        <Text style={styles.tagYellowFlagText}>{flag}</Text>
-                                      </View>
-                                    ))}
-                                  </View>
-                                </View>
-                              )}
-
-                              {/* Red Flags */}
-                              {match.analysis.redFlags.length > 0 && (
-                                <View style={styles.flagSection}>
-                                  <Text style={styles.flagTitle}>Red Flags</Text>
-                                  <View style={styles.tagsRow}>
-                                    {match.analysis.redFlags.map((flag, i) => (
-                                      <View key={i} style={styles.tagRedFlag}>
-                                        <IconX size={12} color="#991b1b" />
-                                        <Text style={styles.tagRedFlagText}>{flag}</Text>
-                                      </View>
-                                    ))}
-                                  </View>
-                                </View>
-                              )}
-                            </View>
-                          )}
-
-                          {/* Full Profile Tab */}
-                          {activeTab[match.user._id] === 'profile' && (
-                            <FullProfileView
-                              profile={match.profile}
-                              user={match.user}
-                              userName={match.user.name || 'User'}
-                            />
-                          )}
+                          <View
+                            style={[
+                              styles.scoreBadge,
+                              {
+                                backgroundColor: getScoreColor(match.analysis.overallScore),
+                              },
+                            ]}
+                          >
+                            <Text style={styles.scoreText}>{match.analysis.overallScore}</Text>
+                          </View>
                         </View>
-                      )}
 
-                      <Text style={styles.expandHint}>
-                        {isExpanded ? 'Tap to collapse' : 'Tap for details'}
-                      </Text>
-                    </Pressable>
-                  </View>
+                        <PhotoStrip
+                          photos={match.photos}
+                          onPhotoPress={(i) => {
+                            if (match.photos.length > 0)
+                              setFullscreenPhotos({
+                                urls: match.photos,
+                                startIndex: i,
+                              });
+                          }}
+                        />
+                      </Pressable>
+
+                      <BasicsAtAGlance user={match.user} />
+
+                      <Pressable
+                        style={{
+                          paddingHorizontal: spacing.md,
+                          paddingBottom: spacing.md,
+                        }}
+                        onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
+                      >
+                        {match.profile.generatedBio && (
+                          <Text style={styles.shortBio}>
+                            {!isExpanded && match.profile.generatedBio.length > 375
+                              ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, '') +
+                                '...'
+                              : match.profile.generatedBio}
+                          </Text>
+                        )}
+
+                        {isExpanded && (
+                          <View style={styles.breakdown}>
+                            <View style={styles.toggleContainer}>
+                              <View style={styles.toggleTrack}>
+                                <Pressable
+                                  style={[
+                                    styles.toggleOption,
+                                    (activeTab[match.user._id] || 'compatibility') ===
+                                      'compatibility' && styles.toggleOptionActive,
+                                  ]}
+                                  onPress={() =>
+                                    setActiveTab({
+                                      ...activeTab,
+                                      [match.user._id]: 'compatibility',
+                                    })
+                                  }
+                                >
+                                  <Text
+                                    style={[
+                                      styles.toggleText,
+                                      (activeTab[match.user._id] || 'compatibility') ===
+                                        'compatibility' && styles.toggleTextActive,
+                                    ]}
+                                  >
+                                    Compatibility
+                                  </Text>
+                                </Pressable>
+                                <Pressable
+                                  style={[
+                                    styles.toggleOption,
+                                    activeTab[match.user._id] === 'profile' &&
+                                      styles.toggleOptionActive,
+                                  ]}
+                                  onPress={() =>
+                                    setActiveTab({
+                                      ...activeTab,
+                                      [match.user._id]: 'profile',
+                                    })
+                                  }
+                                >
+                                  <Text
+                                    style={[
+                                      styles.toggleText,
+                                      activeTab[match.user._id] === 'profile' &&
+                                        styles.toggleTextActive,
+                                    ]}
+                                  >
+                                    Full Profile
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+
+                            {(activeTab[match.user._id] || 'compatibility') === 'compatibility' && (
+                              <View>
+                                <Text style={styles.aiSummary}>{match.analysis.summary}</Text>
+
+                                {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
+                                  const score = match.analysis.categoryScores[key] * 10;
+                                  const scoreColor = getScoreColor(score);
+                                  const isFull = score === 100;
+                                  const summaryText = match.analysis.categorySummaries?.[key];
+                                  const isCatExpanded =
+                                    expandedCategories[match.user._id]?.has(key);
+                                  return (
+                                    <View key={key}>
+                                      <Pressable
+                                        style={styles.categoryRow}
+                                        onPress={() => {
+                                          if (!summaryText) return;
+                                          setExpandedCategories((prev) => {
+                                            const set = new Set(prev[match.user._id]);
+                                            if (set.has(key)) set.delete(key);
+                                            else set.add(key);
+                                            return { ...prev, [match.user._id]: set };
+                                          });
+                                        }}
+                                      >
+                                        <View style={styles.categoryBar}>
+                                          <View
+                                            style={[
+                                              styles.categoryBarFill,
+                                              {
+                                                width: `${score}%`,
+                                                borderTopRightRadius: isFull ? 10 : 0,
+                                                borderBottomRightRadius: isFull ? 10 : 0,
+                                              },
+                                            ]}
+                                          >
+                                            <LinearGradient
+                                              colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                              start={{ x: 0, y: 0 }}
+                                              end={{ x: 1, y: 0 }}
+                                              style={styles.categoryBarGradient}
+                                            />
+                                            {!isFull && (
+                                              <View
+                                                style={[
+                                                  styles.categoryBarEdge,
+                                                  {
+                                                    backgroundColor: scoreColor,
+                                                  },
+                                                ]}
+                                              />
+                                            )}
+                                          </View>
+                                          <View style={styles.categoryBarContent}>
+                                            <CatIcon size={20} color={colors.text} />
+                                            <Text style={styles.categoryBarLabel}>{label}</Text>
+                                          </View>
+                                        </View>
+                                        <Text
+                                          style={[styles.categoryBarScore, { color: scoreColor }]}
+                                        >
+                                          {match.analysis.categoryScores[key]}
+                                          /10
+                                        </Text>
+                                      </Pressable>
+                                      {isCatExpanded && summaryText && (
+                                        <Text style={styles.categorySummaryText}>
+                                          {summaryText}
+                                        </Text>
+                                      )}
+                                    </View>
+                                  );
+                                })}
+
+                                {match.analysis.greenFlags.length > 0 && (
+                                  <View style={styles.flagSection}>
+                                    <Text style={styles.flagTitle}>Green Flags</Text>
+                                    <View style={styles.tagsRow}>
+                                      {match.analysis.greenFlags.map((flag, i) => (
+                                        <View key={i} style={styles.tagGreenFlag}>
+                                          <IconCheck size={12} color="#166534" />
+                                          <Text style={styles.tagGreenFlagText}>{flag}</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
+
+                                {match.analysis.yellowFlags.length > 0 && (
+                                  <View style={styles.flagSection}>
+                                    <Text style={styles.flagTitle}>Yellow Flags</Text>
+                                    <View style={styles.tagsRow}>
+                                      {match.analysis.yellowFlags.map((flag, i) => (
+                                        <View key={i} style={styles.tagYellowFlag}>
+                                          <IconAlertTriangle size={12} color="#92400e" />
+                                          <Text style={styles.tagYellowFlagText}>{flag}</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
+
+                                {match.analysis.redFlags.length > 0 && (
+                                  <View style={styles.flagSection}>
+                                    <Text style={styles.flagTitle}>Red Flags</Text>
+                                    <View style={styles.tagsRow}>
+                                      {match.analysis.redFlags.map((flag, i) => (
+                                        <View key={i} style={styles.tagRedFlag}>
+                                          <IconX size={12} color="#991b1b" />
+                                          <Text style={styles.tagRedFlagText}>{flag}</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
+                              </View>
+                            )}
+
+                            {activeTab[match.user._id] === 'profile' && (
+                              <FullProfileView
+                                profile={match.profile}
+                                user={match.user}
+                                userName={match.user.name || 'User'}
+                              />
+                            )}
+                          </View>
+                        )}
+
+                        <Text style={styles.expandHint}>
+                          {isExpanded ? 'Tap to collapse' : 'Tap for details'}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.bottomPadding} />
+                  </ScrollView>
                 );
-              })}
+              }}
+            />
 
-              <View style={styles.bottomPadding} />
-            </ScrollView>
+            {testUserMatches.filter(Boolean).length > 1 && !expandedUser && (
+              <View style={styles.paginationContainer}>
+                {testUserMatches.filter(Boolean).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[styles.paginationDot, i === currentPage && styles.paginationDotActive]}
+                  />
+                ))}
+              </View>
+            )}
 
             {fullscreenPhotos && (
               <FullscreenPhotoViewer
@@ -1677,8 +1703,34 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     marginTop: spacing.xs,
   },
-  scrollView: {
-    flex: 1,
+  pageContainer: {
+    width: SCREEN_WIDTH,
+  },
+  pageContent: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing['3xl'],
+  },
+  paginationContainer: {
+    alignItems: 'center',
+    bottom: 24,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
+  paginationDot: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  paginationDotActive: {
+    backgroundColor: colors.text,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   emptyState: {
     alignItems: 'center',

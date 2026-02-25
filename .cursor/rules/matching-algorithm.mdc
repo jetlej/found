@@ -31,20 +31,20 @@ Server-side GPT call per pair. Stored in `compatibilityAnalyses` table. Both use
 - **Green Flags**: 3-6 items (shared values, uncommon similarities, strong alignment)
 - **Yellow Flags**: 2-4 items (differences requiring compromise, not dealbreakers)
 - **Red Flags**: 0-3 items (genuine dealbreakers, serious misalignments)
-- **10 Category Scores** (0-10 each):
-  1. Core Values
-  2. Lifestyle Alignment
-  3. Relationship Goals
-  4. Communication Style
-  5. Emotional Compatibility
-  6. Family Planning
-  7. Social Lifestyle
-  8. Conflict Resolution
-  9. Intimacy Alignment
-  10. Growth Mindset
+- **10 Category Scores** (0-10 each, defined in `convex/lib/compatibilityCategories.ts`):
+  1. Core Values (2x)
+  2. Lifestyle Alignment (1.5x)
+  3. Relationship Goals (2x)
+  4. Emotional Compatibility (1.5x)
+  5. Family Planning (2x)
+  6. Social Lifestyle (1x)
+  7. Growth Mindset (2x)
+  8. Shared Passions (1x)
+  9. Life Story & Depth (1.5x)
+  10. Partner Fit (2x)
 
 ### Overall Score (0-100)
-- Sum of 10 category scores
+- Weighted sum of 10 category scores, normalized to 0-100: `round((weightedSum / maxWeighted) * 100)`
 - **Dealbreaker penalty**: Red flags multiply the score down
   - First red flag: ×0.6
   - Each additional: ×0.75

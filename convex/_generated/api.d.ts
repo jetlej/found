@@ -18,6 +18,7 @@ import type * as config from "../config.js";
 import type * as lib_admin from "../lib/admin.js";
 import type * as lib_canonicalValues from "../lib/canonicalValues.js";
 import type * as lib_compatibility from "../lib/compatibility.js";
+import type * as lib_compatibilityCategories from "../lib/compatibilityCategories.js";
 import type * as lib_filterProfile from "../lib/filterProfile.js";
 import type * as lib_openai from "../lib/openai.js";
 import type * as lib_prompts from "../lib/prompts.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   "lib/admin": typeof lib_admin;
   "lib/canonicalValues": typeof lib_canonicalValues;
   "lib/compatibility": typeof lib_compatibility;
+  "lib/compatibilityCategories": typeof lib_compatibilityCategories;
   "lib/filterProfile": typeof lib_filterProfile;
   "lib/openai": typeof lib_openai;
   "lib/prompts": typeof lib_prompts;

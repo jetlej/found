@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { api, internal } from './_generated/api';
 import { setupTest } from './test.setup';
 import { Id } from './_generated/dataModel';
+import { mockCategoryScores, mockCategorySummaries } from './lib/compatibilityCategories';
 
 const identity = { subject: 'clerk_e2e_user' };
 
@@ -50,19 +51,9 @@ const minAnalysis = {
   greenFlags: ['shared values'],
   yellowFlags: ['distance'],
   redFlags: [],
-  categoryScores: {
-    coreValues: 8,
-    lifestyleAlignment: 7,
-    relationshipGoals: 9,
-    communicationStyle: 8,
-    emotionalCompatibility: 7,
-    familyPlanning: 8,
-    socialLifestyle: 7,
-    conflictResolution: 8,
-    intimacyAlignment: 7,
-    growthMindset: 8,
-  },
-  overallScore: 77,
+  categoryScores: mockCategoryScores(8),
+  categorySummaries: mockCategorySummaries(),
+  overallScore: 80,
   generatedAt: Date.now(),
   openaiModel: 'test',
 };
@@ -183,7 +174,7 @@ describe('full user journey', () => {
     const matches = await as.query(api.matching.getMatchesForCurrentUser, {});
     expect(matches).toHaveLength(1);
     expect(matches![0].user.name).toBe('Sarah');
-    expect(matches![0].analysis.overallScore).toBe(77);
+    expect(matches![0].analysis.overallScore).toBe(80);
 
     // 11. Verify match generation status
     const status = await as.query(api.matching.getMatchGenerationStatusForCurrentUser, {});

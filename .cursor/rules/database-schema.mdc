@@ -63,6 +63,6 @@ alwaysApply: false
 - `userIdPair`: string — sorted "id1_id2" for dedup (index: `by_pair`)
 - `user1Id`: Id<"users"> (index: `by_user1`), `user2Id`: Id<"users"> (index: `by_user2`)
 - `summary`: string, `greenFlags`: string[], `yellowFlags`: string[], `redFlags`: string[]
-- `categoryScores`: object with 10 number fields (coreValues, lifestyleAlignment, relationshipGoals, communicationStyle, emotionalCompatibility, familyPlanning, socialLifestyle, conflictResolution, intimacyAlignment, growthMindset)
+- `categoryScores`: object with 10 number fields — defined in `convex/lib/compatibilityCategories.ts` (coreValues, lifestyleAlignment, relationshipGoals, emotionalCompatibility, familyPlanning, socialLifestyle, growthMindset, sharedPassions, lifeStoryDepth, partnerFit)
 - `overallScore`: number (0-100, sum of categories with dealbreaker penalty)
 - `generatedAt`: number (timestamp), `openaiModel`: string

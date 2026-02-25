@@ -7,7 +7,10 @@ import {
   QueryCtx,
   MutationCtx,
 } from './_generated/server';
+import { internal } from './_generated/api';
 import { Id } from './_generated/dataModel';
+import { categoryScoresValidator, categorySummariesValidator } from './lib/compatibilityCategories';
+import { requireAdmin } from './lib/admin';
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -135,18 +138,8 @@ export const store = internalMutation({
     greenFlags: v.array(v.string()),
     yellowFlags: v.array(v.string()),
     redFlags: v.array(v.string()),
-    categoryScores: v.object({
-      coreValues: v.number(),
-      lifestyleAlignment: v.number(),
-      relationshipGoals: v.number(),
-      communicationStyle: v.number(),
-      emotionalCompatibility: v.number(),
-      familyPlanning: v.number(),
-      socialLifestyle: v.number(),
-      conflictResolution: v.number(),
-      intimacyAlignment: v.number(),
-      growthMindset: v.number(),
-    }),
+    categoryScores: categoryScoresValidator,
+    categorySummaries: v.optional(categorySummariesValidator),
     overallScore: v.number(),
     openaiModel: v.string(),
   },
@@ -173,6 +166,7 @@ export const store = internalMutation({
       yellowFlags: args.yellowFlags,
       redFlags: args.redFlags,
       categoryScores: args.categoryScores,
+      ...(args.categorySummaries ? { categorySummaries: args.categorySummaries } : {}),
       overallScore: args.overallScore,
       generatedAt: Date.now(),
       openaiModel: args.openaiModel,
@@ -207,5 +201,43 @@ export const clearForUser = mutation({
       await ctx.db.delete(doc._id);
     }
     return all.length;
+  },
+});
+
+// Admin: clear ALL analyses (useful after category changes)
+export const clearAll = mutation({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+    const all = await ctx.db.query('compatibilityAnalyses').collect();
+    for (const doc of all) {
+      await ctx.db.delete(doc._id);
+    }
+    return all.length;
+  },
+});
+
+// Admin: regenerate compatibility for all human users with profiles
+export const regenerateAll = mutation({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+    const allUsers = await ctx.db.query('users').collect();
+    const humans = allUsers.filter((u) => u.type === 'human' && u.profileAuditCompletedAt);
+    let scheduled = 0;
+    for (const user of humans) {
+      const profile = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .first();
+      if (!profile) continue;
+      await ctx.scheduler.runAfter(
+        scheduled * 2000, // stagger to avoid rate limits
+        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        { userId: user._id }
+      );
+      scheduled++;
+    }
+    return { scheduled, totalHumans: humans.length };
   },
 });

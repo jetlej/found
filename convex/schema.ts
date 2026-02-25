@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
+import { categoryScoresValidator, categorySummariesValidator } from './lib/compatibilityCategories';
 
 export default defineSchema({
   users: defineTable({
@@ -403,18 +404,8 @@ export default defineSchema({
     yellowFlags: v.array(v.string()),
     redFlags: v.array(v.string()),
     // 10 scored categories (0-10 each, summed for overall score)
-    categoryScores: v.object({
-      coreValues: v.number(),
-      lifestyleAlignment: v.number(),
-      relationshipGoals: v.number(),
-      communicationStyle: v.number(),
-      emotionalCompatibility: v.number(),
-      familyPlanning: v.number(),
-      socialLifestyle: v.number(),
-      conflictResolution: v.number(),
-      intimacyAlignment: v.number(),
-      growthMindset: v.number(),
-    }),
+    categoryScores: categoryScoresValidator,
+    categorySummaries: v.optional(categorySummariesValidator),
     overallScore: v.number(),
     // Metadata
     generatedAt: v.number(),

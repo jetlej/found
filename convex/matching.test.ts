@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { api } from './_generated/api';
 import { setupTest } from './test.setup';
 import { Id } from './_generated/dataModel';
+import { mockCategoryScores, mockCategorySummaries } from './lib/compatibilityCategories';
 
 const identity1 = { subject: 'clerk_match_user1' };
 const identity2 = { subject: 'clerk_match_user2' };
@@ -50,19 +51,9 @@ const minAnalysis = {
   greenFlags: ['shared values'],
   yellowFlags: ['distance'],
   redFlags: [],
-  categoryScores: {
-    coreValues: 8,
-    lifestyleAlignment: 7,
-    relationshipGoals: 9,
-    communicationStyle: 8,
-    emotionalCompatibility: 7,
-    familyPlanning: 8,
-    socialLifestyle: 7,
-    conflictResolution: 8,
-    intimacyAlignment: 7,
-    growthMindset: 8,
-  },
-  overallScore: 77,
+  categoryScores: mockCategoryScores(8),
+  categorySummaries: mockCategorySummaries(),
+  overallScore: 80,
   generatedAt: Date.now(),
   openaiModel: 'test',
 };

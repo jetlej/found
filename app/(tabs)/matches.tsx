@@ -16,7 +16,6 @@ import {
   IconGlass,
   IconHeart,
   IconHome,
-  IconMessageCircle,
   IconMoodSmile,
   IconPaw,
   IconPill,
@@ -223,39 +222,27 @@ const fullscreenStyles = StyleSheet.create({
   },
 });
 
-// AI compatibility analysis - 10 category system
-type AICategoryKey =
-  | 'coreValues'
-  | 'lifestyleAlignment'
-  | 'relationshipGoals'
-  | 'communicationStyle'
-  | 'emotionalCompatibility'
-  | 'familyPlanning'
-  | 'socialLifestyle'
-  | 'conflictResolution'
-  | 'intimacyAlignment'
-  | 'growthMindset';
+// AI compatibility analysis - 10 category system (keys/labels from shared source of truth)
+import { COMPATIBILITY_CATEGORIES, type CategoryKey } from '@/convex/lib/compatibilityCategories';
 
-const AI_CATEGORIES: {
-  key: AICategoryKey;
-  label: string;
-  icon: React.ComponentType<{ size: number; color: string }>;
-}[] = [
-  { key: 'coreValues', label: 'Core Values', icon: IconDiamondFilled },
-  { key: 'lifestyleAlignment', label: 'Lifestyle', icon: IconSeedlingFilled },
-  { key: 'relationshipGoals', label: 'Relationship Goals', icon: IconTarget },
-  {
-    key: 'communicationStyle',
-    label: 'Communication',
-    icon: IconMessageCircle,
-  },
-  { key: 'emotionalCompatibility', label: 'Emotional', icon: IconMoodSmile },
-  { key: 'familyPlanning', label: 'Family Planning', icon: IconBabyCarriage },
-  { key: 'socialLifestyle', label: 'Social Life', icon: IconUsers },
-  { key: 'conflictResolution', label: 'Conflict Style', icon: IconShield },
-  { key: 'intimacyAlignment', label: 'Intimacy', icon: IconFlame },
-  { key: 'growthMindset', label: 'Growth Mindset', icon: IconRocket },
-];
+const CATEGORY_ICONS: Record<CategoryKey, React.ComponentType<{ size: number; color: string }>> = {
+  coreValues: IconDiamondFilled,
+  lifestyleAlignment: IconSeedlingFilled,
+  relationshipGoals: IconTarget,
+  emotionalCompatibility: IconMoodSmile,
+  familyPlanning: IconBabyCarriage,
+  socialLifestyle: IconUsers,
+  growthMindset: IconRocket,
+  sharedPassions: IconFlame,
+  lifeStoryDepth: IconHeart,
+  partnerFit: IconShield,
+};
+
+const AI_CATEGORIES = COMPATIBILITY_CATEGORIES.map((c) => ({
+  key: c.key,
+  label: c.label,
+  icon: CATEGORY_ICONS[c.key],
+}));
 
 // Types for compatibility calculation
 type UserProfile = Doc<'userProfiles'>;
@@ -1312,6 +1299,7 @@ export default function MatchesScreen() {
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
 
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, Set<string>>>({});
   const [fullscreenPhotos, setFullscreenPhotos] = useState<{
     urls: string[];
     startIndex: number;
@@ -1517,45 +1505,65 @@ export default function MatchesScreen() {
                                 const score = match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
                                 const scoreColor = getScoreColor(score);
                                 const isFull = score === 100;
+                                const summaryText = match.analysis.categorySummaries?.[key];
+                                const isExpanded = expandedCategories[match.user._id]?.has(key);
                                 return (
-                                  <View key={key} style={styles.categoryRow}>
-                                    <View style={styles.categoryBar}>
-                                      <View
-                                        style={[
-                                          styles.categoryBarFill,
-                                          {
-                                            width: `${score}%`,
-                                            borderTopRightRadius: isFull ? 10 : 0,
-                                            borderBottomRightRadius: isFull ? 10 : 0,
-                                          },
-                                        ]}
-                                      >
-                                        <LinearGradient
-                                          colors={[`${scoreColor}4D`, `${scoreColor}99`]}
-                                          start={{ x: 0, y: 0 }}
-                                          end={{ x: 1, y: 0 }}
-                                          style={styles.categoryBarGradient}
-                                        />
-                                        {!isFull && (
-                                          <View
-                                            style={[
-                                              styles.categoryBarEdge,
-                                              {
-                                                backgroundColor: scoreColor,
-                                              },
-                                            ]}
+                                  <View key={key}>
+                                    <Pressable
+                                      style={styles.categoryRow}
+                                      onPress={() => {
+                                        if (!summaryText) return;
+                                        setExpandedCategories((prev) => {
+                                          const set = new Set(prev[match.user._id]);
+                                          if (set.has(key)) set.delete(key);
+                                          else set.add(key);
+                                          return { ...prev, [match.user._id]: set };
+                                        });
+                                      }}
+                                    >
+                                      <View style={styles.categoryBar}>
+                                        <View
+                                          style={[
+                                            styles.categoryBarFill,
+                                            {
+                                              width: `${score}%`,
+                                              borderTopRightRadius: isFull ? 10 : 0,
+                                              borderBottomRightRadius: isFull ? 10 : 0,
+                                            },
+                                          ]}
+                                        >
+                                          <LinearGradient
+                                            colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.categoryBarGradient}
                                           />
-                                        )}
+                                          {!isFull && (
+                                            <View
+                                              style={[
+                                                styles.categoryBarEdge,
+                                                {
+                                                  backgroundColor: scoreColor,
+                                                },
+                                              ]}
+                                            />
+                                          )}
+                                        </View>
+                                        <View style={styles.categoryBarContent}>
+                                          <CatIcon size={20} color={colors.text} />
+                                          <Text style={styles.categoryBarLabel}>{label}</Text>
+                                        </View>
                                       </View>
-                                      <View style={styles.categoryBarContent}>
-                                        <CatIcon size={20} color={colors.text} />
-                                        <Text style={styles.categoryBarLabel}>{label}</Text>
-                                      </View>
-                                    </View>
-                                    <Text style={[styles.categoryBarScore, { color: scoreColor }]}>
-                                      {match.analysis.categoryScores[key]}
-                                      /10
-                                    </Text>
+                                      <Text
+                                        style={[styles.categoryBarScore, { color: scoreColor }]}
+                                      >
+                                        {match.analysis.categoryScores[key]}
+                                        /10
+                                      </Text>
+                                    </Pressable>
+                                    {isExpanded && summaryText && (
+                                      <Text style={styles.categorySummaryText}>{summaryText}</Text>
+                                    )}
                                   </View>
                                 );
                               })}
@@ -1892,6 +1900,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'right',
     width: 42,
+  },
+  categorySummaryText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.xs,
+    fontStyle: 'italic',
+    lineHeight: fontSizes.xs * 1.5,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
   },
   sharedSection: {
     marginTop: spacing.md,

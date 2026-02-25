@@ -14,6 +14,15 @@ import {
 import { isGenderCompatible } from '../lib/compatibility';
 import { filterProfile as applyHiddenFilter } from '../lib/filterProfile';
 import { requireAdmin } from '../lib/admin';
+import {
+  type CategoryScores,
+  type CategorySummaries,
+  type CategoryKey,
+  CATEGORY_KEYS,
+  categoryScoresPromptJson,
+  categoryDescriptionsPrompt,
+  sumCategoryScores,
+} from '../lib/compatibilityCategories';
 
 // Build profile summary string for the prompt
 function formatProfile(name: string, user: any, rawProfile: any): string {
@@ -154,45 +163,43 @@ Return a JSON object with this exact structure:
   "yellowFlags": ["Things not perfectly aligned but not dealbreakers. Differences requiring compromise. 2-4 items."],
   "redFlags": ["Genuine dealbreakers or serious misalignments where one person cares deeply about something the other contradicts. 0-3 items. Only include if truly significant."],
   "categoryScores": {
-    "coreValues": <0-10>,
-    "lifestyleAlignment": <0-10>,
-    "relationshipGoals": <0-10>,
-    "communicationStyle": <0-10>,
-    "emotionalCompatibility": <0-10>,
-    "familyPlanning": <0-10>,
-    "socialLifestyle": <0-10>,
-    "conflictResolution": <0-10>,
-    "intimacyAlignment": <0-10>,
-    "growthMindset": <0-10>
+${categoryScoresPromptJson}
   }
 }
 
+Category definitions:
+${categoryDescriptionsPrompt}
+
 Scoring guidelines per category:
-- 9-10: Exceptional alignment, rare compatibility
-- 7-8: Strong match, minor complementary differences
-- 5-6: Moderate compatibility, meaningful differences to navigate
-- 3-4: Significant misalignment, substantial compromise needed
-- 1-2: Fundamental incompatibility
+- 10: Clear compatibility. They don't need to be identical — aligned, complementary, or compatible counts.
+- 8-9: Good match with minor differences
+- 6-7: Moderate compatibility, some meaningful gaps
+- 4-5: Notable misalignment, would require real compromise
+- 1-3: Fundamental incompatibility or contradictory values
 
-Be honest and calibrated. Don't inflate scores. A total of 70/100 is a genuinely good match. 50/100 is mediocre. 85+ is exceptional and rare. The overall score is the sum of all 10 category scores.`;
+IMPORTANT: Compatibility does NOT mean identical. Two people who are clearly compatible on paper should score near 100. 10/10 in a category means "these two are compatible here" — not "they are clones." Overlapping worlds, complementary energy, and shared direction all count. Do NOT apply an artificial curve or hold back high scores. If the profiles align, score high. The overall score is the sum of all 10 category scores.`;
 
-interface AnalysisResult {
+// Raw shape from AI — each category has score + summary bundled together
+interface RawAnalysisResult {
   summary: string;
   greenFlags: string[];
   yellowFlags: string[];
   redFlags: string[];
-  categoryScores: {
-    coreValues: number;
-    lifestyleAlignment: number;
-    relationshipGoals: number;
-    communicationStyle: number;
-    emotionalCompatibility: number;
-    familyPlanning: number;
-    socialLifestyle: number;
-    conflictResolution: number;
-    intimacyAlignment: number;
-    growthMindset: number;
-  };
+  categoryScores: Record<CategoryKey, { score: number; summary: string }>;
+}
+
+function splitCategoryScores(raw: RawAnalysisResult['categoryScores']): {
+  scores: CategoryScores;
+  summaries: CategorySummaries;
+} {
+  const scores = {} as CategoryScores;
+  const summaries = {} as CategorySummaries;
+  for (const k of CATEGORY_KEYS) {
+    const entry = raw[k as CategoryKey];
+    scores[k as CategoryKey] = entry?.score ?? 5;
+    summaries[k as CategoryKey] = entry?.summary ?? '';
+  }
+  return { scores, summaries };
 }
 
 type AnalyzeArgs = {
@@ -247,31 +254,26 @@ async function runCompatibilityAnalysis(
   console.log(`Analyzing compatibility [${model}]: ${name1} <-> ${name2}`);
 
   // Call LLM via OpenRouter
-  const result = await extractStructuredDataWithUsage<AnalysisResult>(SYSTEM_PROMPT, userContent, {
-    model,
-    maxTokens: 4000,
-  });
+  const result = await extractStructuredDataWithUsage<RawAnalysisResult>(
+    SYSTEM_PROMPT,
+    userContent,
+    {
+      model,
+    }
+  );
 
-  const analysis = result.data;
+  const raw = result.data;
+  const { scores: categoryScores, summaries: categorySummaries } = splitCategoryScores(
+    raw.categoryScores
+  );
   console.log(`Compatibility analysis complete [${model}] (${formatCost(result.cost)})`);
 
   // Calculate overall score
-  const scores = analysis.categoryScores;
-  let overallScore =
-    scores.coreValues +
-    scores.lifestyleAlignment +
-    scores.relationshipGoals +
-    scores.communicationStyle +
-    scores.emotionalCompatibility +
-    scores.familyPlanning +
-    scores.socialLifestyle +
-    scores.conflictResolution +
-    scores.intimacyAlignment +
-    scores.growthMindset;
+  let overallScore = sumCategoryScores(categoryScores);
 
   // Dealbreaker penalty: red flags tank the score
   // First red flag: x0.6, each additional: x0.75
-  const redFlagCount = analysis.redFlags.length;
+  const redFlagCount = raw.redFlags.length;
   if (redFlagCount > 0) {
     overallScore *= 0.6; // first red flag
     for (let i = 1; i < redFlagCount; i++) {
@@ -284,17 +286,18 @@ async function runCompatibilityAnalysis(
   const docId = await ctx.runMutation(internal.compatibilityAnalyses.store, {
     user1Id: args.user1Id,
     user2Id: args.user2Id,
-    summary: analysis.summary,
-    greenFlags: analysis.greenFlags,
-    yellowFlags: analysis.yellowFlags,
-    redFlags: analysis.redFlags,
-    categoryScores: analysis.categoryScores,
+    summary: raw.summary,
+    greenFlags: raw.greenFlags,
+    yellowFlags: raw.yellowFlags,
+    redFlags: raw.redFlags,
+    categoryScores,
+    categorySummaries,
     overallScore,
     openaiModel: model,
   });
 
   console.log(
-    `Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`
+    `Stored analysis: score=${overallScore}, green=${raw.greenFlags.length}, yellow=${raw.yellowFlags.length}, red=${raw.redFlags.length}`
   );
   return { docId, usage: result.usage, cost: result.cost };
 }
@@ -487,24 +490,15 @@ export const rerunAllAnalyses = action({
             formatProfile(name2, user2, profile2),
           ].join('\n');
 
-          const result = await extractStructuredDataWithUsage<AnalysisResult>(
+          const result = await extractStructuredDataWithUsage<RawAnalysisResult>(
             SYSTEM_PROMPT,
             userContent,
-            { model: args.model, maxTokens: 4000 }
+            { model: args.model }
           );
 
           const a = result.data;
-          let overallScore =
-            a.categoryScores.coreValues +
-            a.categoryScores.lifestyleAlignment +
-            a.categoryScores.relationshipGoals +
-            a.categoryScores.communicationStyle +
-            a.categoryScores.emotionalCompatibility +
-            a.categoryScores.familyPlanning +
-            a.categoryScores.socialLifestyle +
-            a.categoryScores.conflictResolution +
-            a.categoryScores.intimacyAlignment +
-            a.categoryScores.growthMindset;
+          const { scores, summaries } = splitCategoryScores(a.categoryScores);
+          let overallScore = sumCategoryScores(scores);
 
           const redFlagCount = a.redFlags.length;
           if (redFlagCount > 0) {
@@ -520,7 +514,8 @@ export const rerunAllAnalyses = action({
             greenFlags: a.greenFlags,
             yellowFlags: a.yellowFlags,
             redFlags: a.redFlags,
-            categoryScores: a.categoryScores,
+            categoryScores: scores,
+            categorySummaries: summaries,
             overallScore,
             openaiModel: args.model,
           });

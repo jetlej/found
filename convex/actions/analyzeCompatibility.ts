@@ -1,56 +1,56 @@
-"use node";
+'use node';
 
-import { v } from "convex/values";
-import { action, internalAction } from "../_generated/server";
-import { api, internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
+import { v } from 'convex/values';
+import { action, internalAction } from '../_generated/server';
+import { api, internal } from '../_generated/api';
+import { Id } from '../_generated/dataModel';
 import {
   extractStructuredDataWithUsage,
   DEFAULT_MODEL,
   formatCost,
   calculateCost,
   type TokenUsage,
-} from "../lib/openai";
-import { isGenderCompatible } from "../lib/compatibility";
-import { filterProfile as applyHiddenFilter } from "../lib/filterProfile";
-import { requireAdmin } from "../lib/admin";
+} from '../lib/openai';
+import { isGenderCompatible } from '../lib/compatibility';
+import { filterProfile as applyHiddenFilter } from '../lib/filterProfile';
+import { requireAdmin } from '../lib/admin';
 
 // Build profile summary string for the prompt
-function formatProfile(
-  name: string,
-  user: any,
-  rawProfile: any,
-): string {
+function formatProfile(name: string, user: any, rawProfile: any): string {
   // Strip hidden fields before building the compatibility prompt
   const profile = applyHiddenFilter(rawProfile, rawProfile.hiddenFields ?? undefined);
   const age = user.birthdate
     ? Math.floor((Date.now() - new Date(user.birthdate).getTime()) / 31557600000)
-    : "unknown";
+    : 'unknown';
 
   const lines: string[] = [];
   lines.push(`## ${name}`);
-  lines.push(`**Demographics:** ${age} years old, ${user.gender || "unknown"}, ${user.location || "unknown location"}`);
+  lines.push(
+    `**Demographics:** ${age} years old, ${user.gender || 'unknown'}, ${user.location || 'unknown location'}`
+  );
   if (user.ageRangeMin && user.ageRangeMax) {
-    lines.push(`**Preferred Partner Age Range:** ${user.ageRangeMin}-${user.ageRangeMax} (dealbreaker: ${user.ageRangeDealbreaker ? "yes" : "no"})`);
+    lines.push(
+      `**Preferred Partner Age Range:** ${user.ageRangeMin}-${user.ageRangeMax} (dealbreaker: ${user.ageRangeDealbreaker ? 'yes' : 'no'})`
+    );
   }
-  lines.push(`**Relationship Goal:** ${user.relationshipGoal || "not specified"}`);
-  lines.push(`**Wants Children:** ${user.wantsChildren || "not specified"}`);
-  lines.push(`**Relationship Type:** ${user.relationshipType || "not specified"}`);
+  lines.push(`**Relationship Goal:** ${user.relationshipGoal || 'not specified'}`);
+  lines.push(`**Wants Children:** ${user.wantsChildren || 'not specified'}`);
+  lines.push(`**Relationship Type:** ${user.relationshipType || 'not specified'}`);
 
   // Personality traits
   lines.push(`\n**Personality Traits (1-10):**`);
   const traitLabels: Record<string, string> = {
-    introversion: "Introversion (1=extrovert, 10=introvert)",
-    adventurousness: "Adventurousness",
-    ambition: "Ambition",
-    emotionalOpenness: "Emotional Openness",
-    traditionalValues: "Traditional Values (1=progressive, 10=traditional)",
-    independenceNeed: "Independence Need",
-    romanticStyle: "Romantic Style (1=practical, 10=romantic)",
-    socialEnergy: "Social Energy (1=homebody, 10=social butterfly)",
-    communicationStyle: "Communication (1=reserved, 10=expressive)",
-    attachmentStyle: "Attachment (1=avoidant, 10=anxious)",
-    planningStyle: "Planning (1=spontaneous, 10=structured)",
+    introversion: 'Introversion (1=extrovert, 10=introvert)',
+    adventurousness: 'Adventurousness',
+    ambition: 'Ambition',
+    emotionalOpenness: 'Emotional Openness',
+    traditionalValues: 'Traditional Values (1=progressive, 10=traditional)',
+    independenceNeed: 'Independence Need',
+    romanticStyle: 'Romantic Style (1=practical, 10=romantic)',
+    socialEnergy: 'Social Energy (1=homebody, 10=social butterfly)',
+    communicationStyle: 'Communication (1=reserved, 10=expressive)',
+    attachmentStyle: 'Attachment (1=avoidant, 10=anxious)',
+    planningStyle: 'Planning (1=spontaneous, 10=structured)',
   };
   for (const [key, label] of Object.entries(traitLabels)) {
     const val = profile.traits[key];
@@ -58,10 +58,12 @@ function formatProfile(
   }
 
   // Values & interests
-  if (profile.canonicalValues?.length) lines.push(`\n**Core Values:** ${profile.canonicalValues.join(", ")}`);
-  if (profile.values?.length) lines.push(`**Values:** ${profile.values.join(", ")}`);
-  if (profile.interests?.length) lines.push(`**Interests:** ${profile.interests.join(", ")}`);
-  if (profile.dealbreakers?.length) lines.push(`**Dealbreakers:** ${profile.dealbreakers.join(", ")}`);
+  if (profile.canonicalValues?.length)
+    lines.push(`\n**Core Values:** ${profile.canonicalValues.join(', ')}`);
+  if (profile.values?.length) lines.push(`**Values:** ${profile.values.join(', ')}`);
+  if (profile.interests?.length) lines.push(`**Interests:** ${profile.interests.join(', ')}`);
+  if (profile.dealbreakers?.length)
+    lines.push(`**Dealbreakers:** ${profile.dealbreakers.join(', ')}`);
 
   // Relationship style
   const rs = profile.relationshipStyle;
@@ -82,17 +84,20 @@ function formatProfile(
   // Family
   const fp = profile.familyPlans;
   lines.push(`\n**Family Plans:**`);
-  lines.push(`- Wants Kids: ${fp.wantsKids}${fp.kidsTimeline ? `, Timeline: ${fp.kidsTimeline}` : ""}`);
+  lines.push(
+    `- Wants Kids: ${fp.wantsKids}${fp.kidsTimeline ? `, Timeline: ${fp.kidsTimeline}` : ''}`
+  );
   lines.push(`- Family Closeness: ${fp.familyCloseness}/10`);
 
   // Partner preferences
   if (profile.partnerPreferences) {
     const pp = profile.partnerPreferences;
     lines.push(`\n**Partner Preferences:**`);
-    if (pp.mustHaves?.length) lines.push(`- Must Haves: ${pp.mustHaves.join(", ")}`);
-    if (pp.dealbreakersInPartner?.length) lines.push(`- Dealbreakers in Partner: ${pp.dealbreakersInPartner.join(", ")}`);
-    if (pp.redFlags?.length) lines.push(`- Red Flags: ${pp.redFlags.join(", ")}`);
-    if (pp.niceToHaves?.length) lines.push(`- Nice to Haves: ${pp.niceToHaves.join(", ")}`);
+    if (pp.mustHaves?.length) lines.push(`- Must Haves: ${pp.mustHaves.join(', ')}`);
+    if (pp.dealbreakersInPartner?.length)
+      lines.push(`- Dealbreakers in Partner: ${pp.dealbreakersInPartner.join(', ')}`);
+    if (pp.redFlags?.length) lines.push(`- Red Flags: ${pp.redFlags.join(', ')}`);
+    if (pp.niceToHaves?.length) lines.push(`- Nice to Haves: ${pp.niceToHaves.join(', ')}`);
   }
 
   // Life story
@@ -101,8 +106,8 @@ function formatProfile(
     lines.push(`\n**Life Story:**`);
     if (ls.proudestAchievement) lines.push(`- Proudest Achievement: ${ls.proudestAchievement}`);
     if (ls.definingHardship) lines.push(`- Defining Challenge: ${ls.definingHardship}`);
-    if (ls.dreams?.length) lines.push(`- Dreams: ${ls.dreams.join(", ")}`);
-    if (ls.fears?.length) lines.push(`- Fears: ${ls.fears.join(", ")}`);
+    if (ls.dreams?.length) lines.push(`- Dreams: ${ls.dreams.join(', ')}`);
+    if (ls.fears?.length) lines.push(`- Fears: ${ls.fears.join(', ')}`);
   }
 
   // Love philosophy
@@ -111,7 +116,8 @@ function formatProfile(
     lines.push(`\n**Love Philosophy:**`);
     if (lp.loveDefinition) lines.push(`- Love Definition: ${lp.loveDefinition}`);
     lines.push(`- Believes in Soulmates: ${lp.believesInSoulmates}`);
-    if (lp.healthyRelationshipVision) lines.push(`- Healthy Relationship: ${lp.healthyRelationshipVision}`);
+    if (lp.healthyRelationshipVision)
+      lines.push(`- Healthy Relationship: ${lp.healthyRelationshipVision}`);
   }
 
   // Intimacy
@@ -120,7 +126,8 @@ function formatProfile(
     lines.push(`\n**Intimacy:**`);
     lines.push(`- Physical Intimacy Importance: ${ip.physicalIntimacyImportance}/10`);
     lines.push(`- PDA Comfort: ${ip.pdaComfort}`);
-    if (ip.connectionTriggers?.length) lines.push(`- Connection Triggers: ${ip.connectionTriggers.join(", ")}`);
+    if (ip.connectionTriggers?.length)
+      lines.push(`- Connection Triggers: ${ip.connectionTriggers.join(', ')}`);
   }
 
   // Social
@@ -135,7 +142,7 @@ function formatProfile(
     lines.push(`\n**Bio:** ${profile.generatedBio}`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 const SYSTEM_PROMPT = `You are a relationship compatibility analyst for a dating app. You will be given two user profiles extracted from voice interviews. Analyze their compatibility thoroughly and honestly.
@@ -189,8 +196,8 @@ interface AnalysisResult {
 }
 
 type AnalyzeArgs = {
-  user1Id: Id<"users">;
-  user2Id: Id<"users">;
+  user1Id: Id<'users'>;
+  user2Id: Id<'users'>;
   model?: string;
 };
 
@@ -199,16 +206,16 @@ async function runCompatibilityAnalysis(
     runQuery: any;
     runMutation: any;
   },
-  args: AnalyzeArgs,
+  args: AnalyzeArgs
 ) {
   const model = args.model ?? DEFAULT_MODEL;
 
   // Check if already exists (skip unless model override = forced re-run)
   if (!args.model) {
-    const existing = await ctx.runQuery(
-      internal.compatibilityAnalyses.getForPairInternal,
-      { user1Id: args.user1Id, user2Id: args.user2Id },
-    );
+    const existing = await ctx.runQuery(internal.compatibilityAnalyses.getForPairInternal, {
+      user1Id: args.user1Id,
+      user2Id: args.user2Id,
+    });
     if (existing) {
       console.log(`Analysis already exists for pair, skipping`);
       return { docId: existing._id, usage: null, cost: 0 };
@@ -224,27 +231,26 @@ async function runCompatibilityAnalysis(
   ]);
 
   if (!user1 || !user2 || !profile1 || !profile2) {
-    throw new Error("Missing user or profile data");
+    throw new Error('Missing user or profile data');
   }
 
-  const name1 = user1.name?.split(" ")[0] || "Person A";
-  const name2 = user2.name?.split(" ")[0] || "Person B";
+  const name1 = user1.name?.split(' ')[0] || 'Person A';
+  const name2 = user2.name?.split(' ')[0] || 'Person B';
 
   // Build prompt
   const userContent = [
     formatProfile(name1, user1, profile1),
-    "\n---\n",
+    '\n---\n',
     formatProfile(name2, user2, profile2),
-  ].join("\n");
+  ].join('\n');
 
   console.log(`Analyzing compatibility [${model}]: ${name1} <-> ${name2}`);
 
   // Call LLM via OpenRouter
-  const result = await extractStructuredDataWithUsage<AnalysisResult>(
-    SYSTEM_PROMPT,
-    userContent,
-    { model, maxTokens: 4000 },
-  );
+  const result = await extractStructuredDataWithUsage<AnalysisResult>(SYSTEM_PROMPT, userContent, {
+    model,
+    maxTokens: 4000,
+  });
 
   const analysis = result.data;
   console.log(`Compatibility analysis complete [${model}] (${formatCost(result.cost)})`);
@@ -275,45 +281,49 @@ async function runCompatibilityAnalysis(
   overallScore = Math.round(overallScore);
 
   // Store result (upserts — replaces existing for same pair)
-  const docId = await ctx.runMutation(
-    internal.compatibilityAnalyses.store,
-    {
-      user1Id: args.user1Id,
-      user2Id: args.user2Id,
-      summary: analysis.summary,
-      greenFlags: analysis.greenFlags,
-      yellowFlags: analysis.yellowFlags,
-      redFlags: analysis.redFlags,
-      categoryScores: analysis.categoryScores,
-      overallScore,
-      openaiModel: model,
-    },
-  );
+  const docId = await ctx.runMutation(internal.compatibilityAnalyses.store, {
+    user1Id: args.user1Id,
+    user2Id: args.user2Id,
+    summary: analysis.summary,
+    greenFlags: analysis.greenFlags,
+    yellowFlags: analysis.yellowFlags,
+    redFlags: analysis.redFlags,
+    categoryScores: analysis.categoryScores,
+    overallScore,
+    openaiModel: model,
+  });
 
-  console.log(`Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`);
+  console.log(
+    `Stored analysis: score=${overallScore}, green=${analysis.greenFlags.length}, yellow=${analysis.yellowFlags.length}, red=${analysis.redFlags.length}`
+  );
   return { docId, usage: result.usage, cost: result.cost };
 }
 
 export const analyzeCompatibility = action({
   args: {
-    user1Id: v.id("users"),
-    user2Id: v.id("users"),
+    user1Id: v.id('users'),
+    user2Id: v.id('users'),
     model: v.optional(v.string()),
   },
   handler: async (
     ctx,
-    args,
-  ): Promise<{ docId: Id<"compatibilityAnalyses"> | null; usage: null; cost: number; queued: boolean }> => {
+    args
+  ): Promise<{
+    docId: Id<'compatibilityAnalyses'> | null;
+    usage: null;
+    cost: number;
+    queued: boolean;
+  }> => {
     const currentUser = await ctx.runQuery(api.users.current, {});
-    if (!currentUser) throw new Error("Not authenticated");
+    if (!currentUser) throw new Error('Not authenticated');
     if (currentUser._id !== args.user1Id && currentUser._id !== args.user2Id) {
-      throw new Error("Forbidden");
+      throw new Error('Forbidden');
     }
     // DEPRECATED: Public trigger is intentionally disabled to prevent abuse.
     // Compatibility generation is backend-triggered on profile parse/update.
-    const existing: { _id: Id<"compatibilityAnalyses"> } | null = await ctx.runQuery(
+    const existing: { _id: Id<'compatibilityAnalyses'> } | null = await ctx.runQuery(
       internal.compatibilityAnalyses.getForPairInternal,
-      { user1Id: args.user1Id, user2Id: args.user2Id },
+      { user1Id: args.user1Id, user2Id: args.user2Id }
     );
     return {
       docId: existing?._id ?? null,
@@ -326,8 +336,8 @@ export const analyzeCompatibility = action({
 
 export const analyzeCompatibilityInternal = internalAction({
   args: {
-    user1Id: v.id("users"),
-    user2Id: v.id("users"),
+    user1Id: v.id('users'),
+    user2Id: v.id('users'),
     model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -339,7 +349,7 @@ export const analyzeCompatibilityInternal = internalAction({
 
 // Run compatibility analyses for a newly-profiled user against all eligible users
 export const analyzeAllForUser = internalAction({
-  args: { userId: v.id("users"), cursor: v.optional(v.string()) },
+  args: { userId: v.id('users'), cursor: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const MAX_ELIGIBLE_PER_RUN = 20;
     const USERS_PAGE_SIZE = 100;
@@ -355,15 +365,13 @@ export const analyzeAllForUser = internalAction({
 
     const existingAnalyses = await ctx.runQuery(
       internal.compatibilityAnalyses.listForUserInternal,
-      { userId: args.userId, limit: 2000 },
+      { userId: args.userId, limit: 2000 }
     );
     const existingOtherUserIds = new Set(
-      existingAnalyses.map((a) =>
-        a.user1Id === args.userId ? a.user2Id : a.user1Id,
-      ),
+      existingAnalyses.map((a) => (a.user1Id === args.userId ? a.user2Id : a.user1Id))
     );
 
-    const eligible: Id<"users">[] = [];
+    const eligible: Id<'users'>[] = [];
     let cursor = args.cursor ?? null;
     let isDone = false;
 
@@ -381,10 +389,9 @@ export const analyzeAllForUser = internalAction({
         if (existingOtherUserIds.has(user._id)) continue;
         if (!isGenderCompatible(newUser, user)) continue;
 
-        const hasProfile = await ctx.runQuery(
-          internal.userProfiles.hasProfileInternal,
-          { userId: user._id },
-        );
+        const hasProfile = await ctx.runQuery(internal.userProfiles.hasProfileInternal, {
+          userId: user._id,
+        });
         if (!hasProfile) continue;
 
         eligible.push(user._id);
@@ -398,35 +405,33 @@ export const analyzeAllForUser = internalAction({
       const batch = eligible.slice(i, i + ANALYSIS_BATCH_SIZE);
       const results = await Promise.allSettled(
         batch.map((otherUserId) =>
-          ctx.runAction(
-            internal.actions.analyzeCompatibility.analyzeCompatibilityInternal,
-            { user1Id: args.userId, user2Id: otherUserId },
-          ),
-        ),
+          ctx.runAction(internal.actions.analyzeCompatibility.analyzeCompatibilityInternal, {
+            user1Id: args.userId,
+            user2Id: otherUserId,
+          })
+        )
       );
 
       for (const result of results) {
-        if (result.status === "fulfilled") {
+        if (result.status === 'fulfilled') {
           analyzed++;
         } else {
-          console.error(
-            `Failed to analyze ${newUser.name} compatibility pair:`,
-            result.reason,
-          );
+          console.error(`Failed to analyze ${newUser.name} compatibility pair:`, result.reason);
         }
       }
     }
 
     const shouldContinue = !isDone && !!cursor;
     if (shouldContinue) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.actions.analyzeCompatibility.analyzeAllForUser,
-        { userId: args.userId, cursor: cursor! },
-      );
+      await ctx.scheduler.runAfter(0, internal.actions.analyzeCompatibility.analyzeAllForUser, {
+        userId: args.userId,
+        cursor: cursor!,
+      });
     }
 
-    console.log(`analyzeAllForUser: completed ${analyzed}/${eligible.length} analyses for ${newUser.name}`);
+    console.log(
+      `analyzeAllForUser: completed ${analyzed}/${eligible.length} analyses for ${newUser.name}`
+    );
     return {
       analyzed,
       total: eligible.length,
@@ -442,16 +447,19 @@ export const rerunAllAnalyses = action({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.adminSecret);
 
-    const allAnalyses = await ctx.runQuery(
-      internal.compatibilityAnalyses.listAllInternal,
-      {},
-    );
+    const allAnalyses = await ctx.runQuery(internal.compatibilityAnalyses.listAllInternal, {});
 
     console.log(`\n========================================`);
     console.log(`BENCHMARK: Re-running ${allAnalyses.length} analyses with ${args.model}`);
     console.log(`========================================\n`);
 
-    const stats: { pair: string; promptTokens: number; completionTokens: number; totalTokens: number; cost: number }[] = [];
+    const stats: {
+      pair: string;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      cost: number;
+    }[] = [];
 
     // Process in parallel batches of 5 to stay under timeout
     const BATCH_SIZE = 5;
@@ -470,28 +478,33 @@ export const rerunAllAnalyses = action({
             throw new Error(`Missing data for pair ${analysis.userIdPair}`);
           }
 
-          const name1 = user1.name?.split(" ")[0] || "Person A";
-          const name2 = user2.name?.split(" ")[0] || "Person B";
+          const name1 = user1.name?.split(' ')[0] || 'Person A';
+          const name2 = user2.name?.split(' ')[0] || 'Person B';
 
           const userContent = [
             formatProfile(name1, user1, profile1),
-            "\n---\n",
+            '\n---\n',
             formatProfile(name2, user2, profile2),
-          ].join("\n");
+          ].join('\n');
 
           const result = await extractStructuredDataWithUsage<AnalysisResult>(
             SYSTEM_PROMPT,
             userContent,
-            { model: args.model, maxTokens: 4000 },
+            { model: args.model, maxTokens: 4000 }
           );
 
           const a = result.data;
           let overallScore =
-            a.categoryScores.coreValues + a.categoryScores.lifestyleAlignment +
-            a.categoryScores.relationshipGoals + a.categoryScores.communicationStyle +
-            a.categoryScores.emotionalCompatibility + a.categoryScores.familyPlanning +
-            a.categoryScores.socialLifestyle + a.categoryScores.conflictResolution +
-            a.categoryScores.intimacyAlignment + a.categoryScores.growthMindset;
+            a.categoryScores.coreValues +
+            a.categoryScores.lifestyleAlignment +
+            a.categoryScores.relationshipGoals +
+            a.categoryScores.communicationStyle +
+            a.categoryScores.emotionalCompatibility +
+            a.categoryScores.familyPlanning +
+            a.categoryScores.socialLifestyle +
+            a.categoryScores.conflictResolution +
+            a.categoryScores.intimacyAlignment +
+            a.categoryScores.growthMindset;
 
           const redFlagCount = a.redFlags.length;
           if (redFlagCount > 0) {
@@ -512,7 +525,9 @@ export const rerunAllAnalyses = action({
             openaiModel: args.model,
           });
 
-          console.log(`[${args.model}] ${name1}<->${name2}: score=${overallScore}, cost=${formatCost(result.cost)}, tokens=${result.usage.totalTokens}`);
+          console.log(
+            `[${args.model}] ${name1}<->${name2}: score=${overallScore}, cost=${formatCost(result.cost)}, tokens=${result.usage.totalTokens}`
+          );
 
           return {
             pair: `${name1}<->${name2}`,
@@ -521,11 +536,11 @@ export const rerunAllAnalyses = action({
             totalTokens: result.usage.totalTokens,
             cost: result.cost,
           };
-        }),
+        })
       );
 
       for (const r of batchResults) {
-        if (r.status === "fulfilled") stats.push(r.value);
+        if (r.status === 'fulfilled') stats.push(r.value);
         else console.error(`Failed:`, r.reason);
       }
     }
@@ -541,10 +556,14 @@ export const rerunAllAnalyses = action({
     console.log(`BENCHMARK RESULTS: ${args.model}`);
     console.log(`========================================`);
     console.log(`Pairs analyzed: ${n}`);
-    console.log(`Total tokens: ${totalTokens} (prompt: ${totalPrompt}, completion: ${totalCompletion})`);
+    console.log(
+      `Total tokens: ${totalTokens} (prompt: ${totalPrompt}, completion: ${totalCompletion})`
+    );
     console.log(`Total cost: ${formatCost(totalCost)}`);
     if (n > 0) {
-      console.log(`Avg tokens/run: ${Math.round(totalTokens / n)} (prompt: ${Math.round(totalPrompt / n)}, completion: ${Math.round(totalCompletion / n)})`);
+      console.log(
+        `Avg tokens/run: ${Math.round(totalTokens / n)} (prompt: ${Math.round(totalPrompt / n)}, completion: ${Math.round(totalCompletion / n)})`
+      );
       console.log(`Avg cost/run: ${formatCost(totalCost / n)}`);
     }
     console.log(`========================================\n`);

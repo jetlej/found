@@ -1,10 +1,10 @@
-"use node";
+'use node';
 
-import { v } from "convex/values";
-import { action, internalAction } from "../_generated/server";
-import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
-import { requireAdmin } from "../lib/admin";
+import { v } from 'convex/values';
+import { action, internalAction } from '../_generated/server';
+import { internal } from '../_generated/api';
+import { Id } from '../_generated/dataModel';
+import { requireAdmin } from '../lib/admin';
 
 // ---------------------------------------------------------------------------
 // DuckDuckGo image search (raw fetch, no npm dependency)
@@ -13,17 +13,16 @@ import { requireAdmin } from "../lib/admin";
 // ---------------------------------------------------------------------------
 
 const DDG_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.5",
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.5',
 };
 
 async function getVqd(query: string): Promise<string> {
-  const resp = await fetch(
-    `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
-    { headers: DDG_HEADERS },
-  );
+  const resp = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, {
+    headers: DDG_HEADERS,
+  });
   const text = await resp.text();
   // Extract vqd="..." from the page
   const match = text.match(/vqd="([^"]+)"/);
@@ -31,27 +30,22 @@ async function getVqd(query: string): Promise<string> {
   return match[1];
 }
 
-async function searchPhotos(
-  query: string,
-  count: number = 3,
-): Promise<string[]> {
+async function searchPhotos(query: string, count: number = 3): Promise<string[]> {
   const vqd = await getVqd(query);
   const params = new URLSearchParams({
     q: query,
     vqd,
-    l: "us-en",
-    o: "json",
-    f: ",,,,,",
-    p: "1", // safe search on
+    l: 'us-en',
+    o: 'json',
+    f: ',,,,,',
+    p: '1', // safe search on
   });
   const resp = await fetch(`https://duckduckgo.com/i.js?${params}`, {
-    headers: { ...DDG_HEADERS, Referer: "https://duckduckgo.com/" },
+    headers: { ...DDG_HEADERS, Referer: 'https://duckduckgo.com/' },
   });
   if (!resp.ok) throw new Error(`DDG image search failed: ${resp.status}`);
   const data = await resp.json();
-  const results: string[] = (data.results || [])
-    .slice(0, count)
-    .map((r: any) => r.image);
+  const results: string[] = (data.results || []).slice(0, count).map((r: any) => r.image);
   return results;
 }
 
@@ -63,34 +57,34 @@ async function searchPhotos(
 
 const PHOTO_QUERIES: Record<string, string> = {
   // Fictional personas -> celebrity lookalike
-  "Marcus Hale": "Michael B. Jordan actor",
-  "Mateo Alvarez": "Oscar Isaac actor",
-  "Lucas Carter": "Chris Evans actor",
-  "Jonah Reed": "Paul Mescal actor",
-  "Daniel Okoye": "Idris Elba actor",
-  "Leo Gutierrez": "Pedro Pascal actor",
-  "Aisha Thompson": "Zendaya actress",
-  "Priya Nair": "Deepika Padukone actress",
-  "Mei Lin Chen": "Gemma Chan actress",
-  "Nora Gallagher": "Florence Pugh actress",
-  "Priya Menon": "Priyanka Chopra actress",
-  "Simone Laurent": "Janelle Monae",
-  "Ravi Patel": "Lil Nas X",
+  'Marcus Hale': 'Michael B. Jordan actor',
+  'Mateo Alvarez': 'Oscar Isaac actor',
+  'Lucas Carter': 'Chris Evans actor',
+  'Jonah Reed': 'Paul Mescal actor',
+  'Daniel Okoye': 'Idris Elba actor',
+  'Leo Gutierrez': 'Pedro Pascal actor',
+  'Aisha Thompson': 'Zendaya actress',
+  'Priya Nair': 'Deepika Padukone actress',
+  'Mei Lin Chen': 'Gemma Chan actress',
+  'Nora Gallagher': 'Florence Pugh actress',
+  'Priya Menon': 'Priyanka Chopra actress',
+  'Simone Laurent': 'Janelle Monae',
+  'Ravi Patel': 'Lil Nas X',
   // Celebrity personas -> themselves
-  "Dolly Parton": "Dolly Parton",
-  "Oprah Winfrey": "Oprah Winfrey",
-  "Zendaya": "Zendaya actress",
-  "Alexandria Ocasio-Cortez": "Alexandria Ocasio-Cortez",
-  "Rihanna": "Rihanna singer",
-  "Keanu Reeves": "Keanu Reeves actor",
-  "Dwayne Johnson": "Dwayne Johnson actor",
-  "Harry Styles": "Harry Styles singer",
-  "Barack Obama": "Barack Obama",
-  "Bad Bunny": "Bad Bunny singer",
+  'Dolly Parton': 'Dolly Parton',
+  'Oprah Winfrey': 'Oprah Winfrey',
+  Zendaya: 'Zendaya actress',
+  'Alexandria Ocasio-Cortez': 'Alexandria Ocasio-Cortez',
+  Rihanna: 'Rihanna singer',
+  'Keanu Reeves': 'Keanu Reeves actor',
+  'Dwayne Johnson': 'Dwayne Johnson actor',
+  'Harry Styles': 'Harry Styles singer',
+  'Barack Obama': 'Barack Obama',
+  'Bad Bunny': 'Bad Bunny singer',
   // High-compat personas -> celebrity lookalike
-  "Mia Torres": "Eiza Gonzalez actress",
-  "Sasha Kim": "Jamie Chung actress",
-  "Ava Chen": "Constance Wu actress",
+  'Mia Torres': 'Eiza Gonzalez actress',
+  'Sasha Kim': 'Jamie Chung actress',
+  'Ava Chen': 'Constance Wu actress',
 };
 
 // ---------------------------------------------------------------------------
@@ -103,7 +97,7 @@ export const seedPhotosForUser = internalAction({
     urls: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = args.userId as Id<"users">;
+    const userId = args.userId as Id<'users'>;
     console.log(`Seeding photos for ${userId}...`);
 
     // Check existing photos — skip if already complete
@@ -124,7 +118,7 @@ export const seedPhotosForUser = internalAction({
       try {
         const response = await fetch(url, {
           headers: {
-            "User-Agent": "FoundDatingApp/1.0 (dev seed script)",
+            'User-Agent': 'FoundDatingApp/1.0 (dev seed script)',
           },
         });
         if (!response.ok) {
@@ -183,7 +177,7 @@ export const seedAllPhotos = action({
         await ctx.scheduler.runAfter(
           index * 2000, // 2s stagger
           internal.actions.seedTestPhotos.seedPhotosForUser,
-          { userId, urls },
+          { userId, urls }
         );
         scheduled++;
       } catch (e) {
@@ -217,11 +211,10 @@ export const seedPhotosForName = action({
     if (urls.length === 0) throw new Error(`No DDG results for "${query}"`);
 
     console.log(`Found ${urls.length} images for "${args.name}", seeding...`);
-    await ctx.scheduler.runAfter(
-      0,
-      internal.actions.seedTestPhotos.seedPhotosForUser,
-      { userId: user._id, urls },
-    );
+    await ctx.scheduler.runAfter(0, internal.actions.seedTestPhotos.seedPhotosForUser, {
+      userId: user._id,
+      urls,
+    });
     return { name: args.name, query, urls };
   },
 });
@@ -244,9 +237,10 @@ export const seedPhotosForPersona = internalAction({
     if (!query) {
       // Build a search query from the persona description for a plausible face.
       // Extract ethnicity/nationality cues + gender to find a matching celebrity.
-      const genderTerm = args.gender === "Woman" ? "woman" : args.gender === "Man" ? "man" : "person";
+      const genderTerm =
+        args.gender === 'Woman' ? 'woman' : args.gender === 'Man' ? 'man' : 'person';
       // Grab the first sentence fragment for ethnicity/vibe cues (e.g. "Nigerian-American runway model")
-      const snippet = args.description.split(/[.!]/)[ 0] || args.description.slice(0, 80);
+      const snippet = args.description.split(/[.!]/)[0] || args.description.slice(0, 80);
       query = `${snippet} ${genderTerm} portrait photo`;
       console.log(`  Auto query: "${query}"`);
     }
@@ -258,11 +252,10 @@ export const seedPhotosForPersona = internalAction({
         return;
       }
       console.log(`  Found ${urls.length} photos for "${args.name}" (query: "${query}")`);
-      await ctx.scheduler.runAfter(
-        0,
-        internal.actions.seedTestPhotos.seedPhotosForUser,
-        { userId: args.userId, urls },
-      );
+      await ctx.scheduler.runAfter(0, internal.actions.seedTestPhotos.seedPhotosForUser, {
+        userId: args.userId,
+        urls,
+      });
     } catch (e) {
       console.warn(`  Photo seeding failed for "${args.name}": ${e}`);
     }

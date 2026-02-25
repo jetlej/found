@@ -1,76 +1,59 @@
-import { DevTrigger } from "@/components/DevTrigger";
-import { UpdateRequiredScreen } from "@/components/UpdateRequiredScreen";
-import { api } from "@/convex/_generated/api";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { AuthProvider } from "@/lib/clerk";
-import { ConvexClientProvider } from "@/lib/convex";
+import { DevTrigger } from '@/components/DevTrigger';
+import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
+import { api } from '@/convex/_generated/api';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { AuthProvider } from '@/lib/clerk';
+import { ConvexClientProvider } from '@/lib/convex';
+import { clearCachedAuth, getCachedAuth, setCachedAuth, setCachedUser } from '@/lib/offline-auth';
+import { colors } from '@/lib/theme';
+import { useOfflineStore } from '@/stores/offline';
+import { useAuth } from '@clerk/clerk-expo';
 import {
-    clearCachedAuth,
-    getCachedAuth,
-    setCachedAuth,
-    setCachedUser,
-} from "@/lib/offline-auth";
-import { colors } from "@/lib/theme";
-import { useOfflineStore } from "@/stores/offline";
-import { useAuth } from "@clerk/clerk-expo";
-import {
-    Figtree_400Regular,
-    Figtree_500Medium,
-    Figtree_600SemiBold,
-    Figtree_700Bold,
-} from "@expo-google-fonts/figtree";
-import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import * as Application from "expo-application";
-import { useFonts } from "expo-font";
-import * as Linking from "expo-linking";
-import {
-    Stack,
-    useRootNavigationState,
-    useRouter,
-    useSegments,
-} from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
-import * as SystemUI from "expo-system-ui";
-import * as Updates from "expo-updates";
-import { useEffect, useRef, useState } from "react";
-import {
-    ActivityIndicator,
-    AppState,
-    AppStateStatus,
-    StyleSheet,
-    Text,
-    View
-} from "react-native";
-import "react-native-reanimated";
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+} from '@expo-google-fonts/figtree';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
+import * as Application from 'expo-application';
+import { useFonts } from 'expo-font';
+import * as Linking from 'expo-linking';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import * as Updates from 'expo-updates';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, AppStateStatus, StyleSheet, Text, View } from 'react-native';
+import 'react-native-reanimated';
 
 // Set root background color immediately (light theme)
 SystemUI.setBackgroundColorAsync(colors.background);
 
-export { ErrorBoundary } from "expo-router";
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  initialRouteName: '(tabs)',
 };
 
 SplashScreen.preventAutoHideAsync();
 
-import { isValidStep } from "@/lib/onboarding-flow";
-import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
+import { isValidStep } from '@/lib/onboarding-flow';
+import { TOTAL_VOICE_QUESTIONS } from '@/lib/voice-questions';
 
 // ── Route State Machine ─────────────────────────────────────────────────────
 // Pure derivation: compute a single routing state from all inputs.
 // "loading" = not enough data yet, keep splash screen up.
 
 type RouteState =
-  | { status: "loading" }
-  | { status: "unauthenticated" }
-  | { status: "onboarding"; route: string }
-  | { status: "voice_questions" }
-  | { status: "profile_audit" }
-  | { status: "ready" };
+  | { status: 'loading' }
+  | { status: 'unauthenticated' }
+  | { status: 'onboarding'; route: string }
+  | { status: 'voice_questions' }
+  | { status: 'profile_audit' }
+  | { status: 'ready' };
 
 function deriveRouteState(p: {
   authReady: boolean;
@@ -83,46 +66,46 @@ function deriveRouteState(p: {
   voiceRecordingCount: number | undefined;
   hasProfile: boolean | undefined;
 }): RouteState {
-  if (!p.authReady) return { status: "loading" };
-  if (!p.effectiveIsSignedIn) return { status: "unauthenticated" };
+  if (!p.authReady) return { status: 'loading' };
+  if (!p.effectiveIsSignedIn) return { status: 'unauthenticated' };
 
   // Offline with cached user — use cached data
   if (!p.isOnline && p.cachedUser) {
     if (!p.cachedUser.onboardingComplete) {
-      return { status: "onboarding", route: "/(onboarding)/referral" };
+      return { status: 'onboarding', route: '/(onboarding)/referral' };
     }
     if (!p.cachedUser.voiceQuestionsComplete) {
-      return { status: "voice_questions" };
+      return { status: 'voice_questions' };
     }
     if (!p.cachedUser.profileAuditCompletedAt) {
-      return { status: "profile_audit" };
+      return { status: 'profile_audit' };
     }
-    return { status: "ready" };
+    return { status: 'ready' };
   }
 
   // Still creating the user doc
-  if (p.creatingUser) return { status: "loading" };
+  if (p.creatingUser) return { status: 'loading' };
 
   // Convex user not yet loaded (undefined = loading, null = no doc yet)
-  if (!p.currentUser) return { status: "loading" };
+  if (!p.currentUser) return { status: 'loading' };
 
   // User doc loaded — check onboarding
   if (!p.currentUser.onboardingComplete) {
-    let route = "/(onboarding)/referral";
+    let route = '/(onboarding)/referral';
     if (p.currentUser.onboardingStep && isValidStep(p.currentUser.onboardingStep)) {
       route = `/(onboarding)/${p.currentUser.onboardingStep}`;
     }
-    return { status: "onboarding", route };
+    return { status: 'onboarding', route };
   }
 
   // Onboarding complete — check voice questions
-  if (p.voiceRecordingCount === undefined) return { status: "loading" };
-  if (p.voiceRecordingCount < TOTAL_VOICE_QUESTIONS) return { status: "voice_questions" };
-  if (p.hasProfile === undefined) return { status: "loading" };
-  if (!p.hasProfile) return { status: "voice_questions" };
-  if (!p.currentUser.profileAuditCompletedAt) return { status: "profile_audit" };
+  if (p.voiceRecordingCount === undefined) return { status: 'loading' };
+  if (p.voiceRecordingCount < TOTAL_VOICE_QUESTIONS) return { status: 'voice_questions' };
+  if (p.hasProfile === undefined) return { status: 'loading' };
+  if (!p.hasProfile) return { status: 'voice_questions' };
+  if (!p.currentUser.profileAuditCompletedAt) return { status: 'profile_audit' };
 
-  return { status: "ready" };
+  return { status: 'ready' };
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -142,12 +125,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isLoaded) {
-        console.log(
-          "[Auth] Clerk timed out - isLoaded:",
-          isLoaded,
-          "isOnline:",
-          isOnline
-        );
+        console.log('[Auth] Clerk timed out - isLoaded:', isLoaded, 'isOnline:', isOnline);
         setTimedOut(true);
       }
     }, 60000);
@@ -195,17 +173,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Query current user from Convex (skip until Convex has validated the JWT)
   const currentUser = useQuery(
     api.users.current,
-    effectiveUserId && isConvexAuthenticated ? {} : "skip"
+    effectiveUserId && isConvexAuthenticated ? {} : 'skip'
   );
 
   // Check if voice questions are complete (needed to route to /questions vs /(tabs))
   const voiceRecordingCount = useQuery(
     api.voiceRecordings.getCompletedCount,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const hasProfile = useQuery(
     api.userProfiles.hasProfile,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   // If signed in but no Convex user doc exists, create one. This handles the
@@ -224,7 +202,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [currentUser, effectiveIsSignedIn]);
 
   useEffect(() => {
-    if (!isConvexAuthenticated || !effectiveIsSignedIn || currentUser !== null || creatingUser || isDevImpersonating) {
+    if (
+      !isConvexAuthenticated ||
+      !effectiveIsSignedIn ||
+      currentUser !== null ||
+      creatingUser ||
+      isDevImpersonating
+    ) {
       return;
     }
 
@@ -284,18 +268,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       setCachedUser(userToCache);
       setOfflineUser(userToCache);
     }
-  }, [currentUser?._id, currentUser?.name, currentUser?.avatarUrl, currentUser?.onboardingComplete, currentUser?.profileAuditCompletedAt, voiceQuestionsComplete]);
+  }, [
+    currentUser?._id,
+    currentUser?.name,
+    currentUser?.avatarUrl,
+    currentUser?.onboardingComplete,
+    currentUser?.profileAuditCompletedAt,
+    voiceQuestionsComplete,
+  ]);
 
   // Initialize offline sync and push notifications
   useOfflineSync();
   usePushNotifications();
 
   // ── Derive route state (pure, no side effects) ──────────────────────────
-  const authReady = isDevImpersonating
-    ? true
-    : isOnline
-      ? isLoaded
-      : isLoaded || offlineAuthLoaded;
+  const authReady = isDevImpersonating ? true : isOnline ? isLoaded : isLoaded || offlineAuthLoaded;
 
   const routeState = deriveRouteState({
     authReady,
@@ -318,31 +305,32 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [effectiveIsSignedIn]);
 
   useEffect(() => {
-    if (routeState.status === "loading") return;
+    if (routeState.status === 'loading') return;
     if (!navigationState?.key) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
-    const inOnboarding = segments[0] === "(onboarding)";
-    const onLandingPage = segments[0] === undefined || segments[0] === "index" || segments.length === 0;
+    const inAuthGroup = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === '(onboarding)';
+    const onLandingPage =
+      segments[0] === undefined || segments[0] === 'index' || segments.length === 0;
 
     switch (routeState.status) {
-      case "unauthenticated":
-        if (!inAuthGroup && !onLandingPage) router.replace("/");
+      case 'unauthenticated':
+        if (!inAuthGroup && !onLandingPage) router.replace('/');
         break;
-      case "onboarding":
+      case 'onboarding':
         if (inAuthGroup || onLandingPage) router.replace(routeState.route);
         else if (!inOnboarding) router.replace(routeState.route);
         break;
-      case "voice_questions":
-        if (inAuthGroup || onLandingPage) router.replace("/(tabs)/questions");
+      case 'voice_questions':
+        if (inAuthGroup || onLandingPage) router.replace('/(tabs)/questions');
         break;
-      case "profile_audit":
-        if (segments[0] !== "profile-audit") {
-          router.replace("/profile-audit?firstTime=true");
+      case 'profile_audit':
+        if (segments[0] !== 'profile-audit') {
+          router.replace('/profile-audit?firstTime=true');
         }
         break;
-      case "ready":
-        if (inAuthGroup || onLandingPage) router.replace("/(tabs)/matches");
+      case 'ready':
+        if (inAuthGroup || onLandingPage) router.replace('/(tabs)/matches');
         break;
     }
     setHasRouted(true);
@@ -359,8 +347,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Auth Loading Failed</Text>
           <Text style={styles.errorText}>
-            Clerk didn't initialize. Check your production instance
-            configuration.
+            Clerk didn't initialize. Check your production instance configuration.
           </Text>
         </View>
       );
@@ -374,32 +361,32 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   errorContainer: {
-    flex: 1,
+    alignItems: 'center',
     backgroundColor: colors.background,
-    justifyContent: "center",
-    alignItems: "center",
+    flex: 1,
+    justifyContent: 'center',
     padding: 20,
+  },
+  errorText: {
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   errorTitle: {
     color: colors.text,
     fontSize: 18,
     marginBottom: 10,
   },
-  errorText: {
-    color: colors.textMuted,
-    textAlign: "center",
-  },
 });
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-    "Figtree-Regular": Figtree_400Regular,
-    "Figtree-Medium": Figtree_500Medium,
-    "Figtree-SemiBold": Figtree_600SemiBold,
-    "Figtree-Bold": Figtree_700Bold,
-    "Avigea": require("../assets/fonts/Avigea.ttf"),
-    "Avigea-Italic": require("../assets/fonts/Avigea-Italic.ttf"),
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Figtree-Regular': Figtree_400Regular,
+    'Figtree-Medium': Figtree_500Medium,
+    'Figtree-SemiBold': Figtree_600SemiBold,
+    'Figtree-Bold': Figtree_700Bold,
+    Avigea: require('../assets/fonts/Avigea.ttf'),
+    'Avigea-Italic': require('../assets/fonts/Avigea-Italic.ttf'),
   });
 
   useEffect(() => {
@@ -429,10 +416,10 @@ export default function RootLayout() {
 
 const splashStyles = StyleSheet.create({
   container: {
-    flex: 1,
+    alignItems: 'center',
     backgroundColor: colors.background,
-    justifyContent: "center",
-    alignItems: "center",
+    flex: 1,
+    justifyContent: 'center',
   },
 });
 
@@ -462,24 +449,18 @@ function useUpdateChecker() {
         setOtaReady(true);
       }
     } catch (e) {
-      console.warn("[OTA] Update check failed:", e);
+      console.warn('[OTA] Update check failed:', e);
     }
   };
 
   useEffect(() => {
     checkForUpdate();
-    const subscription = AppState.addEventListener(
-      "change",
-      (nextAppState: AppStateStatus) => {
-        if (
-          appState.current.match(/inactive|background/) &&
-          nextAppState === "active"
-        ) {
-          checkForUpdate();
-        }
-        appState.current = nextAppState;
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        checkForUpdate();
       }
-    );
+      appState.current = nextAppState;
+    });
     return () => subscription.remove();
   }, []);
 
@@ -489,11 +470,8 @@ function useUpdateChecker() {
 
   // Check TestFlight build number
   const minBuild = useQuery(api.config.getMinBuildNumber);
-  const currentBuild = parseInt(Application.nativeBuildVersion ?? "0", 10);
-  const needsTestFlight =
-    minBuild !== null &&
-    minBuild !== undefined &&
-    currentBuild < minBuild;
+  const currentBuild = parseInt(Application.nativeBuildVersion ?? '0', 10);
+  const needsTestFlight = minBuild !== null && minBuild !== undefined && currentBuild < minBuild;
 
   return { otaReady, applyOta, needsTestFlight };
 }
@@ -509,9 +487,7 @@ function RootLayoutNav() {
     return (
       <UpdateRequiredScreen
         type="testflight"
-        onInstall={() =>
-          Linking.openURL("itms-beta://beta.apple.com/sp/betaprogram")
-        }
+        onInstall={() => Linking.openURL('itms-beta://beta.apple.com/sp/betaprogram')}
       />
     );
   }
@@ -530,16 +506,13 @@ function RootLayoutNav() {
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="(onboarding)"
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="profile"
                 options={{
                   headerShown: false,
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
                   gestureEnabled: true,
                 }}
               />
@@ -547,8 +520,8 @@ function RootLayoutNav() {
                 name="my-profile"
                 options={{
                   headerShown: false,
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
                   gestureEnabled: true,
                 }}
               />
@@ -556,21 +529,21 @@ function RootLayoutNav() {
                 name="profile-audit"
                 options={{
                   headerShown: false,
-                  animation: "default",
+                  animation: 'default',
                 }}
               />
               <Stack.Screen
                 name="edit-answers"
                 options={{
                   headerShown: false,
-                  animation: "default",
+                  animation: 'default',
                 }}
               />
               <Stack.Screen
                 name="mini-profile"
                 options={{
                   headerShown: false,
-                  animation: "default",
+                  animation: 'default',
                 }}
               />
             </Stack>

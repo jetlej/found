@@ -1,12 +1,8 @@
-import { AppHeader } from "@/components/AppHeader";
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
-import {
-  TOTAL_VOICE_QUESTIONS,
-  VOICE_QUESTIONS,
-  VoiceQuestionIcon,
-} from "@/lib/voice-questions";
+import { AppHeader } from '@/components/AppHeader';
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
+import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS, VoiceQuestionIcon } from '@/lib/voice-questions';
 import {
   IconBook,
   IconAlertTriangle,
@@ -24,19 +20,12 @@ import {
   IconStar,
   IconTarget,
   IconUsers,
-} from "@tabler/icons-react-native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+} from '@tabler/icons-react-native';
+import { useMutation, useQuery } from 'convex/react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -44,23 +33,23 @@ import Animated, {
   withDelay,
   withSequence,
   withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Confetti - explosive burst from center
 const CONFETTI_COLORS = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#45B7D1",
-  "#FFA07A",
-  "#98D8C8",
-  "#F7DC6F",
-  "#BB8FCE",
-  "#85C1E9",
-  "#FF85A2",
-  "#7BED9F",
-  "#70A1FF",
-  "#FFC048",
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#FFA07A',
+  '#98D8C8',
+  '#F7DC6F',
+  '#BB8FCE',
+  '#85C1E9',
+  '#FF85A2',
+  '#7BED9F',
+  '#70A1FF',
+  '#FFC048',
 ];
 const CONFETTI_COUNT = 240;
 
@@ -86,7 +75,7 @@ function ConfettiParticle({ index }: { index: number }) {
     scale.value = withDelay(d, withTiming(1, { duration: 80 }));
     translateX.value = withDelay(
       d,
-      withTiming(targetX, { duration: dur, easing: Easing.out(Easing.quad) }),
+      withTiming(targetX, { duration: dur, easing: Easing.out(Easing.quad) })
     );
     translateY.value = withDelay(
       d,
@@ -95,25 +84,22 @@ function ConfettiParticle({ index }: { index: number }) {
         withTiming(targetY + 600 + Math.random() * 300, {
           duration: fallDur,
           easing: Easing.in(Easing.quad),
-        }),
-      ),
+        })
+      )
     );
     rotate.value = withDelay(
       d,
       withTiming(720 * (Math.random() > 0.5 ? 1 : -1), {
         duration: dur + fallDur,
-      }),
+      })
     );
-    opacity.value = withDelay(
-      d + dur + fallDur * 0.5,
-      withTiming(0, { duration: fallDur * 0.5 }),
-    );
+    opacity.value = withDelay(d + dur + fallDur * 0.5, withTiming(0, { duration: fallDur * 0.5 }));
   }, []);
 
   const style = useAnimatedStyle(() => ({
-    position: "absolute" as const,
-    top: "40%",
-    left: "50%",
+    position: 'absolute' as const,
+    top: '40%',
+    left: '50%',
     width: size,
     height: isCircle ? size : size * 2.5,
     borderRadius: isCircle ? size / 2 : 2,
@@ -151,8 +137,8 @@ function CelebrationText({ children }: { children: React.ReactNode }) {
       style={[
         {
           flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
+          alignItems: 'center',
+          justifyContent: 'center',
           paddingHorizontal: 32,
         },
         animStyle,
@@ -166,15 +152,12 @@ function CelebrationText({ children }: { children: React.ReactNode }) {
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-type QuestionState = "completed" | "current" | "locked";
+type QuestionState = 'completed' | 'current' | 'locked';
 
-const ICONS: Record<
-  VoiceQuestionIcon,
-  React.ComponentType<{ size: number; color: string }>
-> = {
+const ICONS: Record<VoiceQuestionIcon, React.ComponentType<{ size: number; color: string }>> = {
   diamond: IconDiamond,
   heart: IconHeart,
   book: IconBook,
@@ -191,7 +174,7 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = forceEditing || editing === "true";
+  const isEditing = forceEditing || editing === 'true';
 
   const fadeOpacity = useSharedValue(0);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
@@ -201,14 +184,11 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     fadeOpacity.value = withTiming(1, { duration: 350 });
   }, []);
 
-  const currentUser = useQuery(
-    api.users.current,
-    userId ? {} : "skip",
-  );
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
 
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   // Create a map of questionIndex -> recording for quick lookup
@@ -219,14 +199,12 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
 
   const myProfile = useQuery(
     api.userProfiles.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   const regenerateProfile = useMutation(api.users.regenerateProfile);
   const [regenerating, setRegenerating] = useState(false);
-  const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(
-    null,
-  );
+  const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(null);
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [regenerateReady, setRegenerateReady] = useState(false);
 
@@ -256,38 +234,38 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     currentUser?.tattoos
   );
 
-  const basicsStarted = currentUser?.completedCategories?.includes("the_basics") ?? false;
+  const basicsStarted = currentUser?.completedCategories?.includes('the_basics') ?? false;
   const hasUnanswered = basicsStarted && !basicsComplete;
 
   const firstUnansweredBasicsStep = useMemo(() => {
-    if (!currentUser) return "pronouns";
+    if (!currentUser) return 'pronouns';
     const steps: { field: string; step: string }[] = [
-      { field: "pronouns", step: "pronouns" },
-      { field: "gender", step: "gender" },
-      { field: "sexuality", step: "sexuality" },
-      { field: "location", step: "location" },
-      { field: "birthdate", step: "birthday" },
-      { field: "ageRangeMin", step: "age-range" },
-      { field: "heightInches", step: "height" },
-      { field: "relationshipGoal", step: "relationship-goals" },
-      { field: "relationshipType", step: "relationship-type" },
-      { field: "hasChildren", step: "kids" },
-      { field: "wantsChildren", step: "wants-kids" },
-      { field: "ethnicity", step: "ethnicity" },
-      { field: "hometown", step: "hometown" },
-      { field: "religion", step: "religion" },
-      { field: "politicalLeaning", step: "politics" },
-      { field: "pets", step: "pets" },
-      { field: "drinking", step: "drinking" },
-      { field: "smoking", step: "smoking" },
-      { field: "marijuana", step: "marijuana" },
-      { field: "drugs", step: "drugs" },
-      { field: "tattoos", step: "tattoos" },
+      { field: 'pronouns', step: 'pronouns' },
+      { field: 'gender', step: 'gender' },
+      { field: 'sexuality', step: 'sexuality' },
+      { field: 'location', step: 'location' },
+      { field: 'birthdate', step: 'birthday' },
+      { field: 'ageRangeMin', step: 'age-range' },
+      { field: 'heightInches', step: 'height' },
+      { field: 'relationshipGoal', step: 'relationship-goals' },
+      { field: 'relationshipType', step: 'relationship-type' },
+      { field: 'hasChildren', step: 'kids' },
+      { field: 'wantsChildren', step: 'wants-kids' },
+      { field: 'ethnicity', step: 'ethnicity' },
+      { field: 'hometown', step: 'hometown' },
+      { field: 'religion', step: 'religion' },
+      { field: 'politicalLeaning', step: 'politics' },
+      { field: 'pets', step: 'pets' },
+      { field: 'drinking', step: 'drinking' },
+      { field: 'smoking', step: 'smoking' },
+      { field: 'marijuana', step: 'marijuana' },
+      { field: 'drugs', step: 'drugs' },
+      { field: 'tattoos', step: 'tattoos' },
     ];
     for (const { field, step } of steps) {
       if (!(currentUser as any)[field]) return step;
     }
-    return "pronouns"; // all complete, start from beginning for editing
+    return 'pronouns'; // all complete, start from beginning for editing
   }, [currentUser]);
 
   // Find first unanswered question index
@@ -299,26 +277,23 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
   }, [recordingMap]);
 
   const handleQuestionPress = (index: number, state: QuestionState) => {
-    if (state === "locked") return;
+    if (state === 'locked') return;
     router.push({
-      pathname: "/(onboarding)/voice-questions",
+      pathname: '/(onboarding)/voice-questions',
       params: { startIndex: index.toString() },
     });
   };
 
   const getQuestionState = (index: number): QuestionState => {
-    if (recordingMap.has(index)) return "completed";
-    if (index === firstUnansweredIndex) return "current";
-    return "locked";
+    if (recordingMap.has(index)) return 'completed';
+    if (index === firstUnansweredIndex) return 'current';
+    return 'locked';
   };
 
   const allComplete = completedCount >= TOTAL_VOICE_QUESTIONS;
   const regenerateCooldownMs = 30 * 1000; // 30s for dev, raise to 60*60*1000 for prod
   const remainingCooldownMs = currentUser?.lastProfileRegeneratedAt
-    ? Math.max(
-        0,
-        currentUser.lastProfileRegeneratedAt + regenerateCooldownMs - Date.now(),
-      )
+    ? Math.max(0, currentUser.lastProfileRegeneratedAt + regenerateCooldownMs - Date.now())
     : 0;
   const isCooldownActive = remainingCooldownMs > 0;
   const cooldownLabel = `Try again in ${Math.ceil(remainingCooldownMs / (60 * 1000))}m.`;
@@ -334,13 +309,15 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
   const canRegenerate =
     allComplete && hasChangesSinceLastRegeneration && !isCooldownActive && !regenerating;
 
-
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
         {isEditing ? (
           <View style={styles.editingNavBar}>
-            <Pressable onPress={() => forceEditing ? router.back() : router.replace("/(tabs)/settings")} style={styles.editingBackButton}>
+            <Pressable
+              onPress={() => (forceEditing ? router.back() : router.replace('/(tabs)/settings'))}
+              style={styles.editingBackButton}
+            >
               <IconChevronLeft size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.editingNavTitle}>Edit Answers</Text>
@@ -352,8 +329,8 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
         <View style={styles.header}>
           <Text style={styles.subtitle}>
             {isEditing
-              ? "Re-record voice answers or update your basics."
-              : "Answer 8 questions with your voice. Be yourself — no editing, no second-guessing."}
+              ? 'Re-record voice answers or update your basics.'
+              : 'Answer 8 questions with your voice. Be yourself — no editing, no second-guessing.'}
           </Text>
         </View>
 
@@ -377,11 +354,11 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
               ]}
               onPress={() => {
                 if (basicsComplete || hasUnanswered) {
-                  router.push({ pathname: "/(onboarding)/basics-summary" });
+                  router.push({ pathname: '/(onboarding)/basics-summary' });
                 } else {
                   router.push({
                     pathname: `/(onboarding)/${firstUnansweredBasicsStep}`,
-                    params: { editing: "true" },
+                    params: { editing: 'true' },
                   });
                 }
               }}
@@ -391,7 +368,7 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
                   <View style={styles.iconWrapper}>
                     <IconListCheck
                       size={21}
-                      color={basicsComplete || hasUnanswered ? colors.text : "#FFFFFF"}
+                      color={basicsComplete || hasUnanswered ? colors.text : '#FFFFFF'}
                     />
                   </View>
                   <Text
@@ -429,31 +406,24 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
             const Icon = ICONS[question.icon];
 
             const iconColor =
-              state === "completed"
-                ? colors.text
-                : state === "current"
-                  ? "#FFFFFF"
-                  : "#AAAAAA";
+              state === 'completed' ? colors.text : state === 'current' ? '#FFFFFF' : '#AAAAAA';
 
             return (
               <View key={question.index} style={styles.nodeWrapper}>
                 {!isLast && (
                   <View
-                    style={[
-                      styles.connector,
-                      state === "completed" && styles.connectorCompleted,
-                    ]}
+                    style={[styles.connector, state === 'completed' && styles.connectorCompleted]}
                   />
                 )}
                 <Pressable
                   style={[
                     styles.node,
-                    state === "completed" && styles.nodeCompleted,
-                    state === "current" && styles.nodeCurrent,
-                    state === "locked" && styles.nodeLocked,
+                    state === 'completed' && styles.nodeCompleted,
+                    state === 'current' && styles.nodeCurrent,
+                    state === 'locked' && styles.nodeLocked,
                   ]}
                   onPress={() => handleQuestionPress(question.index, state)}
-                  disabled={state === "locked"}
+                  disabled={state === 'locked'}
                 >
                   <View style={styles.nodeHeader}>
                     <View style={styles.nodeHeaderLeft}>
@@ -463,14 +433,14 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
                       <Text
                         style={[
                           styles.nodeName,
-                          state === "current" && styles.nodeNameCurrent,
-                          state === "locked" && styles.nodeNameLocked,
+                          state === 'current' && styles.nodeNameCurrent,
+                          state === 'locked' && styles.nodeNameLocked,
                         ]}
                       >
                         {question.category}
                       </Text>
                     </View>
-                    {state === "completed" && (
+                    {state === 'completed' && (
                       <View style={styles.completedBadge}>
                         <IconCheck size={14} color={colors.success} />
                         <Text style={styles.durationText}>
@@ -478,14 +448,12 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
                         </Text>
                       </View>
                     )}
-                    {state === "current" && (
+                    {state === 'current' && (
                       <View style={styles.answerButton}>
                         <Text style={styles.answerButtonText}>Answer</Text>
                       </View>
                     )}
-                    {state === "locked" && (
-                      <IconLock size={14} color="#AAAAAA" />
-                    )}
+                    {state === 'locked' && <IconLock size={14} color="#AAAAAA" />}
                   </View>
                 </Pressable>
               </View>
@@ -495,7 +463,9 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
         </ScrollView>
 
         {(allComplete || isEditing) && currentUser?._id && (
-          <View style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <View
+            style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
+          >
             <Pressable
               style={[styles.regenerateButton, !canRegenerate && styles.buttonDisabled]}
               disabled={!canRegenerate}
@@ -508,17 +478,15 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
                   await regenerateProfile({});
                 } catch (error) {
                   const message =
-                    error instanceof Error ? error.message : "Failed to regenerate profile.";
-                  console.error("Failed to regenerate profile:", error);
+                    error instanceof Error ? error.message : 'Failed to regenerate profile.';
+                  console.error('Failed to regenerate profile:', error);
                   setRegenerateError(message);
                   setRegenerating(false);
                   setRegenerateStartedAt(null);
                 }
               }}
             >
-              <Text style={styles.regenerateButtonText}>
-                Regenerate Profile
-              </Text>
+              <Text style={styles.regenerateButtonText}>Regenerate Profile</Text>
             </Pressable>
             {regenerateError ? (
               <Text style={styles.regenerateHelpText}>{regenerateError}</Text>
@@ -532,11 +500,17 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
           <View style={styles.celebrationOverlay}>
             <Confetti />
             <CelebrationText>
-              {regenerateReady
-                ? <IconSparkles size={48} color={colors.text} />
-                : <ActivityIndicator size="large" color={colors.text} style={{ marginBottom: spacing.sm }} />}
+              {regenerateReady ? (
+                <IconSparkles size={48} color={colors.text} />
+              ) : (
+                <ActivityIndicator
+                  size="large"
+                  color={colors.text}
+                  style={{ marginBottom: spacing.sm }}
+                />
+              )}
               <Text style={styles.celebrationTitle}>
-                {regenerateReady ? "Time to Review Your Profile" : "Regenerating!"}
+                {regenerateReady ? 'Time to Review Your Profile' : 'Regenerating!'}
               </Text>
               {regenerateReady ? (
                 <View style={styles.checkmarkList}>
@@ -546,22 +520,30 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
                   </View>
                   <View style={styles.checkmarkRow}>
                     <IconEraser size={20} color={colors.text} />
-                    <Text style={styles.checkmarkText}>Remove things you'd rather keep private</Text>
+                    <Text style={styles.checkmarkText}>
+                      Remove things you'd rather keep private
+                    </Text>
                   </View>
                 </View>
               ) : (
                 <Text style={styles.celebrationSubtitle}>
-                  We're using AI to craft your updated profile and compatibility scores. This usually takes about a minute.
+                  We're using AI to craft your updated profile and compatibility scores. This
+                  usually takes about a minute.
                 </Text>
               )}
             </CelebrationText>
             {regenerateReady && (
-              <View style={[styles.stickyFooter, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+              <View
+                style={[
+                  styles.stickyFooter,
+                  { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+                ]}
+              >
                 <Pressable
                   style={styles.regenerateButton}
                   onPress={() => {
                     setRegenerateReady(false);
-                    router.push({ pathname: "/profile-audit", params: { fromRegenerate: "true" } });
+                    router.push({ pathname: '/profile-audit', params: { fromRegenerate: 'true' } });
                   }}
                 >
                   <Text style={styles.regenerateButtonText}>Edit My Profile</Text>
@@ -580,65 +562,121 @@ export default function QuestionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  answerButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  editingNavBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  editingBackButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  editingNavTitle: { ...textStyles.pageTitle },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  subtitle: {
+  answerButtonText: {
+    color: colors.text,
     fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
+    fontWeight: '600',
   },
-  scrollView: {
+  bottomPadding: {
+    height: spacing['2xl'],
+  },
+  buttonDisabled: {
+    opacity: 0.4,
+  },
+  celebrationContent: {
+    alignItems: 'center',
     flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing['2xl'],
   },
-  scrollContent: {
+  celebrationOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  celebrationSubtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    lineHeight: 24,
+    paddingHorizontal: spacing.lg,
+    textAlign: 'center',
+  },
+  celebrationTitle: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['4xl'],
+    marginBottom: spacing.lg,
+    marginTop: spacing.xl,
+    textAlign: 'center',
+  },
+  checkmarkList: {
+    gap: 9,
+    marginTop: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
   },
-  nodeWrapper: {
-    position: "relative",
-    marginBottom: spacing.md,
+  checkmarkRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  checkmarkText: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: fontSizes.lg,
+    lineHeight: 26,
+  },
+  completedBadge: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   connector: {
-    position: "absolute",
-    left: 24,
-    top: 56,
-    bottom: -spacing.md - 4,
-    width: 2,
     backgroundColor: colors.border,
+    bottom: -spacing.md - 4,
+    left: 24,
+    position: 'absolute',
+    top: 56,
+    width: 2,
     zIndex: 0,
   },
   connectorCompleted: {
     backgroundColor: colors.text,
   },
+  container: {
+    flex: 1,
+  },
+  durationText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    fontWeight: '500',
+  },
+  editingBackButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  editingNavBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  editingNavTitle: { ...textStyles.pageTitle },
+  header: {
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  iconWrapper: {
+    marginRight: spacing.sm,
+  },
   node: {
     backgroundColor: colors.surface,
     borderRadius: 12,
+    elevation: 3,
     padding: spacing.lg,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 6,
-    elevation: 3,
     zIndex: 1,
   },
   nodeCompleted: {
@@ -647,125 +685,69 @@ const styles = StyleSheet.create({
   nodeCurrent: {
     backgroundColor: colors.text,
   },
+  nodeHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  nodeHeaderLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flex: 1,
+  },
   nodeLocked: {
     backgroundColor: colors.background,
   },
-  nodeHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  nodeHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  iconWrapper: {
-    marginRight: spacing.sm,
-  },
   nodeName: {
+    color: colors.text,
     fontFamily: fonts.serifBold,
     fontSize: fontSizes.lg,
-    color: colors.text,
   },
   nodeNameCurrent: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
   },
   nodeNameLocked: {
-    color: "#AAAAAA",
+    color: '#AAAAAA',
   },
-  completedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  durationText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    fontWeight: "500",
-  },
-  answerButton: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-  },
-  answerButtonText: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  stickyFooter: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
+  nodeWrapper: {
+    marginBottom: spacing.md,
+    position: 'relative',
   },
   regenerateButton: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
-    alignItems: "center",
   },
   regenerateButtonText: {
+    color: '#FFFFFF',
     fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    fontWeight: '600',
   },
   regenerateHelpText: {
-    marginTop: spacing.sm,
-    fontSize: fontSizes.sm,
     color: colors.textMuted,
-    textAlign: "center",
+    fontSize: fontSizes.sm,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  celebrationOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
-    zIndex: 10,
-    overflow: "hidden",
-  },
-  celebrationContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing["2xl"],
-  },
-  celebrationTitle: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["4xl"],
-    color: colors.text,
-    textAlign: "center",
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  celebrationSubtitle: {
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: spacing.lg,
-  },
-  checkmarkList: {
-    marginTop: spacing.lg,
-    gap: 9,
+  scrollContent: {
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
   },
-  checkmarkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
+  scrollView: {
+    flex: 1,
   },
-  checkmarkText: {
-    fontSize: fontSizes.lg,
-    color: colors.text,
-    lineHeight: 26,
-    flexShrink: 1,
+  stickyFooter: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
   },
-  bottomPadding: {
-    height: spacing["2xl"],
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });

@@ -9,4 +9,3 @@ export function getAvatarUrl(
   if (avatarUrl) return avatarUrl;
   return `https://i.pravatar.cc/${size}?u=${uniqueId}`;
 }
-

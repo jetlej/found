@@ -1,12 +1,12 @@
-import { api } from "@/convex/_generated/api";
-import { Doc, Id } from "@/convex/_generated/dataModel";
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import ExpoImageCropTool from "@bsky.app/expo-image-crop-tool";
-import { IconCircleX, IconPlus } from "@tabler/icons-react-native";
-import { useMutation } from "convex/react";
-import * as ExpoImagePicker from "expo-image-picker";
-import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from '@/convex/_generated/api';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { colors, fontSizes, spacing } from '@/lib/theme';
+import ExpoImageCropTool from '@bsky.app/expo-image-crop-tool';
+import { IconCircleX, IconPlus } from '@tabler/icons-react-native';
+import { useMutation } from 'convex/react';
+import * as ExpoImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -16,12 +16,8 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from "react-native-gesture-handler";
+} from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   runOnJS,
@@ -29,9 +25,9 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_GAP = spacing.md;
 const GRID_PADDING = spacing.xl;
 const SLOT_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
@@ -40,7 +36,7 @@ const COL_STRIDE = SLOT_WIDTH + GRID_GAP;
 const ROW_STRIDE = SLOT_HEIGHT + GRID_GAP;
 
 function getSlotXY(slot: number) {
-  "worklet";
+  'worklet';
   return {
     x: (slot % 3) * COL_STRIDE,
     y: Math.floor(slot / 3) * ROW_STRIDE,
@@ -48,7 +44,7 @@ function getSlotXY(slot: number) {
 }
 
 function getSlotFromXY(x: number, y: number) {
-  "worklet";
+  'worklet';
   const col = Math.round(x / COL_STRIDE);
   const row = Math.round(y / ROW_STRIDE);
   return Math.min(5, Math.max(0, Math.min(2, col)) + Math.max(0, Math.min(1, row)) * 3);
@@ -57,16 +53,16 @@ function getSlotFromXY(x: number, y: number) {
 interface PhotoItem {
   id: string;
   order: number;
-  photoId?: Id<"photos">;
-  storageId?: Id<"_storage">;
+  photoId?: Id<'photos'>;
+  storageId?: Id<'_storage'>;
   url?: string;
   uploading?: boolean;
   localUri?: string;
 }
 
 interface PhotoGridProps {
-  userId: Id<"users">;
-  existingPhotos: Doc<"photos">[] | undefined;
+  userId: Id<'users'>;
+  existingPhotos: Doc<'photos'>[] | undefined;
   showRequired?: boolean;
   onPhotoCountChange?: (count: number) => void;
 }
@@ -154,11 +150,7 @@ function DraggableSlot({
 
     if (isActive) {
       return {
-        transform: [
-          { translateX: dragX.value },
-          { translateY: dragY.value },
-          { scale: 1.05 },
-        ],
+        transform: [{ translateX: dragX.value }, { translateY: dragY.value }, { scale: 1.05 }],
         zIndex: 100,
         shadowOpacity: 0.3,
         elevation: 8,
@@ -201,25 +193,15 @@ function DraggableSlot({
       >
         {hasImage ? (
           <>
-            <Pressable
-              style={styles.slotContent}
-              onPress={() => onTap(item.order)}
-            >
-              <Image
-                source={{ uri: item.localUri || item.url }}
-                style={styles.image}
-              />
+            <Pressable style={styles.slotContent} onPress={() => onTap(item.order)}>
+              <Image source={{ uri: item.localUri || item.url }} style={styles.image} />
               {item.uploading && (
                 <View style={styles.uploadingOverlay}>
                   <Text style={styles.uploadingText}>...</Text>
                 </View>
               )}
             </Pressable>
-            <Pressable
-              style={styles.removeButton}
-              onPress={() => onRemove(item)}
-              hitSlop={8}
-            >
+            <Pressable style={styles.removeButton} onPress={() => onRemove(item)} hitSlop={8}>
               <IconCircleX size={24} color={colors.text} />
             </Pressable>
             {isFirst && (
@@ -229,14 +211,8 @@ function DraggableSlot({
             )}
           </>
         ) : (
-          <Pressable
-            style={styles.slotContent}
-            onPress={() => onTap(item.order)}
-          >
-            <IconPlus
-              size={32}
-              color={isRequired ? colors.text : colors.textMuted}
-            />
+          <Pressable style={styles.slotContent} onPress={() => onTap(item.order)}>
+            <IconPlus size={32} color={isRequired ? colors.text : colors.textMuted} />
             {isRequired && <Text style={styles.requiredLabel}>Required</Text>}
           </Pressable>
         )}
@@ -258,12 +234,12 @@ export function PhotoGrid({
   const reorderPhotos = useMutation(api.photos.reorder);
 
   const [items, setItems] = useState<PhotoItem[]>([
-    { id: "0", order: 0 },
-    { id: "1", order: 1 },
-    { id: "2", order: 2 },
-    { id: "3", order: 3 },
-    { id: "4", order: 4 },
-    { id: "5", order: 5 },
+    { id: '0', order: 0 },
+    { id: '1', order: 1 },
+    { id: '2', order: 2 },
+    { id: '3', order: 3 },
+    { id: '4', order: 4 },
+    { id: '5', order: 5 },
   ]);
   const reorderPendingRef = useRef(false);
 
@@ -280,9 +256,7 @@ export function PhotoGrid({
 
     setItems((prev) =>
       prev.map((item) => {
-        const existingPhoto = existingPhotos.find(
-          (p) => p.order === item.order
-        );
+        const existingPhoto = existingPhotos.find((p) => p.order === item.order);
         if (existingPhoto && !item.localUri) {
           return {
             ...item,
@@ -313,9 +287,9 @@ export function PhotoGrid({
     try {
       let uri: string;
 
-      if (Platform.OS === "web") {
+      if (Platform.OS === 'web') {
         const editResult = await ExpoImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [4, 5],
           quality: 0.8,
@@ -324,7 +298,7 @@ export function PhotoGrid({
         uri = editResult.assets[0].uri;
       } else {
         const result = await ExpoImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
+          mediaTypes: ['images'],
           allowsEditing: false,
           quality: 1,
         });
@@ -338,25 +312,19 @@ export function PhotoGrid({
         uri = cropped.path;
       }
 
-      const fileUri = uri.startsWith("file://") ? uri : `file://${uri}`;
+      const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
       setItems((prev) =>
-        prev.map((s) =>
-          s.order === slotOrder
-            ? { ...s, localUri: fileUri, uploading: true }
-            : s
-        )
+        prev.map((s) => (s.order === slotOrder ? { ...s, localUri: fileUri, uploading: true } : s))
       );
 
       const uploadUrl = await generateUploadUrl();
       const response = await fetch(fileUri);
       const blob = await response.blob();
-      const contentType = blob.type.startsWith("image/")
-        ? blob.type
-        : "image/jpeg";
+      const contentType = blob.type.startsWith('image/') ? blob.type : 'image/jpeg';
 
       const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": contentType },
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
         body: blob,
       });
 
@@ -369,22 +337,18 @@ export function PhotoGrid({
         });
 
         setItems((prev) =>
-          prev.map((s) =>
-            s.order === slotOrder ? { ...s, uploading: false } : s
-          )
+          prev.map((s) => (s.order === slotOrder ? { ...s, uploading: false } : s))
         );
       } else {
-        throw new Error("No storage ID returned");
+        throw new Error('No storage ID returned');
       }
     } catch (error: any) {
-      if (error?.code === "E_PICKER_CANCELLED") return;
-      console.error("Image picker error:", error);
-      Alert.alert("Error", "Could not upload image. Please try again.");
+      if (error?.code === 'E_PICKER_CANCELLED') return;
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Could not upload image. Please try again.');
       setItems((prev) =>
         prev.map((s) =>
-          s.order === slotOrder
-            ? { ...s, localUri: undefined, uploading: false }
-            : s
+          s.order === slotOrder ? { ...s, localUri: undefined, uploading: false } : s
         )
       );
     }
@@ -398,14 +362,10 @@ export function PhotoGrid({
 
     setItems((prev) => {
       // Clear the removed slot
-      const cleared = prev.map((s) =>
-        s.order === item.order ? { id: s.id, order: s.order } : s
-      );
+      const cleared = prev.map((s) => (s.order === item.order ? { id: s.id, order: s.order } : s));
 
       // Separate filled and empty, keeping filled sorted by current order
-      const filled = cleared
-        .filter((s) => s.url || s.localUri)
-        .sort((a, b) => a.order - b.order);
+      const filled = cleared.filter((s) => s.url || s.localUri).sort((a, b) => a.order - b.order);
       const empty = cleared.filter((s) => !s.url && !s.localUri);
 
       // Assign sequential orders: filled first, then empty
@@ -426,7 +386,9 @@ export function PhotoGrid({
         reorderPhotos({ orders })
           .catch(console.error)
           .finally(() =>
-            setTimeout(() => { reorderPendingRef.current = false; }, 500)
+            setTimeout(() => {
+              reorderPendingRef.current = false;
+            }, 500)
           );
       } else {
         reorderPendingRef.current = false;
@@ -502,68 +464,68 @@ const styles = StyleSheet.create({
   grid: {
     height: ROW_STRIDE * 2 - GRID_GAP,
   },
-  slot: {
-    position: "absolute",
-    width: SLOT_WIDTH,
-    height: SLOT_HEIGHT,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-  },
-  slotShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 12,
-  },
-  slotRequired: {
-    borderColor: colors.text,
-    borderStyle: "dashed",
-  },
-  slotContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   image: {
-    width: "100%",
-    height: "100%",
-  },
-  requiredLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  removeButton: {
-    position: "absolute",
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-  },
-  uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  uploadingText: {
-    color: "#fff",
-    fontSize: fontSizes.lg,
+    height: '100%',
+    width: '100%',
   },
   mainBadge: {
-    position: "absolute",
+    backgroundColor: colors.primary,
+    borderRadius: 8,
     bottom: spacing.xs,
     left: spacing.xs,
-    backgroundColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: 8,
+    position: 'absolute',
   },
   mainBadgeText: {
     color: colors.primaryText,
     fontSize: fontSizes.xs,
-    fontWeight: "600",
+    fontWeight: '600',
+  },
+  removeButton: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    position: 'absolute',
+    right: spacing.xs,
+    top: spacing.xs,
+  },
+  requiredLabel: {
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
+    marginTop: spacing.xs,
+  },
+  slot: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    height: SLOT_HEIGHT,
+    overflow: 'hidden',
+    position: 'absolute',
+    width: SLOT_WIDTH,
+  },
+  slotContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  slotRequired: {
+    borderColor: colors.text,
+    borderStyle: 'dashed',
+  },
+  slotShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 12,
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+  },
+  uploadingText: {
+    color: '#fff',
+    fontSize: fontSizes.lg,
   },
 });

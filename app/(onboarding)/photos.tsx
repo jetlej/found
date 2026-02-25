@@ -1,35 +1,25 @@
-import { PhotoGrid } from "@/components/PhotoGrid";
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { useScreenReady } from "@/hooks/useScreenReady";
-import { getNextStep, goToNextStep } from "@/lib/onboarding-flow";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft } from "@tabler/icons-react-native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { PhotoGrid } from '@/components/PhotoGrid';
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import { getNextStep, goToNextStep } from '@/lib/onboarding-flow';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { IconChevronLeft } from '@tabler/icons-react-native';
+import { useMutation, useQuery } from 'convex/react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function PhotosScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
+  const isEditing = editing === 'true';
 
-  const currentUser = useQuery(
-    api.users.current,
-    userId ? {} : "skip",
-  );
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
   const existingPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
@@ -55,18 +45,18 @@ export default function PhotosScreen() {
       if (isEditing) {
         router.back();
       } else {
-        const nextStep = getNextStep("photos");
+        const nextStep = getNextStep('photos');
         if (nextStep) {
           await setOnboardingStep({ step: nextStep });
-          goToNextStep(router, "photos");
+          goToNextStep(router, 'photos');
         } else {
           // Last step — complete the basics category and exit
-          await completeCategory({ categoryId: "the_basics" });
-          router.replace("/(tabs)/questions");
+          await completeCategory({ categoryId: 'the_basics' });
+          router.replace('/(tabs)/questions');
         }
       }
     } catch (error) {
-      console.error("Error continuing onboarding:", error);
+      console.error('Error continuing onboarding:', error);
       setIsSubmitting(false);
     }
   };
@@ -103,19 +93,14 @@ export default function PhotosScreen() {
 
         <View style={styles.footer}>
           <Pressable
-            style={[
-              styles.button,
-              (!isValid || isSubmitting) && styles.buttonDisabled,
-            ]}
+            style={[styles.button, (!isValid || isSubmitting) && styles.buttonDisabled]}
             onPress={handleContinue}
             disabled={!isValid || isSubmitting}
           >
             {isSubmitting ? (
               <ActivityIndicator color={colors.primaryText} />
             ) : (
-              <Text style={styles.buttonText}>
-                {isEditing ? "Save" : "Continue"}
-              </Text>
+              <Text style={styles.buttonText}>{isEditing ? 'Save' : 'Continue'}</Text>
             )}
           </Pressable>
         </View>
@@ -125,60 +110,60 @@ export default function PhotosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  closeHeader: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  closeButton: {
-    alignSelf: "flex-start",
-    padding: spacing.xs,
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  stepContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  title: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
   button: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
-    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
     color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  closeButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
+  },
+  closeHeader: {
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  stepContent: {
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    lineHeight: 22,
+  },
+  title: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.sm,
   },
 });

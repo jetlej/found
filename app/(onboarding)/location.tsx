@@ -1,13 +1,9 @@
-import { useBasicsStep } from "@/hooks/useBasicsStep";
-import { useScreenReady } from "@/hooks/useScreenReady";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import {
-  IconChevronLeft,
-  IconMapPin,
-  IconMapPinSearch,
-} from "@tabler/icons-react-native";
-import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import { useBasicsStep } from '@/hooks/useBasicsStep';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { IconChevronLeft, IconMapPin, IconMapPinSearch } from '@tabler/icons-react-native';
+import * as Location from 'expo-location';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -16,21 +12,20 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
 export default function LocationScreen() {
   const { currentUser, isEditing, loading, save, close } = useBasicsStep({
-    stepName: "location",
+    stepName: 'location',
   });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
   const [location, setLocation] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (currentUser?.location && location === null)
-      setLocation(currentUser.location);
+    if (currentUser?.location && location === null) setLocation(currentUser.location);
   }, [currentUser]);
 
   useEffect(() => {
@@ -41,12 +36,12 @@ export default function LocationScreen() {
 
   const requestLocation = async () => {
     setLocationLoading(true);
-    setError("");
+    setError('');
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setError("Location permission is required");
+      if (status !== 'granted') {
+        setError('Location permission is required');
         setLocationLoading(false);
         return;
       }
@@ -58,13 +53,11 @@ export default function LocationScreen() {
       });
 
       if (place) {
-        const locationString = [place.city, place.region]
-          .filter(Boolean)
-          .join(", ");
-        setLocation(locationString || "Unknown location");
+        const locationString = [place.city, place.region].filter(Boolean).join(', ');
+        setLocation(locationString || 'Unknown location');
       }
     } catch (err) {
-      setError("Could not get your location");
+      setError('Could not get your location');
     }
 
     setLocationLoading(false);
@@ -87,9 +80,7 @@ export default function LocationScreen() {
         )}
         <View style={styles.content}>
           <Text style={styles.question}>Where are you located?</Text>
-          <Text style={styles.questionSubtext}>
-            We'll use this to find matches near you
-          </Text>
+          <Text style={styles.questionSubtext}>We'll use this to find matches near you</Text>
 
           {location ? (
             <View style={styles.locationResult}>
@@ -118,16 +109,13 @@ export default function LocationScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[
-              styles.button,
-              (!canProceed || loading) && styles.buttonDisabled,
-            ]}
+            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
             onPress={handleContinue}
             disabled={!canProceed || loading}
             activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
+              {loading ? 'Saving...' : isEditing ? 'Save' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -137,97 +125,97 @@ export default function LocationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  closeHeader: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  closeButton: {
-    alignSelf: "flex-start",
-    padding: spacing.xs,
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-  },
-  question: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  questionSubtext: {
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
-  locationButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    marginTop: spacing.lg,
-  },
-  locationButtonText: {
-    fontSize: fontSizes.lg,
-    color: colors.primaryText,
-    fontWeight: "600",
-  },
-  locationResult: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.success,
-    marginTop: spacing.lg,
-  },
-  locationText: {
-    fontSize: fontSizes.lg,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  error: {
-    color: colors.error,
-    fontSize: fontSizes.sm,
-    textAlign: "center",
-    marginTop: spacing.md,
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
   button: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
-    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
     color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  closeButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
+  },
+  closeHeader: {
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing['2xl'],
+  },
+  error: {
+    color: colors.error,
+    fontSize: fontSizes.sm,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  flex: {
+    flex: 1,
+  },
+  footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  locationButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+  },
+  locationButtonText: {
+    color: colors.primaryText,
+    fontSize: fontSizes.lg,
+    fontWeight: '600',
+  },
+  locationResult: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.success,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+  },
+  locationText: {
+    color: colors.text,
+    fontSize: fontSizes.lg,
+    fontWeight: '600',
+  },
+  question: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.sm,
+  },
+  questionSubtext: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    marginBottom: spacing.xl,
   },
 });

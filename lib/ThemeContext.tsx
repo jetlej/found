@@ -1,8 +1,8 @@
-import { MMKV } from "react-native-mmkv";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { darkColors, lightColors } from "./theme";
+import { MMKV } from 'react-native-mmkv';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { darkColors, lightColors } from './theme';
 
-const storage = new MMKV({ id: "theme-storage" });
+const storage = new MMKV({ id: 'theme-storage' });
 
 type Colors = typeof darkColors;
 
@@ -16,8 +16,8 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(() => {
-    const stored = storage.getString("theme");
-    return stored ? stored === "dark" : true; // Default to dark
+    const stored = storage.getString('theme');
+    return stored ? stored === 'dark' : true; // Default to dark
   });
 
   const colors = isDark ? darkColors : lightColors;
@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggleTheme = () => {
     const newValue = !isDark;
     setIsDark(newValue);
-    storage.set("theme", newValue ? "dark" : "light");
+    storage.set('theme', newValue ? 'dark' : 'light');
   };
 
   return (

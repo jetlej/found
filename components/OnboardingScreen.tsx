@@ -1,7 +1,7 @@
-import { useScreenReady } from "@/hooks/useScreenReady";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft } from "@tabler/icons-react-native";
-import { useEffect, type ReactNode } from "react";
+import { useScreenReady } from '@/hooks/useScreenReady';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { IconChevronLeft } from '@tabler/icons-react-native';
+import { useEffect, type ReactNode } from 'react';
 import {
   Animated,
   Pressable,
@@ -10,7 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from 'react-native';
 
 interface OnboardingScreenProps {
   question: string;
@@ -80,13 +80,17 @@ export function OnboardingScreen({
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.button, onBack && styles.buttonFlex, (!canProceed || loading) && styles.buttonDisabled]}
+              style={[
+                styles.button,
+                onBack && styles.buttonFlex,
+                (!canProceed || loading) && styles.buttonDisabled,
+              ]}
               onPress={onNext}
               disabled={!canProceed || loading}
               activeOpacity={0.7}
             >
               <Text style={styles.buttonText}>
-                {loading ? "Saving..." : submitLabel ?? "Next"}
+                {loading ? 'Saving...' : (submitLabel ?? 'Next')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -97,78 +101,78 @@ export function OnboardingScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  backButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
     flex: 1,
-    backgroundColor: colors.background,
+    padding: spacing.lg,
   },
-  flex: {
-    flex: 1,
+  backButtonText: {
+    color: colors.text,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
   },
-  closeHeader: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
+  button: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonFlex: {
+    flex: 2,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  buttonText: {
+    color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
   },
   closeButton: {
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
     padding: spacing.xs,
+  },
+  closeHeader: {
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
   },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
-  },
-  question: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.xl,
+  flex: {
+    flex: 1,
   },
   footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
   },
-  buttonRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  backButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  backButtonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
+  question: {
     color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.xl,
   },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-  },
-  buttonFlex: {
-    flex: 2,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.primaryText,
+  scrollContent: {
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
   },
 });

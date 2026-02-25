@@ -1,13 +1,13 @@
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import type { OnboardingStep } from "@/lib/onboarding-flow";
-import { useBasicsStep, useSavedValue } from "@/hooks/useBasicsStep";
-import { OnboardingScreen } from "@/components/OnboardingScreen";
-import { OptionButton } from "@/components/OptionButton";
-import { ImportanceSlider } from "@/components/ImportanceSlider";
-import { IconSquare, IconSquareCheckFilled } from "@tabler/icons-react-native";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, fontSizes, spacing } from '@/lib/theme';
+import type { OnboardingStep } from '@/lib/onboarding-flow';
+import { useBasicsStep, useSavedValue } from '@/hooks/useBasicsStep';
+import { OnboardingScreen } from '@/components/OnboardingScreen';
+import { OptionButton } from '@/components/OptionButton';
+import { ImportanceSlider } from '@/components/ImportanceSlider';
+import { IconSquare, IconSquareCheckFilled } from '@tabler/icons-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-type OptionVariant = "default" | "compact" | "pill" | "chip" | "row";
+type OptionVariant = 'default' | 'compact' | 'pill' | 'chip' | 'row';
 
 interface BasicOptionScreenProps {
   stepName: OnboardingStep;
@@ -27,7 +27,7 @@ export function BasicOptionScreen({
   field,
   question,
   options,
-  optionVariant = "default",
+  optionVariant = 'default',
   scrollable,
   visibilityField,
   importanceField,
@@ -35,10 +35,11 @@ export function BasicOptionScreen({
   const { currentUser, isEditing, loading, save, close } = useBasicsStep({ stepName });
 
   const [selected, setSelected] = useSavedValue<string | null>(currentUser, field, null);
-  const [visible, setVisible] = useSavedValue(currentUser, visibilityField ?? "", true);
-  const [importance, setImportance] = useSavedValue(currentUser, importanceField ?? "", 5);
+  const [visible, setVisible] = useSavedValue(currentUser, visibilityField ?? '', true);
+  const [importance, setImportance] = useSavedValue(currentUser, importanceField ?? '', 5);
 
-  const canAutoAdvance = !isEditing && !visibilityField && !importanceField && currentUser?.[field] == null;
+  const canAutoAdvance =
+    !isEditing && !visibilityField && !importanceField && currentUser?.[field] == null;
 
   const handleSelect = (value: string) => {
     setSelected(value);
@@ -55,8 +56,8 @@ export function BasicOptionScreen({
     save(data);
   };
 
-  const isChipLayout = optionVariant === "chip";
-  const isRowLayout = optionVariant === "row";
+  const isChipLayout = optionVariant === 'chip';
+  const isRowLayout = optionVariant === 'row';
 
   return (
     <OnboardingScreen
@@ -64,18 +65,16 @@ export function BasicOptionScreen({
       canProceed={!!selected}
       loading={loading}
       onNext={handleContinue}
-      submitLabel={isEditing ? "Save" : undefined}
+      submitLabel={isEditing ? 'Save' : undefined}
       scrollable={scrollable}
       onClose={isEditing ? close : undefined}
     >
-      <View style={[
-        styles.options,
-        isChipLayout && styles.chipLayout,
-        isRowLayout && styles.rowLayout,
-      ]}>
+      <View
+        style={[styles.options, isChipLayout && styles.chipLayout, isRowLayout && styles.rowLayout]}
+      >
         {options.map((opt) => {
-          const value = typeof opt === "string" ? opt : opt.value;
-          const label = typeof opt === "string" ? opt : opt.label;
+          const value = typeof opt === 'string' ? opt : opt.value;
+          const label = typeof opt === 'string' ? opt : opt.label;
           return (
             <OptionButton
               key={value}
@@ -105,27 +104,27 @@ export function BasicOptionScreen({
 }
 
 const styles = StyleSheet.create({
+  chipLayout: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   options: {
     gap: spacing.md,
     marginTop: spacing.lg,
   },
-  chipLayout: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
   rowLayout: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: spacing.md,
   },
   visibilityRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing["2xl"],
+    marginTop: spacing['2xl'],
   },
   visibilityText: {
-    fontSize: fontSizes.base,
     color: colors.text,
+    fontSize: fontSizes.base,
   },
 });

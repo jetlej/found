@@ -1,6 +1,6 @@
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useRef, useState } from "react";
-import { Animated } from "react-native";
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useRef, useState } from 'react';
+import { Animated } from 'react-native';
 
 /**
  * Hook to handle smooth screen transitions from splash/loading to content.
@@ -15,10 +15,10 @@ export function useScreenReady() {
   useEffect(() => {
     if (isReady && !hasAnimated.current) {
       hasAnimated.current = true;
-      
+
       // Hide splash screen and start fade-in
       SplashScreen.hideAsync();
-      
+
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 350,

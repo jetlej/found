@@ -1,23 +1,23 @@
-import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
-import { DEFAULT_MODEL } from "./lib/openai";
+import { v } from 'convex/values';
+import { internalMutation, internalQuery } from './_generated/server';
+import { DEFAULT_MODEL } from './lib/openai';
 
 // Internal query to find a user by name
 export const findUserByName = internalQuery({
   args: { name: v.string() },
   handler: async (ctx, args) => {
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query('users').collect();
     return users.find((u) => u.name === args.name) || null;
   },
 });
 
 // Internal query to count photos for a user
 export const countUserPhotos = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.id('users') },
   handler: async (ctx, args) => {
     const photos = await ctx.db
-      .query("photos")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .query('photos')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
       .collect();
     return photos.length;
   },
@@ -56,15 +56,30 @@ export const createTestUser = internalMutation({
   },
   handler: async (ctx, args) => {
     // Create fake user — use provided basics or fall back to placeholders
-    const clerkId = `test_${args.name.toLowerCase().replace(/\s+/g, "_")}_${Date.now()}`;
+    const clerkId = `test_${args.name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
 
     // Build optional fields (only include if provided)
     const optionalFields: Record<string, any> = {};
     const optionalKeys = [
-      "pronouns", "ethnicity", "hometown", "relationshipGoal", "relationshipType",
-      "hasChildren", "wantsChildren", "religion", "religionImportance",
-      "politicalLeaning", "politicalImportance", "drinking", "smoking",
-      "marijuana", "drugs", "pets", "ageRangeMin", "ageRangeMax", "ageRangeDealbreaker",
+      'pronouns',
+      'ethnicity',
+      'hometown',
+      'relationshipGoal',
+      'relationshipType',
+      'hasChildren',
+      'wantsChildren',
+      'religion',
+      'religionImportance',
+      'politicalLeaning',
+      'politicalImportance',
+      'drinking',
+      'smoking',
+      'marijuana',
+      'drugs',
+      'pets',
+      'ageRangeMin',
+      'ageRangeMax',
+      'ageRangeDealbreaker',
     ] as const;
     for (const key of optionalKeys) {
       if (args[key] !== undefined) optionalFields[key] = args[key];
@@ -75,36 +90,36 @@ export const createTestUser = internalMutation({
     if (args.marijuana !== undefined) optionalFields.marijuanaVisible = true;
     if (args.drugs !== undefined) optionalFields.drugsVisible = true;
 
-    const userId = await ctx.db.insert("users", {
+    const userId = await ctx.db.insert('users', {
       clerkId,
       phone: `+1555${Math.floor(Math.random() * 10000000)
         .toString()
-        .padStart(7, "0")}`,
+        .padStart(7, '0')}`,
       name: args.name,
-      gender: args.gender || "Non-binary",
-      sexuality: args.sexuality || "Everyone",
-      location: args.location || "San Francisco, CA",
-      birthdate: args.birthdate || "1995-06-15",
+      gender: args.gender || 'Non-binary',
+      sexuality: args.sexuality || 'Everyone',
+      location: args.location || 'San Francisco, CA',
+      birthdate: args.birthdate || '1995-06-15',
       heightInches: args.heightInches || 68,
       onboardingComplete: true,
       waitlistPosition: 999,
-      type: "bot",
+      type: 'bot',
       ...optionalFields,
     });
 
     // Get all questions to map order -> id
-    const questions = await ctx.db.query("questions").collect();
+    const questions = await ctx.db.query('questions').collect();
     const questionMap = new Map(questions.map((q) => [q.order.toString(), q._id]));
 
     // Insert answers
     for (const [orderStr, value] of Object.entries(args.answers)) {
       const questionId = questionMap.get(orderStr);
       if (questionId) {
-        await ctx.db.insert("answers", {
+        await ctx.db.insert('answers', {
           userId,
           questionId,
           value: value.toString(),
-          source: "manual",
+          source: 'manual',
         });
       }
     }
@@ -116,14 +131,14 @@ export const createTestUser = internalMutation({
 // Internal mutation to replace all answers for an existing user
 export const replaceUserAnswers = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
     answers: v.record(v.string(), v.string()),
   },
   handler: async (ctx, args) => {
     // Delete existing answers
     const existingAnswers = await ctx.db
-      .query("answers")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .query('answers')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
       .collect();
 
     for (const answer of existingAnswers) {
@@ -131,18 +146,18 @@ export const replaceUserAnswers = internalMutation({
     }
 
     // Get all questions to map order -> id
-    const questions = await ctx.db.query("questions").collect();
+    const questions = await ctx.db.query('questions').collect();
     const questionMap = new Map(questions.map((q) => [q.order.toString(), q._id]));
 
     // Insert new answers
     for (const [orderStr, value] of Object.entries(args.answers)) {
       const questionId = questionMap.get(orderStr);
       if (questionId) {
-        await ctx.db.insert("answers", {
+        await ctx.db.insert('answers', {
           userId: args.userId,
           questionId,
           value: value.toString(),
-          source: "ai",
+          source: 'ai',
         });
       }
     }
@@ -152,7 +167,7 @@ export const replaceUserAnswers = internalMutation({
     if (user && !user.onboardingComplete) {
       await ctx.db.patch(args.userId, {
         onboardingComplete: true,
-        onboardingStep: "complete",
+        onboardingStep: 'complete',
       });
     }
   },
@@ -161,7 +176,7 @@ export const replaceUserAnswers = internalMutation({
 // Internal mutation to create a user profile directly (skip AI parsing for test users)
 export const createTestProfile = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
     persona: v.object({
       name: v.string(),
       description: v.string(),
@@ -212,15 +227,15 @@ export const createTestProfile = internalMutation({
   handler: async (ctx, args) => {
     // Check if profile already exists
     const existing = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .query('userProfiles')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
       .first();
 
     if (existing) {
       await ctx.db.delete(existing._id);
     }
 
-    await ctx.db.insert("userProfiles", {
+    await ctx.db.insert('userProfiles', {
       userId: args.userId,
       values: args.extractedData.values,
       interests: args.extractedData.interests,
@@ -273,7 +288,7 @@ export const createTestProfile = internalMutation({
 export const getTestUsers = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query('users').collect();
     return users.filter((u) => u.waitlistPosition === 999);
   },
 });
@@ -281,7 +296,7 @@ export const getTestUsers = internalQuery({
 // Internal mutation to patch bio fields on a test user
 export const patchTestUserBasics = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
     pronouns: v.optional(v.string()),
     sexuality: v.optional(v.string()),
     birthdate: v.optional(v.string()),
@@ -324,22 +339,22 @@ export const patchTestUserBasics = internalMutation({
 // Internal mutation to save a photo record for a test user (called from action after storage)
 export const saveTestUserPhoto = internalMutation({
   args: {
-    userId: v.id("users"),
-    storageId: v.id("_storage"),
+    userId: v.id('users'),
+    storageId: v.id('_storage'),
     url: v.string(),
   },
   handler: async (ctx, args) => {
     // Delete any existing photos for this user
     const existingPhotos = await ctx.db
-      .query("photos")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .query('photos')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
       .collect();
     for (const photo of existingPhotos) {
       await ctx.db.delete(photo._id);
     }
 
     // Create the photo record
-    await ctx.db.insert("photos", {
+    await ctx.db.insert('photos', {
       userId: args.userId,
       storageId: args.storageId,
       url: args.url,
@@ -357,16 +372,16 @@ export const saveTestUserPhoto = internalMutation({
 export const backfillUserTypes = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query('users').collect();
     let bots = 0;
     let humans = 0;
     for (const user of users) {
       if (user.type) continue; // already set
       if (user.waitlistPosition === 999) {
-        await ctx.db.patch(user._id, { type: "bot" });
+        await ctx.db.patch(user._id, { type: 'bot' });
         bots++;
       } else {
-        await ctx.db.patch(user._id, { type: "human" });
+        await ctx.db.patch(user._id, { type: 'human' });
         humans++;
       }
     }
@@ -378,21 +393,39 @@ export const backfillUserTypes = internalMutation({
 export const deleteAllBots = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
-    const toDelete = users.filter((u) => u.type === "bot" || u.waitlistPosition === 999);
+    const users = await ctx.db.query('users').collect();
+    const toDelete = users.filter((u) => u.type === 'bot' || u.waitlistPosition === 999);
 
     for (const user of toDelete) {
-      const answers = await ctx.db.query("answers").withIndex("by_user", (q) => q.eq("userId", user._id)).collect();
+      const answers = await ctx.db
+        .query('answers')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .collect();
       for (const a of answers) await ctx.db.delete(a._id);
-      const photos = await ctx.db.query("photos").withIndex("by_user", (q) => q.eq("userId", user._id)).collect();
+      const photos = await ctx.db
+        .query('photos')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .collect();
       for (const p of photos) await ctx.db.delete(p._id);
-      const recordings = await ctx.db.query("voiceRecordings").withIndex("by_user", (q) => q.eq("userId", user._id)).collect();
+      const recordings = await ctx.db
+        .query('voiceRecordings')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .collect();
       for (const r of recordings) await ctx.db.delete(r._id);
-      const profiles = await ctx.db.query("userProfiles").withIndex("by_user", (q) => q.eq("userId", user._id)).collect();
+      const profiles = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .collect();
       for (const p of profiles) await ctx.db.delete(p._id);
-      const analyses1 = await ctx.db.query("compatibilityAnalyses").withIndex("by_user1", (q) => q.eq("user1Id", user._id)).collect();
+      const analyses1 = await ctx.db
+        .query('compatibilityAnalyses')
+        .withIndex('by_user1', (q) => q.eq('user1Id', user._id))
+        .collect();
       for (const a of analyses1) await ctx.db.delete(a._id);
-      const analyses2 = await ctx.db.query("compatibilityAnalyses").withIndex("by_user2", (q) => q.eq("user2Id", user._id)).collect();
+      const analyses2 = await ctx.db
+        .query('compatibilityAnalyses')
+        .withIndex('by_user2', (q) => q.eq('user2Id', user._id))
+        .collect();
       for (const a of analyses2) await ctx.db.delete(a._id);
       await ctx.db.delete(user._id);
     }
@@ -405,49 +438,49 @@ export const deleteAllBots = internalMutation({
 export const deleteNonVoiceBots = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query('users').collect();
     const toDelete = users.filter(
-      (u) => u.waitlistPosition === 999 && u.onboardingType !== "voice",
+      (u) => u.waitlistPosition === 999 && u.onboardingType !== 'voice'
     );
 
     for (const user of toDelete) {
       // Delete answers
       const answers = await ctx.db
-        .query("answers")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .query('answers')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
         .collect();
       for (const a of answers) await ctx.db.delete(a._id);
 
       // Delete photos
       const photos = await ctx.db
-        .query("photos")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .query('photos')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
         .collect();
       for (const p of photos) await ctx.db.delete(p._id);
 
       // Delete voice recordings (shouldn't have any, but be safe)
       const recordings = await ctx.db
-        .query("voiceRecordings")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .query('voiceRecordings')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
         .collect();
       for (const r of recordings) await ctx.db.delete(r._id);
 
       // Delete user profiles
       const profiles = await ctx.db
-        .query("userProfiles")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
         .collect();
       for (const p of profiles) await ctx.db.delete(p._id);
 
       // Delete compatibility analyses
       const analyses1 = await ctx.db
-        .query("compatibilityAnalyses")
-        .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+        .query('compatibilityAnalyses')
+        .withIndex('by_user1', (q) => q.eq('user1Id', user._id))
         .collect();
       for (const a of analyses1) await ctx.db.delete(a._id);
       const analyses2 = await ctx.db
-        .query("compatibilityAnalyses")
-        .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+        .query('compatibilityAnalyses')
+        .withIndex('by_user2', (q) => q.eq('user2Id', user._id))
         .collect();
       for (const a of analyses2) await ctx.db.delete(a._id);
 

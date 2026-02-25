@@ -1,15 +1,12 @@
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface AppHeaderProps {
   showLevelLink?: boolean;
   onLogoPress?: () => void;
 }
 
-export function AppHeader({
-  showLevelLink = true,
-  onLogoPress,
-}: AppHeaderProps) {
+export function AppHeader({ showLevelLink = true, onLogoPress }: AppHeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft} />
@@ -27,24 +24,24 @@ export function AppHeader({
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
   },
   headerLeft: {
+    alignItems: 'flex-start',
     flex: 1,
-    alignItems: "flex-start",
   },
   headerRight: {
+    alignItems: 'flex-end',
     flex: 1,
-    alignItems: "flex-end",
   },
   logo: {
-    fontFamily: fonts.logo,
-    fontSize: fontSizes["2xl"],
     color: colors.text,
+    fontFamily: fonts.logo,
+    fontSize: fontSizes['2xl'],
   },
 });

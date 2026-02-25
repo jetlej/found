@@ -1,8 +1,8 @@
-import { AppHeader } from "@/components/AppHeader";
-import { api } from "@/convex/_generated/api";
-import { Doc } from "@/convex/_generated/dataModel";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { AppHeader } from '@/components/AppHeader';
+import { api } from '@/convex/_generated/api';
+import { Doc } from '@/convex/_generated/dataModel';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import {
   IconAlertTriangle,
   IconBabyCarriage,
@@ -29,11 +29,11 @@ import {
   IconUserFilled,
   IconUsers,
   IconX,
-} from "@tabler/icons-react-native";
-import { useQuery } from "convex/react";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+} from '@tabler/icons-react-native';
+import { useQuery } from 'convex/react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -44,20 +44,16 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_INNER_WIDTH = SCREEN_WIDTH - spacing.lg * 4; // card padding + margin
 const PHOTO_GAP = 10;
 const PHOTO_WIDTH = CARD_INNER_WIDTH * 0.45;
 const PHOTO_HEIGHT = PHOTO_WIDTH * 1.25; // 4:5 aspect
-const PLACEHOLDER_COLOR = "#E0E0E0";
+const PLACEHOLDER_COLOR = '#E0E0E0';
 
 // Inline photo carousel for match cards
 function PhotoStrip({
@@ -78,10 +74,10 @@ function PhotoStrip({
         decelerationRate="fast"
         snapToInterval={PHOTO_WIDTH + PHOTO_GAP}
         contentContainerStyle={{ gap: PHOTO_GAP }}
-        style={{ overflow: "visible" }}
+        style={{ overflow: 'visible' }}
       >
         {items.map((url, i) => {
-          const rotation = i % 2 === 0 ? "-5deg" : "5deg";
+          const rotation = i % 2 === 0 ? '-5deg' : '5deg';
           const translateY = i % 2 === 0 ? 0 : PHOTO_HEIGHT * 0.05;
           return (
             <Pressable
@@ -93,11 +89,7 @@ function PhotoStrip({
               ]}
             >
               {url ? (
-                <Image
-                  source={{ uri: url }}
-                  style={photoStripStyles.photo}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: url }} style={photoStripStyles.photo} resizeMode="cover" />
               ) : (
                 <View style={photoStripStyles.placeholder}>
                   <IconUserFilled size={40} color="#BDBDBD" />
@@ -113,27 +105,27 @@ function PhotoStrip({
 
 const photoStripStyles = StyleSheet.create({
   container: {
-    marginTop: spacing.md - PHOTO_HEIGHT * 0.1,
     marginBottom: -spacing.md,
+    marginTop: spacing.md - PHOTO_HEIGHT * 0.1,
+    overflow: 'visible',
     paddingVertical: 20,
-    overflow: "visible",
-  },
-  photoWrapper: {
-    width: PHOTO_WIDTH,
-    height: PHOTO_HEIGHT,
   },
   photo: {
-    width: "100%",
-    height: "100%",
     borderRadius: 12,
+    height: '100%',
+    width: '100%',
+  },
+  photoWrapper: {
+    height: PHOTO_HEIGHT,
+    width: PHOTO_WIDTH,
   },
   placeholder: {
-    width: "100%",
-    height: "100%",
+    alignItems: 'center',
     backgroundColor: PLACEHOLDER_COLOR,
-    justifyContent: "center",
-    alignItems: "center",
     borderRadius: 12,
+    height: '100%',
+    justifyContent: 'center',
+    width: '100%',
   },
 });
 
@@ -163,20 +155,14 @@ function FullscreenPhotoViewer({
           showsHorizontalScrollIndicator={false}
           contentOffset={{ x: startIndex * SCREEN_WIDTH, y: 0 }}
           onScroll={(e) => {
-            const idx = Math.round(
-              e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
-            );
+            const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
             setActiveIndex(idx);
           }}
           scrollEventThrottle={16}
         >
           {photos.map((url, i) => (
             <View key={i} style={fullscreenStyles.page}>
-              <Image
-                source={{ uri: url }}
-                style={fullscreenStyles.image}
-                resizeMode="contain"
-              />
+              <Image source={{ uri: url }} style={fullscreenStyles.image} resizeMode="contain" />
             </View>
           ))}
         </ScrollView>
@@ -185,10 +171,7 @@ function FullscreenPhotoViewer({
             {photos.map((_, i) => (
               <View
                 key={i}
-                style={[
-                  fullscreenStyles.dot,
-                  i === activeIndex && fullscreenStyles.dotActive,
-                ]}
+                style={[fullscreenStyles.dot, i === activeIndex && fullscreenStyles.dotActive]}
               />
             ))}
           </View>
@@ -200,82 +183,82 @@ function FullscreenPhotoViewer({
 
 const fullscreenStyles = StyleSheet.create({
   backdrop: {
+    backgroundColor: '#000',
     flex: 1,
-    backgroundColor: "#000",
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   closeButton: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    zIndex: 10,
     padding: 8,
-  },
-  page: {
-    width: SCREEN_WIDTH,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH * 1.25,
-  },
-  dots: {
-    position: "absolute",
-    bottom: 60,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
+    position: 'absolute',
+    right: 20,
+    top: 60,
+    zIndex: 10,
   },
   dot: {
-    width: 8,
-    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.4)',
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.4)",
+    height: 8,
+    width: 8,
   },
   dotActive: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
+  },
+  dots: {
+    bottom: 60,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
+  image: {
+    height: SCREEN_WIDTH * 1.25,
+    width: SCREEN_WIDTH,
+  },
+  page: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: SCREEN_WIDTH,
   },
 });
 
 // AI compatibility analysis - 10 category system
 type AICategoryKey =
-  | "coreValues"
-  | "lifestyleAlignment"
-  | "relationshipGoals"
-  | "communicationStyle"
-  | "emotionalCompatibility"
-  | "familyPlanning"
-  | "socialLifestyle"
-  | "conflictResolution"
-  | "intimacyAlignment"
-  | "growthMindset";
+  | 'coreValues'
+  | 'lifestyleAlignment'
+  | 'relationshipGoals'
+  | 'communicationStyle'
+  | 'emotionalCompatibility'
+  | 'familyPlanning'
+  | 'socialLifestyle'
+  | 'conflictResolution'
+  | 'intimacyAlignment'
+  | 'growthMindset';
 
 const AI_CATEGORIES: {
   key: AICategoryKey;
   label: string;
   icon: React.ComponentType<{ size: number; color: string }>;
 }[] = [
-  { key: "coreValues", label: "Core Values", icon: IconDiamondFilled },
-  { key: "lifestyleAlignment", label: "Lifestyle", icon: IconSeedlingFilled },
-  { key: "relationshipGoals", label: "Relationship Goals", icon: IconTarget },
+  { key: 'coreValues', label: 'Core Values', icon: IconDiamondFilled },
+  { key: 'lifestyleAlignment', label: 'Lifestyle', icon: IconSeedlingFilled },
+  { key: 'relationshipGoals', label: 'Relationship Goals', icon: IconTarget },
   {
-    key: "communicationStyle",
-    label: "Communication",
+    key: 'communicationStyle',
+    label: 'Communication',
     icon: IconMessageCircle,
   },
-  { key: "emotionalCompatibility", label: "Emotional", icon: IconMoodSmile },
-  { key: "familyPlanning", label: "Family Planning", icon: IconBabyCarriage },
-  { key: "socialLifestyle", label: "Social Life", icon: IconUsers },
-  { key: "conflictResolution", label: "Conflict Style", icon: IconShield },
-  { key: "intimacyAlignment", label: "Intimacy", icon: IconFlame },
-  { key: "growthMindset", label: "Growth Mindset", icon: IconRocket },
+  { key: 'emotionalCompatibility', label: 'Emotional', icon: IconMoodSmile },
+  { key: 'familyPlanning', label: 'Family Planning', icon: IconBabyCarriage },
+  { key: 'socialLifestyle', label: 'Social Life', icon: IconUsers },
+  { key: 'conflictResolution', label: 'Conflict Style', icon: IconShield },
+  { key: 'intimacyAlignment', label: 'Intimacy', icon: IconFlame },
+  { key: 'growthMindset', label: 'Growth Mindset', icon: IconRocket },
 ];
 
 // Types for compatibility calculation
-type UserProfile = Doc<"userProfiles">;
+type UserProfile = Doc<'userProfiles'>;
 
 // Format height from inches to ft'in" display
 function formatHeight(inches?: number): string | null {
@@ -288,7 +271,7 @@ function formatHeight(inches?: number): string | null {
 // Convert snake_case enum values to readable labels
 // e.g. "words_of_affirmation" -> "Words of Affirmation", "split_50_50" -> "Split 50/50"
 function formatLabel(value: string): string {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // Hinge-style basics display
@@ -300,18 +283,17 @@ type BasicRow = {
   label: string;
 };
 
-function getBasicsData(user: Doc<"users">) {
+function getBasicsData(user: Doc<'users'>) {
   // Top row: quick-glance items (horizontal scroll)
   const topRow: BasicRow[] = [];
-  if (user.heightInches)
-    topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches)! });
+  if (user.heightInches) topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches)! });
   if (user.hometown) topRow.push({ icon: IconHome, label: user.hometown });
   if (user.wantsChildren) {
     const kidsLabels: Record<string, string> = {
-      yes: "Wants children",
+      yes: 'Wants children',
       no: "Doesn't want children",
-      open: "Open to children",
-      not_sure: "Not sure about children",
+      open: 'Open to children',
+      not_sure: 'Not sure about children',
     };
     topRow.push({
       icon: IconBabyCarriage,
@@ -325,15 +307,12 @@ function getBasicsData(user: Doc<"users">) {
     topRow.push({ icon: IconSmokingNo, label: user.smoking });
   if (user.marijuanaVisible !== false && user.marijuana)
     topRow.push({ icon: IconCannabis, label: user.marijuana });
-  if (user.drugsVisible !== false && user.drugs)
-    topRow.push({ icon: IconPill, label: user.drugs });
+  if (user.drugsVisible !== false && user.drugs) topRow.push({ icon: IconPill, label: user.drugs });
 
   // Detail rows (important compatibility fields)
   const detailRows: BasicRow[] = [];
-  if (user.ethnicity)
-    detailRows.push({ icon: IconFlag, label: user.ethnicity });
-  if (user.religion)
-    detailRows.push({ icon: IconBuildingChurch, label: user.religion });
+  if (user.ethnicity) detailRows.push({ icon: IconFlag, label: user.ethnicity });
+  if (user.religion) detailRows.push({ icon: IconBuildingChurch, label: user.religion });
   if (user.politicalLeaning)
     detailRows.push({
       icon: IconBuildingCommunity,
@@ -342,12 +321,11 @@ function getBasicsData(user: Doc<"users">) {
   // Combine relationship goal + type into one line
   const goalParts: string[] = [];
   if (user.relationshipGoal) {
-    const goal = user.relationshipGoal.replace(/_/g, " ");
+    const goal = user.relationshipGoal.replace(/_/g, ' ');
     goalParts.push(goal.charAt(0).toUpperCase() + goal.slice(1));
   }
   if (user.relationshipType) goalParts.push(user.relationshipType);
-  if (goalParts.length > 0)
-    detailRows.push({ icon: IconHeart, label: goalParts.join(" / ") });
+  if (goalParts.length > 0) detailRows.push({ icon: IconHeart, label: goalParts.join(' / ') });
 
   return { topRow, detailRows };
 }
@@ -355,11 +333,7 @@ function getBasicsData(user: Doc<"users">) {
 function ScrollableRow({ items }: { items: BasicRow[] }) {
   if (items.length === 0) return null;
   return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-    >
+    <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
       <View style={basicsStyles.topRow}>
         {items.map((item, i) => (
           <View key={i} style={basicsStyles.topItem}>
@@ -373,16 +347,14 @@ function ScrollableRow({ items }: { items: BasicRow[] }) {
   );
 }
 
-function BasicsAtAGlance({ user }: { user: Doc<"users"> }) {
+function BasicsAtAGlance({ user }: { user: Doc<'users'> }) {
   const { topRow, detailRows } = getBasicsData(user);
   if (topRow.length === 0 && detailRows.length === 0) return null;
 
   return (
     <View style={basicsStyles.container}>
       <ScrollableRow items={topRow} />
-      {detailRows.length > 0 && topRow.length > 0 && (
-        <View style={basicsStyles.dividerLine} />
-      )}
+      {detailRows.length > 0 && topRow.length > 0 && <View style={basicsStyles.dividerLine} />}
       <ScrollableRow items={detailRows} />
     </View>
   );
@@ -394,32 +366,32 @@ const basicsStyles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: spacing.xs,
   },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  topItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  dividerLine: {
+    backgroundColor: colors.border,
+    height: 1,
+    marginHorizontal: spacing.md,
   },
   topDivider: {
-    width: 1,
-    height: 20,
     backgroundColor: colors.border,
+    height: 20,
     marginHorizontal: spacing.sm,
+    width: 1,
+  },
+  topItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   topLabel: {
-    fontSize: fontSizes.sm,
     color: colors.text,
     fontFamily: fonts.serif,
+    fontSize: fontSizes.sm,
   },
-  dividerLine: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: spacing.md,
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
 });
 
@@ -428,20 +400,19 @@ const basicsStyles = StyleSheet.create({
 // Keywords that map to profile traits/values
 const KEYWORD_MAPPINGS: Record<string, (profile: UserProfile) => boolean> = {
   // Family/Kids related
-  "wants kids": (p) =>
-    p.familyPlans.wantsKids === "yes" || p.familyPlans.wantsKids === "open",
-  "doesn't want kids": (p) => p.familyPlans.wantsKids === "no",
-  "has kids": (p) => p.demographics?.hasKids === true,
-  "no kids": (p) => p.demographics?.hasKids !== true,
-  "family-oriented": (p) => p.familyPlans.familyCloseness >= 7,
+  'wants kids': (p) => p.familyPlans.wantsKids === 'yes' || p.familyPlans.wantsKids === 'open',
+  "doesn't want kids": (p) => p.familyPlans.wantsKids === 'no',
+  'has kids': (p) => p.demographics?.hasKids === true,
+  'no kids': (p) => p.demographics?.hasKids !== true,
+  'family-oriented': (p) => p.familyPlans.familyCloseness >= 7,
 
   // Personality traits
   ambitious: (p) => p.traits.ambition >= 7,
   driven: (p) => p.traits.ambition >= 7,
   adventurous: (p) => p.traits.adventurousness >= 7,
   spontaneous: (p) => (p.traits.planningStyle ?? 5) <= 4,
-  "emotionally available": (p) => p.traits.emotionalOpenness >= 6,
-  "emotionally open": (p) => p.traits.emotionalOpenness >= 6,
+  'emotionally available': (p) => p.traits.emotionalOpenness >= 6,
+  'emotionally open': (p) => p.traits.emotionalOpenness >= 6,
   independent: (p) => p.traits.independenceNeed >= 7,
   traditional: (p) => p.traits.traditionalValues >= 7,
   progressive: (p) => p.traits.traditionalValues <= 4,
@@ -450,56 +421,49 @@ const KEYWORD_MAPPINGS: Record<string, (profile: UserProfile) => boolean> = {
   extroverted: (p) => p.traits.introversion <= 4,
   social: (p) => (p.traits.socialEnergy ?? 5) >= 6,
   homebody: (p) => (p.traits.socialEnergy ?? 5) <= 4,
-  "secure attachment": (p) =>
-    (p.traits.attachmentStyle ?? 5) >= 4 &&
-    (p.traits.attachmentStyle ?? 5) <= 6,
+  'secure attachment': (p) =>
+    (p.traits.attachmentStyle ?? 5) >= 4 && (p.traits.attachmentStyle ?? 5) <= 6,
 
   // Lifestyle
   active: (p) =>
-    p.lifestyle.exerciseLevel.toLowerCase().includes("daily") ||
-    p.lifestyle.exerciseLevel.toLowerCase().includes("5+"),
+    p.lifestyle.exerciseLevel.toLowerCase().includes('daily') ||
+    p.lifestyle.exerciseLevel.toLowerCase().includes('5+'),
   fit: (p) =>
-    p.lifestyle.exerciseLevel.toLowerCase().includes("daily") ||
-    p.lifestyle.exerciseLevel.toLowerCase().includes("5+"),
+    p.lifestyle.exerciseLevel.toLowerCase().includes('daily') ||
+    p.lifestyle.exerciseLevel.toLowerCase().includes('5+'),
   healthy: (p) => (p.health?.physicalHealthRating ?? 5) >= 7,
-  "non-smoker": (p) =>
-    p.health?.smokingStatus?.toLowerCase() === "never" ||
-    p.health?.smokingStatus?.toLowerCase() === "no",
+  'non-smoker': (p) =>
+    p.health?.smokingStatus?.toLowerCase() === 'never' ||
+    p.health?.smokingStatus?.toLowerCase() === 'no',
   "doesn't smoke": (p) =>
-    p.health?.smokingStatus?.toLowerCase() === "never" ||
-    p.health?.smokingStatus?.toLowerCase() === "no",
-  "doesn't drink": (p) => p.lifestyle.alcoholUse.toLowerCase() === "never",
-  "drinks socially": (p) =>
-    p.lifestyle.alcoholUse.toLowerCase().includes("social") ||
-    p.lifestyle.alcoholUse.toLowerCase().includes("occasionally"),
-  "no drugs": (p) => p.lifestyle.drugUse.toLowerCase() === "never",
-  "early bird": (p) =>
-    p.lifestyle.sleepSchedule.toLowerCase().includes("early"),
-  "night owl": (p) =>
-    p.lifestyle.sleepSchedule.toLowerCase().includes("late") ||
-    p.lifestyle.sleepSchedule.toLowerCase().includes("night"),
-  "dog person": (p) => p.lifestyle.petPreference.toLowerCase().includes("dog"),
-  "cat person": (p) => p.lifestyle.petPreference.toLowerCase().includes("cat"),
-  "pet-friendly": (p) =>
-    !p.lifestyle.petPreference.toLowerCase().includes("no pet"),
+    p.health?.smokingStatus?.toLowerCase() === 'never' ||
+    p.health?.smokingStatus?.toLowerCase() === 'no',
+  "doesn't drink": (p) => p.lifestyle.alcoholUse.toLowerCase() === 'never',
+  'drinks socially': (p) =>
+    p.lifestyle.alcoholUse.toLowerCase().includes('social') ||
+    p.lifestyle.alcoholUse.toLowerCase().includes('occasionally'),
+  'no drugs': (p) => p.lifestyle.drugUse.toLowerCase() === 'never',
+  'early bird': (p) => p.lifestyle.sleepSchedule.toLowerCase().includes('early'),
+  'night owl': (p) =>
+    p.lifestyle.sleepSchedule.toLowerCase().includes('late') ||
+    p.lifestyle.sleepSchedule.toLowerCase().includes('night'),
+  'dog person': (p) => p.lifestyle.petPreference.toLowerCase().includes('dog'),
+  'cat person': (p) => p.lifestyle.petPreference.toLowerCase().includes('cat'),
+  'pet-friendly': (p) => !p.lifestyle.petPreference.toLowerCase().includes('no pet'),
 
   // Relationship style
-  "good communicator": (p) => (p.traits.communicationStyle ?? 5) >= 6,
-  "quality time": (p) =>
-    p.relationshipStyle.loveLanguage.toLowerCase().includes("quality time"),
-  "physical touch": (p) =>
-    p.relationshipStyle.loveLanguage.toLowerCase().includes("physical"),
-  "words of affirmation": (p) =>
-    p.relationshipStyle.loveLanguage.toLowerCase().includes("words"),
-  "acts of service": (p) =>
-    p.relationshipStyle.loveLanguage.toLowerCase().includes("acts"),
-  gifts: (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes("gift"),
+  'good communicator': (p) => (p.traits.communicationStyle ?? 5) >= 6,
+  'quality time': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('quality time'),
+  'physical touch': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('physical'),
+  'words of affirmation': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('words'),
+  'acts of service': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('acts'),
+  gifts: (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('gift'),
 
   // Demographics
   religious: (p) => (p.demographics?.religiosity ?? 0) >= 6,
   spiritual: (p) => (p.demographics?.religiosity ?? 0) >= 4,
-  "not religious": (p) => (p.demographics?.religiosity ?? 0) <= 3,
-  "politically active": (p) => (p.demographics?.politicalIntensity ?? 0) >= 6,
+  'not religious': (p) => (p.demographics?.religiosity ?? 0) <= 3,
+  'politically active': (p) => (p.demographics?.politicalIntensity ?? 0) >= 6,
 };
 
 // Check if a must-have is met
@@ -509,10 +473,7 @@ type MustHaveResult = {
   reason?: string;
 };
 
-function checkMustHaves(
-  mustHaves: string[],
-  targetProfile: UserProfile,
-): MustHaveResult[] {
+function checkMustHaves(mustHaves: string[], targetProfile: UserProfile): MustHaveResult[] {
   return mustHaves.map((mustHave) => {
     const lowerMustHave = mustHave.toLowerCase();
 
@@ -523,43 +484,37 @@ function checkMustHaves(
         return {
           mustHave,
           met,
-          reason: met ? "Profile matches" : "Profile doesn't match",
+          reason: met ? 'Profile matches' : "Profile doesn't match",
         };
       }
     }
 
     // Check against values array
     const matchesValue = targetProfile.values.some(
-      (v) =>
-        v.toLowerCase().includes(lowerMustHave) ||
-        lowerMustHave.includes(v.toLowerCase()),
+      (v) => v.toLowerCase().includes(lowerMustHave) || lowerMustHave.includes(v.toLowerCase())
     );
     if (matchesValue) {
-      return { mustHave, met: true, reason: "Matches their values" };
+      return { mustHave, met: true, reason: 'Matches their values' };
     }
 
     // Check against interests array
     const matchesInterest = targetProfile.interests.some(
-      (i) =>
-        i.toLowerCase().includes(lowerMustHave) ||
-        lowerMustHave.includes(i.toLowerCase()),
+      (i) => i.toLowerCase().includes(lowerMustHave) || lowerMustHave.includes(i.toLowerCase())
     );
     if (matchesInterest) {
-      return { mustHave, met: true, reason: "Matches their interests" };
+      return { mustHave, met: true, reason: 'Matches their interests' };
     }
 
     // Check against keywords
     const matchesKeyword = targetProfile.keywords.some(
-      (k) =>
-        k.toLowerCase().includes(lowerMustHave) ||
-        lowerMustHave.includes(k.toLowerCase()),
+      (k) => k.toLowerCase().includes(lowerMustHave) || lowerMustHave.includes(k.toLowerCase())
     );
     if (matchesKeyword) {
-      return { mustHave, met: true, reason: "Found in profile" };
+      return { mustHave, met: true, reason: 'Found in profile' };
     }
 
     // Can't determine - mark as unknown (neutral)
-    return { mustHave, met: true, reason: "Unable to verify" };
+    return { mustHave, met: true, reason: 'Unable to verify' };
   });
 }
 
@@ -567,7 +522,7 @@ function checkMustHaves(
 type DealbreakeResult = {
   dealbreaker: string;
   triggered: boolean;
-  severity: "clear" | "warning" | "triggered";
+  severity: 'clear' | 'warning' | 'triggered';
   reason?: string;
 };
 
@@ -576,148 +531,132 @@ const DEALBREAKER_CHECKS: Record<
   string,
   (profile: UserProfile) => {
     triggered: boolean;
-    severity: "clear" | "warning" | "triggered";
+    severity: 'clear' | 'warning' | 'triggered';
     reason: string;
   }
 > = {
   // Substance-related
   smoking: (p) => {
-    const status = p.health?.smokingStatus?.toLowerCase() || "";
-    if (status === "never" || status === "no")
+    const status = p.health?.smokingStatus?.toLowerCase() || '';
+    if (status === 'never' || status === 'no')
       return {
         triggered: false,
-        severity: "clear",
+        severity: 'clear',
         reason: "They don't smoke",
       };
-    if (status.includes("quit") || status.includes("former"))
-      return { triggered: false, severity: "warning", reason: "Former smoker" };
-    return { triggered: true, severity: "triggered", reason: "They smoke" };
+    if (status.includes('quit') || status.includes('former'))
+      return { triggered: false, severity: 'warning', reason: 'Former smoker' };
+    return { triggered: true, severity: 'triggered', reason: 'They smoke' };
   },
   drugs: (p) => {
     const usage = p.lifestyle.drugUse.toLowerCase();
-    if (usage === "never")
-      return { triggered: false, severity: "clear", reason: "No drug use" };
-    if (usage.includes("rarely") || usage.includes("occasionally"))
+    if (usage === 'never') return { triggered: false, severity: 'clear', reason: 'No drug use' };
+    if (usage.includes('rarely') || usage.includes('occasionally'))
       return {
         triggered: false,
-        severity: "warning",
-        reason: "Occasional use",
+        severity: 'warning',
+        reason: 'Occasional use',
       };
-    return { triggered: true, severity: "triggered", reason: "Uses drugs" };
+    return { triggered: true, severity: 'triggered', reason: 'Uses drugs' };
   },
-  "heavy drinking": (p) => {
+  'heavy drinking': (p) => {
     const usage = p.lifestyle.alcoholUse.toLowerCase();
-    if (
-      usage === "never" ||
-      usage.includes("rarely") ||
-      usage.includes("social")
-    )
+    if (usage === 'never' || usage.includes('rarely') || usage.includes('social'))
       return {
         triggered: false,
-        severity: "clear",
-        reason: "Light/no drinking",
+        severity: 'clear',
+        reason: 'Light/no drinking',
       };
-    if (usage.includes("weekly") || usage.includes("moderate"))
+    if (usage.includes('weekly') || usage.includes('moderate'))
       return {
         triggered: false,
-        severity: "warning",
-        reason: "Moderate drinking",
+        severity: 'warning',
+        reason: 'Moderate drinking',
       };
-    return { triggered: true, severity: "triggered", reason: "Heavy drinker" };
+    return { triggered: true, severity: 'triggered', reason: 'Heavy drinker' };
   },
   alcohol: (p) => {
     const usage = p.lifestyle.alcoholUse.toLowerCase();
-    if (usage === "never")
-      return { triggered: false, severity: "clear", reason: "Doesn't drink" };
-    return { triggered: true, severity: "triggered", reason: "Drinks alcohol" };
+    if (usage === 'never') return { triggered: false, severity: 'clear', reason: "Doesn't drink" };
+    return { triggered: true, severity: 'triggered', reason: 'Drinks alcohol' };
   },
 
   // Family
-  "wants kids": (p) => {
-    if (p.familyPlans.wantsKids === "no")
+  'wants kids': (p) => {
+    if (p.familyPlans.wantsKids === 'no')
       return {
         triggered: false,
-        severity: "clear",
+        severity: 'clear',
         reason: "Doesn't want kids",
       };
-    if (
-      p.familyPlans.wantsKids === "maybe" ||
-      p.familyPlans.wantsKids === "open"
-    )
-      return { triggered: false, severity: "warning", reason: "Open to kids" };
-    return { triggered: true, severity: "triggered", reason: "Wants kids" };
+    if (p.familyPlans.wantsKids === 'maybe' || p.familyPlans.wantsKids === 'open')
+      return { triggered: false, severity: 'warning', reason: 'Open to kids' };
+    return { triggered: true, severity: 'triggered', reason: 'Wants kids' };
   },
   "doesn't want kids": (p) => {
-    if (p.familyPlans.wantsKids === "yes")
-      return { triggered: false, severity: "clear", reason: "Wants kids" };
-    if (
-      p.familyPlans.wantsKids === "maybe" ||
-      p.familyPlans.wantsKids === "open"
-    )
-      return { triggered: false, severity: "warning", reason: "Undecided" };
+    if (p.familyPlans.wantsKids === 'yes')
+      return { triggered: false, severity: 'clear', reason: 'Wants kids' };
+    if (p.familyPlans.wantsKids === 'maybe' || p.familyPlans.wantsKids === 'open')
+      return { triggered: false, severity: 'warning', reason: 'Undecided' };
     return {
       triggered: true,
-      severity: "triggered",
+      severity: 'triggered',
       reason: "Doesn't want kids",
     };
   },
-  "has kids": (p) => {
-    if (!p.demographics?.hasKids)
-      return { triggered: false, severity: "clear", reason: "No kids" };
-    return { triggered: true, severity: "triggered", reason: "Has kids" };
+  'has kids': (p) => {
+    if (!p.demographics?.hasKids) return { triggered: false, severity: 'clear', reason: 'No kids' };
+    return { triggered: true, severity: 'triggered', reason: 'Has kids' };
   },
 
   // Religion/Politics
   religious: (p) => {
     if ((p.demographics?.religiosity ?? 0) <= 3)
-      return { triggered: false, severity: "clear", reason: "Not religious" };
+      return { triggered: false, severity: 'clear', reason: 'Not religious' };
     if ((p.demographics?.religiosity ?? 0) <= 5)
       return {
         triggered: false,
-        severity: "warning",
-        reason: "Somewhat spiritual",
+        severity: 'warning',
+        reason: 'Somewhat spiritual',
       };
-    return { triggered: true, severity: "triggered", reason: "Religious" };
+    return { triggered: true, severity: 'triggered', reason: 'Religious' };
   },
-  "not religious": (p) => {
+  'not religious': (p) => {
     if ((p.demographics?.religiosity ?? 0) >= 6)
-      return { triggered: false, severity: "clear", reason: "Religious" };
-    return { triggered: true, severity: "triggered", reason: "Not religious" };
+      return { triggered: false, severity: 'clear', reason: 'Religious' };
+    return { triggered: true, severity: 'triggered', reason: 'Not religious' };
   },
 
   // Personality extremes
-  "too introverted": (p) => {
+  'too introverted': (p) => {
     if (p.traits.introversion <= 7)
       return {
         triggered: false,
-        severity: "clear",
-        reason: "Balanced social style",
+        severity: 'clear',
+        reason: 'Balanced social style',
       };
     return {
       triggered: true,
-      severity: "triggered",
-      reason: "Very introverted",
+      severity: 'triggered',
+      reason: 'Very introverted',
     };
   },
-  "too extroverted": (p) => {
+  'too extroverted': (p) => {
     if (p.traits.introversion >= 3)
       return {
         triggered: false,
-        severity: "clear",
-        reason: "Balanced social style",
+        severity: 'clear',
+        reason: 'Balanced social style',
       };
     return {
       triggered: true,
-      severity: "triggered",
-      reason: "Very extroverted",
+      severity: 'triggered',
+      reason: 'Very extroverted',
     };
   },
 };
 
-function checkDealbreakers(
-  dealbreakers: string[],
-  targetProfile: UserProfile,
-): DealbreakeResult[] {
+function checkDealbreakers(dealbreakers: string[], targetProfile: UserProfile): DealbreakeResult[] {
   return dealbreakers.map((dealbreaker) => {
     const lowerDealbreaker = dealbreaker.toLowerCase();
 
@@ -731,27 +670,27 @@ function checkDealbreakers(
 
     // Check if dealbreaker appears in their dealbreakers (compatible if different)
     const theyHaveToo = targetProfile.dealbreakers.some((d) =>
-      d.toLowerCase().includes(lowerDealbreaker),
+      d.toLowerCase().includes(lowerDealbreaker)
     );
     if (theyHaveToo) {
       return {
         dealbreaker,
         triggered: false,
-        severity: "clear" as const,
-        reason: "They share this dealbreaker",
+        severity: 'clear' as const,
+        reason: 'They share this dealbreaker',
       };
     }
 
     // Check against their values/interests (if matches, it's a problem)
     const inTheirValues = targetProfile.values.some((v) =>
-      lowerDealbreaker.includes(v.toLowerCase()),
+      lowerDealbreaker.includes(v.toLowerCase())
     );
     if (inTheirValues) {
       return {
         dealbreaker,
         triggered: true,
-        severity: "triggered" as const,
-        reason: "Part of their core values",
+        severity: 'triggered' as const,
+        reason: 'Part of their core values',
       };
     }
 
@@ -759,22 +698,22 @@ function checkDealbreakers(
     return {
       dealbreaker,
       triggered: false,
-      severity: "clear" as const,
-      reason: "No conflict detected",
+      severity: 'clear' as const,
+      reason: 'No conflict detected',
     };
   });
 }
 
 // Score color based on value (10% increments) - red to green gradient (saturated/dark)
 function getScoreColor(score: number): string {
-  if (score >= 90) return "#0B9D4F"; // Deep green
-  if (score >= 80) return "#2D8E3C"; // Forest green
-  if (score >= 70) return "#5A9E2F"; // Olive green
-  if (score >= 60) return "#B8960F"; // Dark gold
-  if (score >= 50) return "#C97A0A"; // Dark amber
-  if (score >= 40) return "#C95A10"; // Burnt orange
-  if (score >= 30) return "#B83220"; // Dark red-orange
-  return "#A3111B"; // Deep red
+  if (score >= 90) return '#0B9D4F'; // Deep green
+  if (score >= 80) return '#2D8E3C'; // Forest green
+  if (score >= 70) return '#5A9E2F'; // Olive green
+  if (score >= 60) return '#B8960F'; // Dark gold
+  if (score >= 50) return '#C97A0A'; // Dark amber
+  if (score >= 40) return '#C95A10'; // Burnt orange
+  if (score >= 30) return '#B83220'; // Dark red-orange
+  return '#A3111B'; // Deep red
 }
 
 // Trait label helper
@@ -786,75 +725,66 @@ function getTraitLabel(trait: string): {
   high: string;
   inverted?: boolean;
 } {
-  const labels: Record<
-    string,
-    { name: string; low: string; high: string; inverted?: boolean }
-  > = {
+  const labels: Record<string, { name: string; low: string; high: string; inverted?: boolean }> = {
     // Inverted: DB has 1=extrovert, 10=introvert, but we want introvert on LEFT
     introversion: {
-      name: "Social Style",
-      low: "Introvert",
-      high: "Extrovert",
+      name: 'Social Style',
+      low: 'Introvert',
+      high: 'Extrovert',
       inverted: true,
     },
     adventurousness: {
-      name: "Adventure",
-      low: "Routine-lover",
-      high: "Thrill-seeker",
+      name: 'Adventure',
+      low: 'Routine-lover',
+      high: 'Thrill-seeker',
     },
-    ambition: { name: "Ambition", low: "Content", high: "Driven" },
+    ambition: { name: 'Ambition', low: 'Content', high: 'Driven' },
     emotionalOpenness: {
-      name: "Emotional Openness",
-      low: "Private",
-      high: "Open book",
+      name: 'Emotional Openness',
+      low: 'Private',
+      high: 'Open book',
     },
     // Inverted: DB has 1=progressive, 10=traditional, but we want traditional on LEFT
     traditionalValues: {
-      name: "Values",
-      low: "Traditional",
-      high: "Progressive",
+      name: 'Values',
+      low: 'Traditional',
+      high: 'Progressive',
       inverted: true,
     },
     independenceNeed: {
-      name: "Independence",
-      low: "Together",
-      high: "Space needed",
+      name: 'Independence',
+      low: 'Together',
+      high: 'Space needed',
     },
     romanticStyle: {
-      name: "Romance Style",
-      low: "Practical",
-      high: "Deeply romantic",
+      name: 'Romance Style',
+      low: 'Practical',
+      high: 'Deeply romantic',
     },
     socialEnergy: {
-      name: "Social Energy",
-      low: "Homebody",
-      high: "Social butterfly",
+      name: 'Social Energy',
+      low: 'Homebody',
+      high: 'Social butterfly',
     },
     communicationStyle: {
-      name: "Communication",
-      low: "Reserved",
-      high: "Expressive",
+      name: 'Communication',
+      low: 'Reserved',
+      high: 'Expressive',
     },
-    attachmentStyle: { name: "Attachment", low: "Avoidant", high: "Anxious" },
+    attachmentStyle: { name: 'Attachment', low: 'Avoidant', high: 'Anxious' },
     // Inverted: DB has 1=spontaneous, 10=structured, but we want structured on LEFT
     planningStyle: {
-      name: "Planning",
-      low: "Structured",
-      high: "Spontaneous",
+      name: 'Planning',
+      low: 'Structured',
+      high: 'Spontaneous',
       inverted: true,
     },
   };
-  return labels[trait] || { name: trait, low: "Low", high: "High" };
+  return labels[trait] || { name: trait, low: 'Low', high: 'High' };
 }
 
 // Profile detail section component
-function ProfileSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.profileSection}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -900,20 +830,10 @@ function MustHavesSection({
           <View style={styles.checkItems}>
             {theyMeetMine.map((result, i) => (
               <View key={i} style={styles.checkItem}>
-                <Text
-                  style={[
-                    styles.checkIcon,
-                    result.met ? styles.checkMet : styles.checkMissed,
-                  ]}
-                >
-                  {result.met ? "✓" : "✗"}
+                <Text style={[styles.checkIcon, result.met ? styles.checkMet : styles.checkMissed]}>
+                  {result.met ? '✓' : '✗'}
                 </Text>
-                <Text
-                  style={[
-                    styles.checkText,
-                    !result.met && styles.checkTextMissed,
-                  ]}
-                >
+                <Text style={[styles.checkText, !result.met && styles.checkTextMissed]}>
                   {result.mustHave}
                 </Text>
               </View>
@@ -930,20 +850,10 @@ function MustHavesSection({
           <View style={styles.checkItems}>
             {iMeetTheirs.map((result, i) => (
               <View key={i} style={styles.checkItem}>
-                <Text
-                  style={[
-                    styles.checkIcon,
-                    result.met ? styles.checkMet : styles.checkMissed,
-                  ]}
-                >
-                  {result.met ? "✓" : "✗"}
+                <Text style={[styles.checkIcon, result.met ? styles.checkMet : styles.checkMissed]}>
+                  {result.met ? '✓' : '✗'}
                 </Text>
-                <Text
-                  style={[
-                    styles.checkText,
-                    !result.met && styles.checkTextMissed,
-                  ]}
-                >
+                <Text style={[styles.checkText, !result.met && styles.checkTextMissed]}>
                   {result.mustHave}
                 </Text>
               </View>
@@ -987,18 +897,11 @@ function DealbreakersSection({
   const iTriggerTheirs = checkDealbreakers(uniqueTheirDealbreakers, myProfile);
 
   const myTriggeredCount = theyTriggerMine.filter((r) => r.triggered).length;
-  const myWarningCount = theyTriggerMine.filter(
-    (r) => r.severity === "warning",
-  ).length;
+  const myWarningCount = theyTriggerMine.filter((r) => r.severity === 'warning').length;
   const theirTriggeredCount = iTriggerTheirs.filter((r) => r.triggered).length;
-  const theirWarningCount = iTriggerTheirs.filter(
-    (r) => r.severity === "warning",
-  ).length;
+  const theirWarningCount = iTriggerTheirs.filter((r) => r.severity === 'warning').length;
 
-  if (
-    uniqueMyDealbreakers.length === 0 &&
-    uniqueTheirDealbreakers.length === 0
-  ) {
+  if (uniqueMyDealbreakers.length === 0 && uniqueTheirDealbreakers.length === 0) {
     return null;
   }
 
@@ -1009,9 +912,9 @@ function DealbreakersSection({
       {uniqueMyDealbreakers.length > 0 && (
         <View style={styles.checkGroup}>
           <Text style={styles.checkGroupTitle}>
-            Your dealbreakers:{" "}
+            Your dealbreakers:{' '}
             {myTriggeredCount === 0 && myWarningCount === 0
-              ? "All clear ✓"
+              ? 'All clear ✓'
               : myTriggeredCount > 0
                 ? `${myTriggeredCount} triggered`
                 : `${myWarningCount} warnings`}
@@ -1022,28 +925,24 @@ function DealbreakersSection({
                 <Text
                   style={[
                     styles.checkIcon,
-                    result.severity === "clear"
+                    result.severity === 'clear'
                       ? styles.checkMet
-                      : result.severity === "warning"
+                      : result.severity === 'warning'
                         ? styles.checkWarning
                         : styles.checkMissed,
                   ]}
                 >
-                  {result.severity === "clear"
-                    ? "✓"
-                    : result.severity === "warning"
-                      ? "⚠"
-                      : "✗"}
+                  {result.severity === 'clear' ? '✓' : result.severity === 'warning' ? '⚠' : '✗'}
                 </Text>
                 <Text
                   style={[
                     styles.checkText,
-                    result.severity === "triggered" && styles.checkTextMissed,
-                    result.severity === "warning" && styles.checkTextWarning,
+                    result.severity === 'triggered' && styles.checkTextMissed,
+                    result.severity === 'warning' && styles.checkTextWarning,
                   ]}
                 >
                   {result.dealbreaker}
-                  {result.reason && result.severity !== "clear" && (
+                  {result.reason && result.severity !== 'clear' && (
                     <Text style={styles.checkReason}> ({result.reason})</Text>
                   )}
                 </Text>
@@ -1056,9 +955,9 @@ function DealbreakersSection({
       {uniqueTheirDealbreakers.length > 0 && (
         <View style={styles.checkGroup}>
           <Text style={styles.checkGroupTitle}>
-            {theirName}'s dealbreakers:{" "}
+            {theirName}'s dealbreakers:{' '}
             {theirTriggeredCount === 0 && theirWarningCount === 0
-              ? "All clear ✓"
+              ? 'All clear ✓'
               : theirTriggeredCount > 0
                 ? `${theirTriggeredCount} triggered`
                 : `${theirWarningCount} warnings`}
@@ -1069,28 +968,24 @@ function DealbreakersSection({
                 <Text
                   style={[
                     styles.checkIcon,
-                    result.severity === "clear"
+                    result.severity === 'clear'
                       ? styles.checkMet
-                      : result.severity === "warning"
+                      : result.severity === 'warning'
                         ? styles.checkWarning
                         : styles.checkMissed,
                   ]}
                 >
-                  {result.severity === "clear"
-                    ? "✓"
-                    : result.severity === "warning"
-                      ? "⚠"
-                      : "✗"}
+                  {result.severity === 'clear' ? '✓' : result.severity === 'warning' ? '⚠' : '✗'}
                 </Text>
                 <Text
                   style={[
                     styles.checkText,
-                    result.severity === "triggered" && styles.checkTextMissed,
-                    result.severity === "warning" && styles.checkTextWarning,
+                    result.severity === 'triggered' && styles.checkTextMissed,
+                    result.severity === 'warning' && styles.checkTextWarning,
                   ]}
                 >
                   {result.dealbreaker}
-                  {result.reason && result.severity !== "clear" && (
+                  {result.reason && result.severity !== 'clear' && (
                     <Text style={styles.checkReason}> ({result.reason})</Text>
                   )}
                 </Text>
@@ -1142,7 +1037,7 @@ function FullProfileView({
   userName,
 }: {
   profile: UserProfile;
-  user?: Doc<"users">;
+  user?: Doc<'users'>;
   userName?: string;
 }) {
   return (
@@ -1205,25 +1100,19 @@ function FullProfileView({
           {profile.lifeStory.proudestAchievement && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>🏆 Proudest Achievement</Text>
-              <Text style={styles.storyText}>
-                {profile.lifeStory.proudestAchievement}
-              </Text>
+              <Text style={styles.storyText}>{profile.lifeStory.proudestAchievement}</Text>
             </View>
           )}
           {profile.lifeStory.definingHardship && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>💪 Defining Challenge</Text>
-              <Text style={styles.storyText}>
-                {profile.lifeStory.definingHardship}
-              </Text>
+              <Text style={styles.storyText}>{profile.lifeStory.definingHardship}</Text>
             </View>
           )}
           {profile.lifeStory.biggestRisk && (
             <View style={styles.storyItem}>
               <Text style={styles.storyLabel}>🎲 Biggest Risk Taken</Text>
-              <Text style={styles.storyText}>
-                {profile.lifeStory.biggestRisk}
-              </Text>
+              <Text style={styles.storyText}>{profile.lifeStory.biggestRisk}</Text>
             </View>
           )}
           {profile.lifeStory.dreams.length > 0 && (
@@ -1261,9 +1150,7 @@ function FullProfileView({
             {profile.lovePhilosophy.loveDefinition && (
               <View style={styles.storyItem}>
                 <Text style={styles.storyLabel}>What is Love?</Text>
-                <Text style={styles.storyText}>
-                  {profile.lovePhilosophy.loveDefinition}
-                </Text>
+                <Text style={styles.storyText}>{profile.lovePhilosophy.loveDefinition}</Text>
               </View>
             )}
             {profile.lovePhilosophy.healthyRelationshipVision && (
@@ -1316,19 +1203,18 @@ function FullProfileView({
               </View>
             </View>
           )}
-          {profile.intimacyProfile &&
-            profile.intimacyProfile.connectionTriggers.length > 0 && (
-              <View style={styles.storyItem}>
-                <Text style={styles.storyLabel}>What Creates Connection</Text>
-                <View style={styles.tagsRow}>
-                  {profile.intimacyProfile.connectionTriggers.map((t, i) => (
-                    <View key={i} style={styles.tagSmall}>
-                      <Text style={styles.tagSmallText}>{t}</Text>
-                    </View>
-                  ))}
-                </View>
+          {profile.intimacyProfile && profile.intimacyProfile.connectionTriggers.length > 0 && (
+            <View style={styles.storyItem}>
+              <Text style={styles.storyLabel}>What Creates Connection</Text>
+              <View style={styles.tagsRow}>
+                {profile.intimacyProfile.connectionTriggers.map((t, i) => (
+                  <View key={i} style={styles.tagSmall}>
+                    <Text style={styles.tagSmallText}>{t}</Text>
+                  </View>
+                ))}
               </View>
-            )}
+            </View>
+          )}
         </ProfileSection>
       )}
 
@@ -1402,9 +1288,7 @@ function FullProfileView({
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Kids Timeline</Text>
-              <Text style={styles.infoValue}>
-                {profile.familyPlans.kidsTimeline}
-              </Text>
+              <Text style={styles.infoValue}>{profile.familyPlans.kidsTimeline}</Text>
             </View>
           </View>
         )}
@@ -1433,21 +1317,16 @@ export default function MatchesScreen() {
     startIndex: number;
   } | null>(null);
   // Track which tab is active per user: "compatibility" (default) or "profile"
-  const [activeTab, setActiveTab] = useState<
-    Record<string, "compatibility" | "profile">
-  >({});
+  const [activeTab, setActiveTab] = useState<Record<string, 'compatibility' | 'profile'>>({});
 
   // Get current user
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
 
   // Server-side filtered matches (replaces client-side listAll queries)
-  const matchesData = useQuery(
-    api.matching.getMatchesForCurrentUser,
-    userId ? {} : "skip",
-  );
+  const matchesData = useQuery(api.matching.getMatchesForCurrentUser, userId ? {} : 'skip');
   const matchGenerationStatus = useQuery(
     api.matching.getMatchGenerationStatusForCurrentUser,
-    userId ? {} : "skip",
+    userId ? {} : 'skip'
   );
 
   // Build match list from server data
@@ -1462,8 +1341,7 @@ export default function MatchesScreen() {
 
   const isLoading = !currentUser || matchesData === undefined;
   const isEmpty = testUserMatches && testUserMatches.length === 0;
-  const isAnalyzingFirstMatch =
-    !!isEmpty && matchGenerationStatus?.isAnalyzing === true;
+  const isAnalyzingFirstMatch = !!isEmpty && matchGenerationStatus?.isAnalyzing === true;
   const isReady = !isLoading && !isEmpty;
 
   // Trigger fade once data is ready (or empty state)
@@ -1475,7 +1353,7 @@ export default function MatchesScreen() {
   }, [isLoading]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
         {isLoading ? (
           <View style={styles.loading}>
@@ -1496,10 +1374,8 @@ export default function MatchesScreen() {
               <Text style={styles.emptyEmoji}>🧪</Text>
               <Text style={styles.emptyTitle}>No Test Users</Text>
               <Text style={styles.emptyText}>
-                Run the seed command to create test profiles:{"\n\n"}
-                <Text style={styles.codeText}>
-                  bunx convex run seedTestUsers:seedTestUsers
-                </Text>
+                Run the seed command to create test profiles:{'\n\n'}
+                <Text style={styles.codeText}>bunx convex run seedTestUsers:seedTestUsers</Text>
               </Text>
             </View>
           </>
@@ -1517,35 +1393,29 @@ export default function MatchesScreen() {
                   <View key={match.user._id} style={styles.matchCard}>
                     <Pressable
                       style={styles.matchCardInner}
-                      onPress={() =>
-                        setExpandedUser(isExpanded ? null : match.user._id)
-                      }
+                      onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
                     >
                       <View style={styles.matchHeader}>
                         <View style={styles.matchInfo}>
                           <Text style={styles.matchName}>
-                            {match.user.name?.split(" ")[0] || "Unknown"}
+                            {match.user.name?.split(' ')[0] || 'Unknown'}
                           </Text>
                           <Text style={styles.matchLocation}>
                             {match.user.birthdate
                               ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
-                              : ""}
-                            {match.user.location || "Unknown location"}
+                              : ''}
+                            {match.user.location || 'Unknown location'}
                           </Text>
                         </View>
                         <View
                           style={[
                             styles.scoreBadge,
                             {
-                              backgroundColor: getScoreColor(
-                                match.analysis.overallScore,
-                              ),
+                              backgroundColor: getScoreColor(match.analysis.overallScore),
                             },
                           ]}
                         >
-                          <Text style={styles.scoreText}>
-                            {match.analysis.overallScore}
-                          </Text>
+                          <Text style={styles.scoreText}>{match.analysis.overallScore}</Text>
                         </View>
                       </View>
 
@@ -1569,18 +1439,14 @@ export default function MatchesScreen() {
                         paddingHorizontal: spacing.md,
                         paddingBottom: spacing.md,
                       }}
-                      onPress={() =>
-                        setExpandedUser(isExpanded ? null : match.user._id)
-                      }
+                      onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
                     >
                       {/* Bio - always visible */}
                       {match.profile.generatedBio && (
                         <Text style={styles.shortBio}>
-                          {!isExpanded &&
-                          match.profile.generatedBio.length > 375
-                            ? match.profile.generatedBio
-                                .slice(0, 375)
-                                .replace(/\s+\S*$/, "") + "..."
+                          {!isExpanded && match.profile.generatedBio.length > 375
+                            ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, '') +
+                              '...'
                             : match.profile.generatedBio}
                         </Text>
                       )}
@@ -1594,23 +1460,21 @@ export default function MatchesScreen() {
                               <Pressable
                                 style={[
                                   styles.toggleOption,
-                                  (activeTab[match.user._id] ||
-                                    "compatibility") === "compatibility" &&
-                                    styles.toggleOptionActive,
+                                  (activeTab[match.user._id] || 'compatibility') ===
+                                    'compatibility' && styles.toggleOptionActive,
                                 ]}
                                 onPress={() =>
                                   setActiveTab({
                                     ...activeTab,
-                                    [match.user._id]: "compatibility",
+                                    [match.user._id]: 'compatibility',
                                   })
                                 }
                               >
                                 <Text
                                   style={[
                                     styles.toggleText,
-                                    (activeTab[match.user._id] ||
-                                      "compatibility") === "compatibility" &&
-                                      styles.toggleTextActive,
+                                    (activeTab[match.user._id] || 'compatibility') ===
+                                      'compatibility' && styles.toggleTextActive,
                                   ]}
                                 >
                                   Compatibility
@@ -1619,20 +1483,20 @@ export default function MatchesScreen() {
                               <Pressable
                                 style={[
                                   styles.toggleOption,
-                                  activeTab[match.user._id] === "profile" &&
+                                  activeTab[match.user._id] === 'profile' &&
                                     styles.toggleOptionActive,
                                 ]}
                                 onPress={() =>
                                   setActiveTab({
                                     ...activeTab,
-                                    [match.user._id]: "profile",
+                                    [match.user._id]: 'profile',
                                   })
                                 }
                               >
                                 <Text
                                   style={[
                                     styles.toggleText,
-                                    activeTab[match.user._id] === "profile" &&
+                                    activeTab[match.user._id] === 'profile' &&
                                       styles.toggleTextActive,
                                   ]}
                                 >
@@ -1643,109 +1507,70 @@ export default function MatchesScreen() {
                           </View>
 
                           {/* Compatibility Tab (AI-powered) */}
-                          {(activeTab[match.user._id] || "compatibility") ===
-                            "compatibility" && (
+                          {(activeTab[match.user._id] || 'compatibility') === 'compatibility' && (
                             <View>
                               {/* AI Summary */}
-                              <Text style={styles.aiSummary}>
-                                {match.analysis.summary}
-                              </Text>
+                              <Text style={styles.aiSummary}>{match.analysis.summary}</Text>
 
                               {/* 10 AI Category Bars */}
-                              {AI_CATEGORIES.map(
-                                ({ key, label, icon: CatIcon }) => {
-                                  const score =
-                                    match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
-                                  const scoreColor = getScoreColor(score);
-                                  const isFull = score === 100;
-                                  return (
-                                    <View key={key} style={styles.categoryRow}>
-                                      <View style={styles.categoryBar}>
-                                        <View
-                                          style={[
-                                            styles.categoryBarFill,
-                                            {
-                                              width: `${score}%`,
-                                              borderTopRightRadius: isFull
-                                                ? 10
-                                                : 0,
-                                              borderBottomRightRadius: isFull
-                                                ? 10
-                                                : 0,
-                                            },
-                                          ]}
-                                        >
-                                          <LinearGradient
-                                            colors={[
-                                              `${scoreColor}4D`,
-                                              `${scoreColor}99`,
-                                            ]}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={styles.categoryBarGradient}
-                                          />
-                                          {!isFull && (
-                                            <View
-                                              style={[
-                                                styles.categoryBarEdge,
-                                                {
-                                                  backgroundColor: scoreColor,
-                                                },
-                                              ]}
-                                            />
-                                          )}
-                                        </View>
-                                        <View
-                                          style={styles.categoryBarContent}
-                                        >
-                                          <CatIcon
-                                            size={20}
-                                            color={colors.text}
-                                          />
-                                          <Text
-                                            style={styles.categoryBarLabel}
-                                          >
-                                            {label}
-                                          </Text>
-                                        </View>
-                                      </View>
-                                      <Text
+                              {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
+                                const score = match.analysis.categoryScores[key] * 10; // 0-10 -> 0-100 for bar width
+                                const scoreColor = getScoreColor(score);
+                                const isFull = score === 100;
+                                return (
+                                  <View key={key} style={styles.categoryRow}>
+                                    <View style={styles.categoryBar}>
+                                      <View
                                         style={[
-                                          styles.categoryBarScore,
-                                          { color: scoreColor },
+                                          styles.categoryBarFill,
+                                          {
+                                            width: `${score}%`,
+                                            borderTopRightRadius: isFull ? 10 : 0,
+                                            borderBottomRightRadius: isFull ? 10 : 0,
+                                          },
                                         ]}
                                       >
-                                        {match.analysis.categoryScores[key]}
-                                        /10
-                                      </Text>
+                                        <LinearGradient
+                                          colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                          start={{ x: 0, y: 0 }}
+                                          end={{ x: 1, y: 0 }}
+                                          style={styles.categoryBarGradient}
+                                        />
+                                        {!isFull && (
+                                          <View
+                                            style={[
+                                              styles.categoryBarEdge,
+                                              {
+                                                backgroundColor: scoreColor,
+                                              },
+                                            ]}
+                                          />
+                                        )}
+                                      </View>
+                                      <View style={styles.categoryBarContent}>
+                                        <CatIcon size={20} color={colors.text} />
+                                        <Text style={styles.categoryBarLabel}>{label}</Text>
+                                      </View>
                                     </View>
-                                  );
-                                },
-                              )}
+                                    <Text style={[styles.categoryBarScore, { color: scoreColor }]}>
+                                      {match.analysis.categoryScores[key]}
+                                      /10
+                                    </Text>
+                                  </View>
+                                );
+                              })}
 
                               {/* Green Flags */}
                               {match.analysis.greenFlags.length > 0 && (
                                 <View style={styles.flagSection}>
-                                  <Text style={styles.flagTitle}>
-                                    Green Flags
-                                  </Text>
+                                  <Text style={styles.flagTitle}>Green Flags</Text>
                                   <View style={styles.tagsRow}>
-                                    {match.analysis.greenFlags.map(
-                                      (flag, i) => (
-                                        <View
-                                          key={i}
-                                          style={styles.tagGreenFlag}
-                                        >
-                                          <IconCheck
-                                            size={12}
-                                            color="#166534"
-                                          />
-                                          <Text style={styles.tagGreenFlagText}>
-                                            {flag}
-                                          </Text>
-                                        </View>
-                                      ),
-                                    )}
+                                    {match.analysis.greenFlags.map((flag, i) => (
+                                      <View key={i} style={styles.tagGreenFlag}>
+                                        <IconCheck size={12} color="#166534" />
+                                        <Text style={styles.tagGreenFlagText}>{flag}</Text>
+                                      </View>
+                                    ))}
                                   </View>
                                 </View>
                               )}
@@ -1753,28 +1578,14 @@ export default function MatchesScreen() {
                               {/* Yellow Flags */}
                               {match.analysis.yellowFlags.length > 0 && (
                                 <View style={styles.flagSection}>
-                                  <Text style={styles.flagTitle}>
-                                    Yellow Flags
-                                  </Text>
+                                  <Text style={styles.flagTitle}>Yellow Flags</Text>
                                   <View style={styles.tagsRow}>
-                                    {match.analysis.yellowFlags.map(
-                                      (flag, i) => (
-                                        <View
-                                          key={i}
-                                          style={styles.tagYellowFlag}
-                                        >
-                                          <IconAlertTriangle
-                                            size={12}
-                                            color="#92400e"
-                                          />
-                                          <Text
-                                            style={styles.tagYellowFlagText}
-                                          >
-                                            {flag}
-                                          </Text>
-                                        </View>
-                                      ),
-                                    )}
+                                    {match.analysis.yellowFlags.map((flag, i) => (
+                                      <View key={i} style={styles.tagYellowFlag}>
+                                        <IconAlertTriangle size={12} color="#92400e" />
+                                        <Text style={styles.tagYellowFlagText}>{flag}</Text>
+                                      </View>
+                                    ))}
                                   </View>
                                 </View>
                               )}
@@ -1782,16 +1593,12 @@ export default function MatchesScreen() {
                               {/* Red Flags */}
                               {match.analysis.redFlags.length > 0 && (
                                 <View style={styles.flagSection}>
-                                  <Text style={styles.flagTitle}>
-                                    Red Flags
-                                  </Text>
+                                  <Text style={styles.flagTitle}>Red Flags</Text>
                                   <View style={styles.tagsRow}>
                                     {match.analysis.redFlags.map((flag, i) => (
                                       <View key={i} style={styles.tagRedFlag}>
                                         <IconX size={12} color="#991b1b" />
-                                        <Text style={styles.tagRedFlagText}>
-                                          {flag}
-                                        </Text>
+                                        <Text style={styles.tagRedFlagText}>{flag}</Text>
                                       </View>
                                     ))}
                                   </View>
@@ -1801,18 +1608,18 @@ export default function MatchesScreen() {
                           )}
 
                           {/* Full Profile Tab */}
-                          {activeTab[match.user._id] === "profile" && (
+                          {activeTab[match.user._id] === 'profile' && (
                             <FullProfileView
                               profile={match.profile}
                               user={match.user}
-                              userName={match.user.name || "User"}
+                              userName={match.user.name || 'User'}
                             />
                           )}
                         </View>
                       )}
 
                       <Text style={styles.expandHint}>
-                        {isExpanded ? "Tap to collapse" : "Tap for details"}
+                        {isExpanded ? 'Tap to collapse' : 'Tap for details'}
                       </Text>
                     </Pressable>
                   </View>
@@ -1841,34 +1648,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loading: {
+    alignItems: 'center',
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
   },
   header: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["2xl"],
     color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['2xl'],
   },
   headerSubtitle: {
-    fontSize: fontSizes.sm,
     color: colors.textSecondary,
+    fontSize: fontSizes.sm,
     marginTop: spacing.xs,
   },
   scrollView: {
     flex: 1,
   },
   emptyState: {
+    alignItems: 'center',
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
   emptyEmoji: {
@@ -1879,347 +1686,347 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   emptyTitle: {
+    color: colors.text,
     fontFamily: fonts.serifBold,
     fontSize: fontSizes.xl,
-    color: colors.text,
     marginBottom: spacing.sm,
   },
   completeProfileButton: {
-    marginTop: spacing.md,
+    alignSelf: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
     borderRadius: 8,
-    alignSelf: "center",
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
   },
   completeProfileButtonText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: fontSizes.base,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   processingContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.lg,
   },
   processingText: {
-    fontSize: fontSizes.sm,
     color: colors.textSecondary,
-    textAlign: "center",
+    fontSize: fontSizes.sm,
+    textAlign: 'center',
   },
   emptyText: {
-    fontSize: fontSizes.base,
     color: colors.textSecondary,
-    textAlign: "center",
+    fontSize: fontSizes.base,
     lineHeight: 24,
+    textAlign: 'center',
   },
   codeText: {
-    fontFamily: "monospace",
-    fontSize: fontSizes.sm,
     backgroundColor: colors.surface,
+    fontFamily: 'monospace',
+    fontSize: fontSizes.sm,
   },
   matchCard: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md * 2,
+    backgroundColor: colors.surface,
     borderRadius: 12,
-    shadowColor: "#000",
+    elevation: 3,
+    marginBottom: spacing.md * 2,
+    marginHorizontal: spacing.lg,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 6,
-    elevation: 3,
-    backgroundColor: colors.surface,
   },
   matchCardInner: {
-    padding: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
+    padding: spacing.lg,
   },
   matchHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
     marginBottom: spacing.sm,
   },
   matchPhoto: {
-    width: 56,
-    height: 56,
     borderRadius: 28,
+    height: 56,
     marginRight: spacing.md,
+    width: 56,
   },
   matchPhotoPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    alignItems: 'center',
     backgroundColor: colors.border,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: 28,
+    height: 56,
+    justifyContent: 'center',
     marginRight: spacing.md,
+    width: 56,
   },
   matchPhotoInitial: {
-    fontSize: fontSizes.xl,
-    fontWeight: "600",
     color: colors.textSecondary,
+    fontSize: fontSizes.xl,
+    fontWeight: '600',
   },
   matchInfo: {
     flex: 1,
   },
   matchName: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["3xl"],
     color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['3xl'],
   },
   matchLocation: {
-    fontSize: fontSizes.base,
     color: colors.textSecondary,
+    fontSize: fontSizes.base,
     marginTop: 2,
   },
   scoreBadge: {
-    width: 44,
-    height: 44,
+    alignItems: 'center',
     borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   shortBio: {
-    fontSize: fontSizes.sm,
     color: colors.text,
-    marginTop: spacing.sm,
+    fontSize: fontSizes.sm,
+    fontStyle: 'italic',
     lineHeight: 20,
-    fontStyle: "italic",
+    marginTop: spacing.sm,
   },
   scoreText: {
+    color: '#fff',
     fontSize: fontSizes.base,
-    fontWeight: "700",
-    color: "#fff",
+    fontWeight: '700',
   },
   tagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
   },
   tagSmall: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
     backgroundColor: colors.background,
     borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
   },
   tagSmallText: {
-    fontSize: fontSizes.xs,
     color: colors.textSecondary,
+    fontSize: fontSizes.xs,
   },
   moreText: {
-    fontSize: fontSizes.xs,
+    alignSelf: 'center',
     color: colors.textMuted,
-    alignSelf: "center",
+    fontSize: fontSizes.xs,
     marginLeft: spacing.xs,
   },
   expandHint: {
-    fontSize: fontSizes.xs,
     color: colors.textMuted,
-    textAlign: "center",
+    fontSize: fontSizes.xs,
     marginTop: spacing.md,
+    textAlign: 'center',
   },
   breakdown: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     marginTop: spacing.lg,
     paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   breakdownTitle: {
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
     color: colors.text,
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
     marginBottom: spacing.md,
   },
   // Category bar styles (card-like progress bars)
   categoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   categoryBar: {
-    flex: 1,
-    height: 36,
     backgroundColor: colors.border,
     borderRadius: 10,
-    overflow: "hidden",
-    position: "relative",
+    flex: 1,
+    height: 36,
+    overflow: 'hidden',
+    position: 'relative',
   },
   categoryBarFill: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    borderTopLeftRadius: 10,
     borderBottomLeftRadius: 10,
-    flexDirection: "row",
-    overflow: "hidden",
+    borderTopLeftRadius: 10,
+    bottom: 0,
+    flexDirection: 'row',
+    left: 0,
+    overflow: 'hidden',
+    position: 'absolute',
+    top: 0,
   },
   categoryBarGradient: {
     flex: 1,
-    height: "100%",
+    height: '100%',
   },
   categoryBarEdge: {
+    height: '100%',
     width: 3,
-    height: "100%",
   },
   categoryBarContent: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    height: "100%",
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    height: '100%',
     paddingLeft: spacing.md,
     paddingRight: spacing.md,
-    gap: spacing.sm,
+    position: 'relative',
   },
   categoryBarLabel: {
+    color: colors.text,
     flex: 1,
     fontSize: fontSizes.sm,
-    fontWeight: "600",
-    color: colors.text,
+    fontWeight: '600',
   },
   categoryBarScore: {
-    width: 42,
-    fontSize: fontSizes.sm,
-    fontWeight: "700",
     color: colors.text,
-    textAlign: "right",
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    textAlign: 'right',
+    width: 42,
   },
   sharedSection: {
     marginTop: spacing.md,
   },
   sharedTitle: {
-    fontSize: fontSizes.xs,
     color: colors.textMuted,
+    fontSize: fontSizes.xs,
     marginBottom: spacing.xs,
   },
   sharedTitleBold: {
-    fontSize: fontSizes.sm,
     color: colors.text,
-    fontWeight: "600",
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
     marginBottom: spacing.xs,
   },
   tagShared: {
+    backgroundColor: '#dcfce7',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#dcfce7",
-    borderRadius: 12,
   },
   tagSharedText: {
+    color: '#166534',
     fontSize: fontSizes.xs,
-    color: "#166534",
   },
   // Dealbreakers alert
   dealbreakersAlert: {
-    backgroundColor: "#fee2e2",
-    padding: spacing.md,
+    backgroundColor: '#fee2e2',
     borderRadius: 8,
     marginBottom: spacing.md,
+    padding: spacing.md,
   },
   dealbreakersTitle: {
+    color: '#991b1b',
     fontSize: fontSizes.sm,
-    fontWeight: "600",
-    color: "#991b1b",
+    fontWeight: '600',
     marginBottom: spacing.xs,
   },
   dealbreakersText: {
+    color: '#991b1b',
     fontSize: fontSizes.sm,
-    color: "#991b1b",
   },
   // Must-Haves & Dealbreakers styles
   checkSection: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     marginTop: spacing.lg,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   checkSectionTitle: {
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
     color: colors.text,
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
     marginBottom: spacing.sm,
   },
   checkGroup: {
     marginTop: spacing.sm,
   },
   checkGroupTitle: {
-    fontSize: fontSizes.xs,
     color: colors.textSecondary,
+    fontSize: fontSizes.xs,
     marginBottom: spacing.xs,
   },
   checkItems: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
   },
   checkItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    alignItems: 'center',
     backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    flexDirection: 'row',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
   },
   checkIcon: {
     fontSize: fontSizes.xs,
     marginRight: 4,
   },
   checkMet: {
-    color: "#22c55e",
+    color: '#22c55e',
   },
   checkMissed: {
-    color: "#ef4444",
+    color: '#ef4444',
   },
   checkWarning: {
-    color: "#f59e0b",
+    color: '#f59e0b',
   },
   checkText: {
-    fontSize: fontSizes.xs,
     color: colors.text,
+    fontSize: fontSizes.xs,
   },
   checkTextMissed: {
-    color: "#ef4444",
+    color: '#ef4444',
   },
   checkTextWarning: {
-    color: "#b45309",
+    color: '#b45309',
   },
   checkReason: {
-    fontSize: fontSizes.xs,
     color: colors.textMuted,
+    fontSize: fontSizes.xs,
   },
   // Watch Out For styles
   watchOutSection: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     marginTop: spacing.lg,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   watchOutTitle: {
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
     color: colors.text,
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
     marginBottom: spacing.sm,
   },
   watchOutItem: {
-    flexDirection: "row",
+    flexDirection: 'row',
     marginBottom: spacing.xs,
   },
   watchOutBullet: {
+    color: '#f59e0b',
     fontSize: fontSizes.sm,
-    color: "#f59e0b",
     marginRight: spacing.xs,
   },
   watchOutText: {
+    color: colors.textSecondary,
     flex: 1,
     fontSize: fontSizes.sm,
-    color: colors.textSecondary,
     lineHeight: 20,
   },
   bottomPadding: {
-    height: spacing["3xl"],
+    height: spacing['3xl'],
   },
   // Full profile styles
   fullProfileContainer: {
@@ -2229,274 +2036,274 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   profileSection: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     marginTop: spacing.lg,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   sectionTitle: {
+    color: colors.text,
     fontFamily: fonts.serifBold,
     fontSize: fontSizes.base,
-    color: colors.text,
     marginBottom: spacing.sm,
   },
   bioText: {
-    fontSize: fontSizes.sm,
     color: colors.text,
+    fontSize: fontSizes.sm,
+    fontStyle: 'italic',
     lineHeight: 22,
-    fontStyle: "italic",
   },
   tagValue: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#dbeafe",
-    borderRadius: 12,
   },
   tagValueText: {
+    color: '#1e40af',
     fontSize: fontSizes.xs,
-    color: "#1e40af",
   },
   tagInterest: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#fef3c7",
-    borderRadius: 12,
   },
   tagInterestText: {
+    color: '#92400e',
     fontSize: fontSizes.xs,
-    color: "#92400e",
   },
   tagDealbreaker: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    flexDirection: 'row',
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#fee2e2",
-    borderRadius: 12,
   },
   tagDealbreakerText: {
+    color: '#991b1b',
     fontSize: fontSizes.xs,
-    color: "#991b1b",
   },
   tagMustHave: {
+    backgroundColor: '#dcfce7',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#dcfce7",
-    borderRadius: 12,
   },
   tagMustHaveText: {
+    color: '#166534',
     fontSize: fontSizes.xs,
-    color: "#166534",
   },
   tagRedFlag: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#fee2e2",
-    borderRadius: 12,
   },
   tagRedFlagText: {
+    color: '#991b1b',
     fontSize: fontSizes.xs,
-    color: "#991b1b",
   },
   tagQuirk: {
+    backgroundColor: '#f3e8ff',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#f3e8ff",
-    borderRadius: 12,
   },
   tagQuirkText: {
+    color: '#7c3aed',
     fontSize: fontSizes.xs,
-    color: "#7c3aed",
   },
   tagPassion: {
+    backgroundColor: '#fce7f3',
+    borderRadius: 12,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: "#fce7f3",
-    borderRadius: 12,
   },
   tagPassionText: {
+    color: '#be185d',
     fontSize: fontSizes.xs,
-    color: "#be185d",
   },
   traitRow: {
     marginBottom: spacing.sm,
   },
   traitName: {
-    fontSize: fontSizes.xs,
     color: colors.textSecondary,
+    fontSize: fontSizes.xs,
     marginBottom: 4,
   },
   traitBarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   traitLabelLeft: {
-    fontSize: 10,
     color: colors.textMuted,
+    fontSize: 10,
     width: 70,
   },
   traitLabelRight: {
-    fontSize: 10,
     color: colors.textMuted,
+    fontSize: 10,
+    textAlign: 'right',
     width: 70,
-    textAlign: "right",
   },
   traitBar: {
-    flex: 1,
-    height: 8,
     backgroundColor: colors.border,
     borderRadius: 4,
+    flex: 1,
+    height: 8,
     marginHorizontal: spacing.xs,
-    position: "relative",
+    position: 'relative',
   },
   traitBarFill: {
-    height: "100%",
     backgroundColor: colors.text,
     borderRadius: 4,
+    height: '100%',
   },
   traitIndicator: {
-    position: "absolute",
+    backgroundColor: colors.text,
+    borderColor: colors.surface,
+    borderRadius: 6,
+    borderWidth: 2,
+    height: 12,
+    marginLeft: -6,
+    position: 'absolute',
     top: -2,
     width: 12,
-    height: 12,
-    backgroundColor: colors.text,
-    borderRadius: 6,
-    marginLeft: -6,
-    borderWidth: 2,
-    borderColor: colors.surface,
   },
   infoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   infoItem: {
-    minWidth: 100,
     marginBottom: spacing.xs,
+    minWidth: 100,
   },
   infoLabel: {
-    fontSize: 10,
     color: colors.textMuted,
-    textTransform: "uppercase",
+    fontSize: 10,
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   infoValue: {
-    fontSize: fontSizes.sm,
     color: colors.text,
+    fontSize: fontSizes.sm,
     marginTop: 2,
   },
   storyItem: {
     marginBottom: spacing.sm,
   },
   storyLabel: {
-    fontSize: fontSizes.xs,
     color: colors.textSecondary,
+    fontSize: fontSizes.xs,
     marginBottom: 4,
   },
   storyText: {
-    fontSize: fontSizes.sm,
     color: colors.text,
+    fontSize: fontSizes.sm,
     lineHeight: 20,
   },
   bulletText: {
-    fontSize: fontSizes.sm,
     color: colors.text,
+    fontSize: fontSizes.sm,
     lineHeight: 20,
     marginLeft: spacing.sm,
   },
   // Toggle styles
   toggleContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   toggleTrack: {
-    flexDirection: "row",
     backgroundColor: colors.border,
     borderRadius: 20,
+    flexDirection: 'row',
     padding: 3,
   },
   toggleOption: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
     borderRadius: 17,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   toggleOptionActive: {
     backgroundColor: colors.surface,
-    shadowColor: "#000",
+    elevation: 2,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
   },
   toggleText: {
-    fontSize: fontSizes.sm,
     color: colors.textMuted,
-    fontWeight: "500",
+    fontSize: fontSizes.sm,
+    fontWeight: '500',
   },
   toggleTextActive: {
     color: colors.text,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   // AI analysis styles
   aiSummary: {
-    fontSize: fontSizes.sm,
     color: colors.text,
+    fontSize: fontSizes.sm,
+    fontStyle: 'italic',
     lineHeight: 22,
-    fontStyle: "italic",
     marginBottom: spacing.lg,
   },
   flagSection: {
     marginTop: spacing.md,
   },
   flagTitle: {
-    fontSize: fontSizes.sm,
     color: colors.text,
-    fontWeight: "600",
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
     marginBottom: spacing.xs,
   },
   tagGreenFlag: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    backgroundColor: '#dcfce7',
+    borderRadius: 12,
+    flexDirection: 'row',
     gap: 4,
+    maxWidth: '100%',
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    backgroundColor: "#dcfce7",
-    borderRadius: 12,
-    maxWidth: "100%",
   },
   tagGreenFlagText: {
-    fontSize: fontSizes.xs,
-    color: "#166534",
+    color: '#166534',
     flexShrink: 1,
+    fontSize: fontSizes.xs,
   },
   tagYellowFlag: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    flexDirection: 'row',
     gap: 4,
+    maxWidth: '100%',
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    backgroundColor: "#fef3c7",
-    borderRadius: 12,
-    maxWidth: "100%",
   },
   tagYellowFlagText: {
-    fontSize: fontSizes.xs,
-    color: "#92400e",
+    color: '#92400e',
     flexShrink: 1,
+    fontSize: fontSizes.xs,
   },
   tagRedFlag: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    flexDirection: 'row',
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    backgroundColor: "#fee2e2",
-    borderRadius: 12,
   },
   tagRedFlagText: {
-    fontSize: fontSizes.xs,
-    color: "#991b1b",
+    color: '#991b1b',
     flexShrink: 1,
+    fontSize: fontSizes.xs,
   },
 });

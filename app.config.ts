@@ -1,81 +1,79 @@
-import { ConfigContext, ExpoConfig } from "expo/config";
+import { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-  name: "Found",
-  slug: "found",
-  version: "1.0.0",
-  orientation: "portrait",
-  icon: "./assets/images/icon.png",
-  scheme: "found",
-  userInterfaceStyle: "light",
-  backgroundColor: "#FAFAFA",
+  name: 'Found',
+  slug: 'found',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/icon.png',
+  scheme: 'found',
+  userInterfaceStyle: 'light',
+  backgroundColor: '#FAFAFA',
   newArchEnabled: true,
   splash: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: '#FAFAFA',
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.jetlej.found",
-    appleTeamId: "34HCA7L7PV",
-    backgroundColor: "#FAFAFA",
+    bundleIdentifier: 'com.jetlej.found',
+    appleTeamId: '34HCA7L7PV',
+    backgroundColor: '#FAFAFA',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      NSLocationWhenInUseUsageDescription:
-        "Found needs your location to find matches near you.",
+      NSLocationWhenInUseUsageDescription: 'Found needs your location to find matches near you.',
     },
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#FAFAFA",
+      foregroundImage: './assets/images/adaptive-icon.png',
+      backgroundColor: '#FAFAFA',
     },
     edgeToEdgeEnabled: true,
-    package: "com.found.app",
-    permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+    package: 'com.found.app',
+    permissions: ['ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION'],
   },
   web: {
-    bundler: "metro",
-    output: "static",
-    favicon: "./assets/images/favicon.png",
+    bundler: 'metro',
+    output: 'static',
+    favicon: './assets/images/favicon.png',
   },
   plugins: [
-    "expo-router",
-    "expo-secure-store",
+    'expo-router',
+    'expo-secure-store',
     [
-      "expo-image-picker",
+      'expo-image-picker',
       {
-        photosPermission: "Found needs access to your photos to add them to your profile.",
+        photosPermission: 'Found needs access to your photos to add them to your profile.',
       },
     ],
     [
-      "expo-location",
+      'expo-location',
       {
-        locationWhenInUsePermission:
-          "Found needs your location to find matches near you.",
+        locationWhenInUsePermission: 'Found needs your location to find matches near you.',
       },
     ],
     [
-      "expo-splash-screen",
+      'expo-splash-screen',
       {
-        backgroundColor: "#FAFAFA",
-        image: "./assets/images/icon-rounded.png",
+        backgroundColor: '#FAFAFA',
+        image: './assets/images/icon-rounded.png',
         imageWidth: 200,
       },
     ],
     [
-      "expo-notifications",
+      'expo-notifications',
       {
-        icon: "./assets/images/icon.png",
-        color: "#ffffff",
+        icon: './assets/images/icon.png',
+        color: '#ffffff',
       },
     ],
   ],
   updates: {
-    url: "https://u.expo.dev/c2c461c0-3a59-40e5-b741-06b86e198e9d",
-    checkAutomatically: "ON_LOAD",
+    url: 'https://u.expo.dev/c2c461c0-3a59-40e5-b741-06b86e198e9d',
+    checkAutomatically: 'ON_LOAD',
   },
   runtimeVersion: {
-    policy: "appVersion",
+    policy: 'appVersion',
   },
   experiments: {
     typedRoutes: true,
@@ -83,8 +81,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     router: {},
     eas: {
-      projectId: "c2c461c0-3a59-40e5-b741-06b86e198e9d",
+      projectId: 'c2c461c0-3a59-40e5-b741-06b86e198e9d',
     },
   },
-  owner: "jetlej",
+  owner: 'jetlej',
 });

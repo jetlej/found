@@ -1,9 +1,9 @@
-import { PhotoGrid } from "@/components/PhotoGrid";
-import { api } from "@/convex/_generated/api";
-import { Doc } from "@/convex/_generated/dataModel";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { getAuditableItems } from "@/lib/filterProfile";
-import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
+import { PhotoGrid } from '@/components/PhotoGrid';
+import { api } from '@/convex/_generated/api';
+import { Doc } from '@/convex/_generated/dataModel';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { getAuditableItems } from '@/lib/filterProfile';
+import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
 import {
   IconBabyCarriage,
   IconBuildingChurch,
@@ -21,10 +21,10 @@ import {
   IconRuler,
   IconSmokingNo,
   IconUserFilled,
-} from "@tabler/icons-react-native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+} from '@tabler/icons-react-native';
+import { useMutation, useQuery } from 'convex/react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -35,10 +35,10 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_INNER_WIDTH = SCREEN_WIDTH - spacing.lg * 4;
 const PHOTO_GAP = 10;
 const PHOTO_WIDTH = CARD_INNER_WIDTH * 0.45;
@@ -54,54 +54,69 @@ function formatHeight(inches?: number): string | null {
 }
 
 function formatLabel(value: string): string {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 type BasicRow = { icon: React.ComponentType<{ size: number; color: string }>; label: string };
 const ICON_SIZE = 20;
 const ICON_COLOR = colors.text;
 
-function getBasicsData(user: Doc<"users">) {
+function getBasicsData(user: Doc<'users'>) {
   const topRow: BasicRow[] = [];
   if (user.heightInches) topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches)! });
   if (user.hometown) topRow.push({ icon: IconHome, label: user.hometown });
   if (user.wantsChildren) {
-    const kidsLabels: Record<string, string> = { yes: "Wants children", no: "Doesn't want children", open: "Open to children", not_sure: "Not sure about children" };
-    topRow.push({ icon: IconBabyCarriage, label: kidsLabels[user.wantsChildren] || user.wantsChildren });
+    const kidsLabels: Record<string, string> = {
+      yes: 'Wants children',
+      no: "Doesn't want children",
+      open: 'Open to children',
+      not_sure: 'Not sure about children',
+    };
+    topRow.push({
+      icon: IconBabyCarriage,
+      label: kidsLabels[user.wantsChildren] || user.wantsChildren,
+    });
   }
   if (user.pets) topRow.push({ icon: IconPaw, label: user.pets });
-  if (user.drinkingVisible !== false && user.drinking) topRow.push({ icon: IconGlass, label: user.drinking });
-  if (user.smokingVisible !== false && user.smoking) topRow.push({ icon: IconSmokingNo, label: user.smoking });
-  if (user.marijuanaVisible !== false && user.marijuana) topRow.push({ icon: IconCannabis, label: user.marijuana });
+  if (user.drinkingVisible !== false && user.drinking)
+    topRow.push({ icon: IconGlass, label: user.drinking });
+  if (user.smokingVisible !== false && user.smoking)
+    topRow.push({ icon: IconSmokingNo, label: user.smoking });
+  if (user.marijuanaVisible !== false && user.marijuana)
+    topRow.push({ icon: IconCannabis, label: user.marijuana });
   if (user.drugsVisible !== false && user.drugs) topRow.push({ icon: IconPill, label: user.drugs });
 
   const detailRows: BasicRow[] = [];
   if (user.ethnicity) detailRows.push({ icon: IconFlag, label: user.ethnicity });
   if (user.religion) detailRows.push({ icon: IconBuildingChurch, label: user.religion });
-  if (user.politicalLeaning) detailRows.push({ icon: IconBuildingCommunity, label: user.politicalLeaning });
+  if (user.politicalLeaning)
+    detailRows.push({ icon: IconBuildingCommunity, label: user.politicalLeaning });
   const goalParts: string[] = [];
-  if (user.relationshipGoal) { const g = user.relationshipGoal.replace(/_/g, " "); goalParts.push(g.charAt(0).toUpperCase() + g.slice(1)); }
+  if (user.relationshipGoal) {
+    const g = user.relationshipGoal.replace(/_/g, ' ');
+    goalParts.push(g.charAt(0).toUpperCase() + g.slice(1));
+  }
   if (user.relationshipType) goalParts.push(user.relationshipType);
-  if (goalParts.length > 0) detailRows.push({ icon: IconHeart, label: goalParts.join(" / ") });
+  if (goalParts.length > 0) detailRows.push({ icon: IconHeart, label: goalParts.join(' / ') });
 
   return { topRow, detailRows };
 }
 
 function getTraitLabel(trait: string) {
   const labels: Record<string, { name: string; low: string; high: string; inverted?: boolean }> = {
-    introversion: { name: "Social Style", low: "Introvert", high: "Extrovert", inverted: true },
-    adventurousness: { name: "Adventure", low: "Routine-lover", high: "Thrill-seeker" },
-    ambition: { name: "Ambition", low: "Content", high: "Driven" },
-    emotionalOpenness: { name: "Emotional Openness", low: "Private", high: "Open book" },
-    traditionalValues: { name: "Values", low: "Traditional", high: "Progressive", inverted: true },
-    independenceNeed: { name: "Independence", low: "Together", high: "Space needed" },
-    romanticStyle: { name: "Romance Style", low: "Practical", high: "Deeply romantic" },
-    socialEnergy: { name: "Social Energy", low: "Homebody", high: "Social butterfly" },
-    communicationStyle: { name: "Communication", low: "Reserved", high: "Expressive" },
-    attachmentStyle: { name: "Attachment", low: "Avoidant", high: "Anxious" },
-    planningStyle: { name: "Planning", low: "Structured", high: "Spontaneous", inverted: true },
+    introversion: { name: 'Social Style', low: 'Introvert', high: 'Extrovert', inverted: true },
+    adventurousness: { name: 'Adventure', low: 'Routine-lover', high: 'Thrill-seeker' },
+    ambition: { name: 'Ambition', low: 'Content', high: 'Driven' },
+    emotionalOpenness: { name: 'Emotional Openness', low: 'Private', high: 'Open book' },
+    traditionalValues: { name: 'Values', low: 'Traditional', high: 'Progressive', inverted: true },
+    independenceNeed: { name: 'Independence', low: 'Together', high: 'Space needed' },
+    romanticStyle: { name: 'Romance Style', low: 'Practical', high: 'Deeply romantic' },
+    socialEnergy: { name: 'Social Energy', low: 'Homebody', high: 'Social butterfly' },
+    communicationStyle: { name: 'Communication', low: 'Reserved', high: 'Expressive' },
+    attachmentStyle: { name: 'Attachment', low: 'Avoidant', high: 'Anxious' },
+    planningStyle: { name: 'Planning', low: 'Structured', high: 'Spontaneous', inverted: true },
   };
-  return labels[trait] || { name: trait, low: "Low", high: "High" };
+  return labels[trait] || { name: trait, low: 'Low', high: 'High' };
 }
 
 // --- Sub-components ---
@@ -123,7 +138,19 @@ function ScrollableBasicsRow({ items }: { items: BasicRow[] }) {
   );
 }
 
-function TraitBar({ name, value, lowLabel, highLabel, inverted }: { name: string; value: number; lowLabel: string; highLabel: string; inverted?: boolean }) {
+function TraitBar({
+  name,
+  value,
+  lowLabel,
+  highLabel,
+  inverted,
+}: {
+  name: string;
+  value: number;
+  lowLabel: string;
+  highLabel: string;
+  inverted?: boolean;
+}) {
   const displayValue = inverted ? 10 - value : value;
   const percentage = (displayValue / 10) * 100;
   return (
@@ -151,17 +178,29 @@ function ProfileSection({ title, children }: { title: string; children: React.Re
 }
 
 // Toggleable tag with eye icon
-function AuditTag({ label, isHidden, style, textStyle, onToggle }: {
-  label: string; isHidden: boolean;
-  style?: any; textStyle?: any;
+function AuditTag({
+  label,
+  isHidden,
+  style,
+  textStyle,
+  onToggle,
+}: {
+  label: string;
+  isHidden: boolean;
+  style?: any;
+  textStyle?: any;
   onToggle: () => void;
 }) {
   return (
     <Pressable style={[s.tag, style, isHidden && s.tagHidden]} onPress={onToggle}>
-      <Text style={[s.tagText, textStyle, isHidden && s.hiddenText]} numberOfLines={2}>{label}</Text>
-      {isHidden
-        ? <IconEyeOff size={12} color={colors.textMuted} />
-        : <IconEye size={12} color={colors.textSecondary} />}
+      <Text style={[s.tagText, textStyle, isHidden && s.hiddenText]} numberOfLines={2}>
+        {label}
+      </Text>
+      {isHidden ? (
+        <IconEyeOff size={12} color={colors.textMuted} />
+      ) : (
+        <IconEye size={12} color={colors.textSecondary} />
+      )}
     </Pressable>
   );
 }
@@ -171,26 +210,29 @@ function AuditTag({ label, isHidden, style, textStyle, onToggle }: {
 export default function ProfileAuditScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
-  const { firstTime, fromRegenerate } = useLocalSearchParams<{ firstTime?: string; fromRegenerate?: string }>();
-  const isFirstTime = firstTime === "true";
-  const isFromRegenerate = fromRegenerate === "true";
+  const { firstTime, fromRegenerate } = useLocalSearchParams<{
+    firstTime?: string;
+    fromRegenerate?: string;
+  }>();
+  const isFirstTime = firstTime === 'true';
+  const isFromRegenerate = fromRegenerate === 'true';
   const isMandatory = isFirstTime || isFromRegenerate;
 
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
   const myProfile = useQuery(
     api.userProfiles.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const updateHiddenFields = useMutation(api.userProfiles.updateHiddenFields);
   const completeProfileAudit = useMutation(api.users.completeProfileAudit);
 
   const matchGenStatus = useQuery(
     api.matching.getMatchGenerationStatusForCurrentUser,
-    userId ? {} : "skip",
+    userId ? {} : 'skip'
   );
 
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -231,7 +273,7 @@ export default function ProfileAuditScreen() {
         return;
       }
     } catch (e) {
-      console.error("Failed to save hidden fields:", e);
+      console.error('Failed to save hidden fields:', e);
       setSaving(false);
       return;
     }
@@ -241,26 +283,33 @@ export default function ProfileAuditScreen() {
 
   useEffect(() => {
     if (analyzingCompat && matchGenStatus?.hasAnyAnalyses) {
-      router.replace("/(tabs)/matches");
+      router.replace('/(tabs)/matches');
     }
   }, [analyzingCompat, matchGenStatus?.hasAnyAnalyses]);
 
   if (!currentUser || !myProfile || !initialized) {
     return (
-      <SafeAreaView style={s.container} edges={["top", "bottom"]}>
-        <View style={s.loading}><ActivityIndicator color={colors.textMuted} /></View>
+      <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+        <View style={s.loading}>
+          <ActivityIndicator color={colors.textMuted} />
+        </View>
       </SafeAreaView>
     );
   }
 
   if (analyzingCompat) {
     return (
-      <SafeAreaView style={s.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         <View style={s.analyzingContainer}>
-          <ActivityIndicator size="large" color={colors.text} style={{ marginBottom: spacing.sm }} />
+          <ActivityIndicator
+            size="large"
+            color={colors.text}
+            style={{ marginBottom: spacing.sm }}
+          />
           <Text style={s.analyzingTitle}>Finding Your Matches</Text>
           <Text style={s.analyzingSubtitle}>
-            We're analyzing your compatibility with other profiles. This usually takes about a minute.
+            We're analyzing your compatibility with other profiles. This usually takes about a
+            minute.
           </Text>
         </View>
       </SafeAreaView>
@@ -275,7 +324,12 @@ export default function ProfileAuditScreen() {
   const profile = myProfile;
 
   // Helper to render a tag row where items are audit-toggleable
-  const renderAuditTags = (items: string[], pathPrefix: string, tagStyle?: any, tagTextStyle?: any) => (
+  const renderAuditTags = (
+    items: string[],
+    pathPrefix: string,
+    tagStyle?: any,
+    tagTextStyle?: any
+  ) => (
     <View style={s.tagsRow}>
       {items.map((item, i) => {
         const path = `${pathPrefix}.${i}`;
@@ -288,15 +342,27 @@ export default function ProfileAuditScreen() {
           );
         }
         return (
-          <AuditTag key={i} label={item} isHidden={hidden.has(path)} style={tagStyle} textStyle={tagTextStyle} onToggle={() => toggleItem(path)} />
+          <AuditTag
+            key={i}
+            label={item}
+            isHidden={hidden.has(path)}
+            style={tagStyle}
+            textStyle={tagTextStyle}
+            onToggle={() => toggleItem(path)}
+          />
         );
       })}
     </View>
   );
 
   // Helper for nested audit tags
-  const renderNestedAuditTags = (items: string[], parentKey: string, subKey: string, tagStyle?: any, tagTextStyle?: any) =>
-    renderAuditTags(items, `${parentKey}.${subKey}`, tagStyle, tagTextStyle);
+  const renderNestedAuditTags = (
+    items: string[],
+    parentKey: string,
+    subKey: string,
+    tagStyle?: any,
+    tagTextStyle?: any
+  ) => renderAuditTags(items, `${parentKey}.${subKey}`, tagStyle, tagTextStyle);
 
   // Helper for nested scalar audit item
   const renderNestedScalar = (parentKey: string, subKey: string, label: string, text: string) => {
@@ -309,7 +375,11 @@ export default function ProfileAuditScreen() {
           <Text style={s.storyLabel}>{label}</Text>
           {isAuditable && (
             <Pressable onPress={() => toggleItem(path)} hitSlop={8}>
-              {isHid ? <IconEyeOff size={14} color={colors.textMuted} /> : <IconEye size={14} color={colors.textSecondary} />}
+              {isHid ? (
+                <IconEyeOff size={14} color={colors.textMuted} />
+              ) : (
+                <IconEye size={14} color={colors.textSecondary} />
+              )}
             </Pressable>
           )}
         </View>
@@ -319,7 +389,7 @@ export default function ProfileAuditScreen() {
   };
 
   return (
-    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       {/* Nav bar */}
       <View style={s.navBar}>
         {isMandatory ? (
@@ -329,22 +399,18 @@ export default function ProfileAuditScreen() {
             <IconChevronLeft size={24} color={colors.text} />
           </Pressable>
         )}
-        <Text style={s.navTitle}>
-          {isMandatory ? "Review Your Profile" : "My Profile"}
-        </Text>
+        <Text style={s.navTitle}>{isMandatory ? 'Review Your Profile' : 'My Profile'}</Text>
         <View style={s.navButton} />
       </View>
 
       <ScrollView style={s.scrollView} contentContainerStyle={s.scrollContent}>
         {/* Subtitle */}
         <Text style={s.subtitle}>
-          {isFirstTime
-            ? "Here's what we learned about you. Tap "
-            : "Tap "}
+          {isFirstTime ? "Here's what we learned about you. Tap " : 'Tap '}
           <IconEye size={14} color={colors.textSecondary} />
           {isFirstTime
             ? " on anything you'd rather keep private."
-            : " to hide or show items on your profile."}
+            : ' to hide or show items on your profile.'}
         </Text>
 
         {/* Match card container */}
@@ -353,24 +419,44 @@ export default function ProfileAuditScreen() {
           <View style={s.cardInner}>
             <View style={s.matchHeader}>
               <View style={s.matchInfo}>
-                <Text style={s.matchName}>
-                  {currentUser.name?.split(" ")[0] || "You"}
-                </Text>
+                <Text style={s.matchName}>{currentUser.name?.split(' ')[0] || 'You'}</Text>
                 <Text style={s.matchLocation}>
-                  {age ? `${age}, ` : ""}{currentUser.location || ""}
+                  {age ? `${age}, ` : ''}
+                  {currentUser.location || ''}
                 </Text>
               </View>
             </View>
 
             {/* Photo strip */}
             <View style={photoStyles.container}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={PHOTO_WIDTH + PHOTO_GAP} contentContainerStyle={{ gap: PHOTO_GAP }} style={{ overflow: "visible" }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                snapToInterval={PHOTO_WIDTH + PHOTO_GAP}
+                contentContainerStyle={{ gap: PHOTO_GAP }}
+                style={{ overflow: 'visible' }}
+              >
                 {(photos.length > 0 ? photos : [null, null, null]).map((url, i) => (
-                  <Pressable key={i} onPress={() => setShowPhotoEditor(true)} style={[photoStyles.photoWrapper, { transform: [{ rotate: i % 2 === 0 ? "-5deg" : "5deg" }, { translateY: i % 2 === 0 ? 0 : PHOTO_HEIGHT * 0.05 }] }]}>
+                  <Pressable
+                    key={i}
+                    onPress={() => setShowPhotoEditor(true)}
+                    style={[
+                      photoStyles.photoWrapper,
+                      {
+                        transform: [
+                          { rotate: i % 2 === 0 ? '-5deg' : '5deg' },
+                          { translateY: i % 2 === 0 ? 0 : PHOTO_HEIGHT * 0.05 },
+                        ],
+                      },
+                    ]}
+                  >
                     {url ? (
                       <Image source={{ uri: url }} style={photoStyles.photo} resizeMode="cover" />
                     ) : (
-                      <View style={photoStyles.placeholder}><IconUserFilled size={40} color="#BDBDBD" /></View>
+                      <View style={photoStyles.placeholder}>
+                        <IconUserFilled size={40} color="#BDBDBD" />
+                      </View>
                     )}
                   </Pressable>
                 ))}
@@ -382,16 +468,16 @@ export default function ProfileAuditScreen() {
           {(basics.topRow.length > 0 || basics.detailRows.length > 0) && (
             <View style={basicsStyles.container}>
               <ScrollableBasicsRow items={basics.topRow} />
-              {basics.detailRows.length > 0 && basics.topRow.length > 0 && <View style={basicsStyles.dividerLine} />}
+              {basics.detailRows.length > 0 && basics.topRow.length > 0 && (
+                <View style={basicsStyles.dividerLine} />
+              )}
               <ScrollableBasicsRow items={basics.detailRows} />
             </View>
           )}
 
           {/* Bio */}
           <View style={s.bioSection}>
-            {profile.generatedBio && (
-              <Text style={s.shortBio}>{profile.generatedBio}</Text>
-            )}
+            {profile.generatedBio && <Text style={s.shortBio}>{profile.generatedBio}</Text>}
           </View>
 
           {/* Full profile sections with audit toggles */}
@@ -399,28 +485,33 @@ export default function ProfileAuditScreen() {
             {/* Values */}
             {profile.values.length > 0 && (
               <ProfileSection title="Values">
-                {renderAuditTags(profile.values, "values", s.tagValue, s.tagValueText)}
+                {renderAuditTags(profile.values, 'values', s.tagValue, s.tagValueText)}
               </ProfileSection>
             )}
 
             {/* Interests */}
             {profile.interests.length > 0 && (
               <ProfileSection title="Interests">
-                {renderAuditTags(profile.interests, "interests", s.tagInterest, s.tagInterestText)}
+                {renderAuditTags(profile.interests, 'interests', s.tagInterest, s.tagInterestText)}
               </ProfileSection>
             )}
 
             {/* Dealbreakers */}
             {profile.dealbreakers.length > 0 && (
               <ProfileSection title="Dealbreakers">
-                {renderAuditTags(profile.dealbreakers, "dealbreakers", s.tagDealbreaker, s.tagDealbreakerText)}
+                {renderAuditTags(
+                  profile.dealbreakers,
+                  'dealbreakers',
+                  s.tagDealbreaker,
+                  s.tagDealbreakerText
+                )}
               </ProfileSection>
             )}
 
             {/* Keywords */}
             {profile.keywords.length > 0 && (
               <ProfileSection title="Keywords">
-                {renderAuditTags(profile.keywords, "keywords", s.tagSmall)}
+                {renderAuditTags(profile.keywords, 'keywords', s.tagSmall)}
               </ProfileSection>
             )}
 
@@ -429,48 +520,89 @@ export default function ProfileAuditScreen() {
               {Object.entries(profile.traits).map(([key, value]) => {
                 if (value === undefined) return null;
                 const label = getTraitLabel(key);
-                return <TraitBar key={key} name={label.name} value={value as number} lowLabel={label.low} highLabel={label.high} inverted={label.inverted} />;
+                return (
+                  <TraitBar
+                    key={key}
+                    name={label.name}
+                    value={value as number}
+                    lowLabel={label.low}
+                    highLabel={label.high}
+                    inverted={label.inverted}
+                  />
+                );
               })}
             </ProfileSection>
 
             {/* Life Story */}
             {profile.lifeStory && (
               <ProfileSection title="Life Story">
-                {profile.lifeStory.proudestAchievement && renderNestedScalar("lifeStory", "proudestAchievement", "🏆 Proudest Achievement", profile.lifeStory.proudestAchievement)}
-                {profile.lifeStory.definingHardship && renderNestedScalar("lifeStory", "definingHardship", "💪 Defining Challenge", profile.lifeStory.definingHardship)}
-                {profile.lifeStory.biggestRisk && renderNestedScalar("lifeStory", "biggestRisk", "🎲 Biggest Risk Taken", profile.lifeStory.biggestRisk)}
+                {profile.lifeStory.proudestAchievement &&
+                  renderNestedScalar(
+                    'lifeStory',
+                    'proudestAchievement',
+                    '🏆 Proudest Achievement',
+                    profile.lifeStory.proudestAchievement
+                  )}
+                {profile.lifeStory.definingHardship &&
+                  renderNestedScalar(
+                    'lifeStory',
+                    'definingHardship',
+                    '💪 Defining Challenge',
+                    profile.lifeStory.definingHardship
+                  )}
+                {profile.lifeStory.biggestRisk &&
+                  renderNestedScalar(
+                    'lifeStory',
+                    'biggestRisk',
+                    '🎲 Biggest Risk Taken',
+                    profile.lifeStory.biggestRisk
+                  )}
                 {profile.lifeStory.dreams.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>✨ Dreams</Text>
-                    {renderNestedAuditTags(profile.lifeStory.dreams, "lifeStory", "dreams", s.tagSmall)}
+                    {renderNestedAuditTags(
+                      profile.lifeStory.dreams,
+                      'lifeStory',
+                      'dreams',
+                      s.tagSmall
+                    )}
                   </View>
                 )}
                 {profile.lifeStory.fears.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>😰 Fears</Text>
-                    {renderNestedAuditTags(profile.lifeStory.fears, "lifeStory", "fears", s.tagSmall)}
+                    {renderNestedAuditTags(
+                      profile.lifeStory.fears,
+                      'lifeStory',
+                      'fears',
+                      s.tagSmall
+                    )}
                   </View>
                 )}
               </ProfileSection>
             )}
 
             {/* Love Philosophy */}
-            {profile.lovePhilosophy && (profile.lovePhilosophy.loveDefinition || profile.lovePhilosophy.healthyRelationshipVision) && (
-              <ProfileSection title="Love Philosophy">
-                {profile.lovePhilosophy.loveDefinition && (
-                  <View style={s.storyItem}>
-                    <Text style={s.storyLabel}>What is Love?</Text>
-                    <Text style={s.storyText}>{profile.lovePhilosophy.loveDefinition}</Text>
-                  </View>
-                )}
-                {profile.lovePhilosophy.healthyRelationshipVision && (
-                  <View style={s.storyItem}>
-                    <Text style={s.storyLabel}>Healthy Relationship</Text>
-                    <Text style={s.storyText}>{profile.lovePhilosophy.healthyRelationshipVision}</Text>
-                  </View>
-                )}
-              </ProfileSection>
-            )}
+            {profile.lovePhilosophy &&
+              (profile.lovePhilosophy.loveDefinition ||
+                profile.lovePhilosophy.healthyRelationshipVision) && (
+                <ProfileSection title="Love Philosophy">
+                  {profile.lovePhilosophy.loveDefinition && (
+                    <View style={s.storyItem}>
+                      <Text style={s.storyLabel}>What is Love?</Text>
+                      <Text style={s.storyText}>{profile.lovePhilosophy.loveDefinition}</Text>
+                    </View>
+                  )}
+                  {profile.lovePhilosophy.healthyRelationshipVision && (
+                    <View style={s.storyItem}>
+                      <Text style={s.storyLabel}>Healthy Relationship</Text>
+                      <Text style={s.storyText}>
+                        {profile.lovePhilosophy.healthyRelationshipVision}
+                      </Text>
+                    </View>
+                  )}
+                </ProfileSection>
+              )}
 
             {/* Partner Preferences */}
             {profile.partnerPreferences && (
@@ -478,19 +610,36 @@ export default function ProfileAuditScreen() {
                 {profile.partnerPreferences.mustHaves.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>✅ Must Haves</Text>
-                    {renderNestedAuditTags(profile.partnerPreferences.mustHaves, "partnerPreferences", "mustHaves", s.tagMustHave, s.tagMustHaveText)}
+                    {renderNestedAuditTags(
+                      profile.partnerPreferences.mustHaves,
+                      'partnerPreferences',
+                      'mustHaves',
+                      s.tagMustHave,
+                      s.tagMustHaveText
+                    )}
                   </View>
                 )}
                 {profile.partnerPreferences.niceToHaves.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>💫 Nice to Have</Text>
-                    {renderNestedAuditTags(profile.partnerPreferences.niceToHaves, "partnerPreferences", "niceToHaves", s.tagSmall)}
+                    {renderNestedAuditTags(
+                      profile.partnerPreferences.niceToHaves,
+                      'partnerPreferences',
+                      'niceToHaves',
+                      s.tagSmall
+                    )}
                   </View>
                 )}
                 {profile.partnerPreferences.redFlags.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>🚩 Red Flags</Text>
-                    {renderNestedAuditTags(profile.partnerPreferences.redFlags, "partnerPreferences", "redFlags", s.tagRedFlag, s.tagRedFlagText)}
+                    {renderNestedAuditTags(
+                      profile.partnerPreferences.redFlags,
+                      'partnerPreferences',
+                      'redFlags',
+                      s.tagRedFlag,
+                      s.tagRedFlagText
+                    )}
                   </View>
                 )}
               </ProfileSection>
@@ -503,20 +652,34 @@ export default function ProfileAuditScreen() {
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>💬 Conversation Starters</Text>
                     {profile.bioElements.conversationStarters.map((c, i) => (
-                      <Text key={i} style={s.bulletText}>• {c}</Text>
+                      <Text key={i} style={s.bulletText}>
+                        • {c}
+                      </Text>
                     ))}
                   </View>
                 )}
                 {profile.bioElements.uniqueQuirks.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>🎭 Quirks</Text>
-                    {renderNestedAuditTags(profile.bioElements.uniqueQuirks, "bioElements", "uniqueQuirks", s.tagQuirk, s.tagQuirkText)}
+                    {renderNestedAuditTags(
+                      profile.bioElements.uniqueQuirks,
+                      'bioElements',
+                      'uniqueQuirks',
+                      s.tagQuirk,
+                      s.tagQuirkText
+                    )}
                   </View>
                 )}
                 {profile.bioElements.passions.length > 0 && (
                   <View style={s.storyItem}>
                     <Text style={s.storyLabel}>🔥 Passions</Text>
-                    {renderNestedAuditTags(profile.bioElements.passions, "bioElements", "passions", s.tagPassion, s.tagPassionText)}
+                    {renderNestedAuditTags(
+                      profile.bioElements.passions,
+                      'bioElements',
+                      'passions',
+                      s.tagPassion,
+                      s.tagPassionText
+                    )}
                   </View>
                 )}
               </ProfileSection>
@@ -527,14 +690,23 @@ export default function ProfileAuditScreen() {
               <View style={s.infoGrid}>
                 <View style={s.infoItem}>
                   <Text style={s.infoLabel}>Love Language</Text>
-                  <Text style={s.infoValue}>{formatLabel(profile.relationshipStyle.loveLanguage)}</Text>
+                  <Text style={s.infoValue}>
+                    {formatLabel(profile.relationshipStyle.loveLanguage)}
+                  </Text>
                 </View>
                 <View style={s.infoItem}>
                   <Text style={s.infoLabel}>Conflict Style</Text>
-                  <Text style={s.infoValue}>{formatLabel(profile.relationshipStyle.conflictStyle)}</Text>
+                  <Text style={s.infoValue}>
+                    {formatLabel(profile.relationshipStyle.conflictStyle)}
+                  </Text>
                 </View>
               </View>
-              <TraitBar name="Alone Time Need" value={profile.relationshipStyle.aloneTimeNeed} lowLabel="Together always" highLabel="Lots of space" />
+              <TraitBar
+                name="Alone Time Need"
+                value={profile.relationshipStyle.aloneTimeNeed}
+                lowLabel="Together always"
+                highLabel="Lots of space"
+              />
             </ProfileSection>
 
             {/* Family & Future */}
@@ -547,7 +719,12 @@ export default function ProfileAuditScreen() {
                   </View>
                 </View>
               )}
-              <TraitBar name="Family Closeness" value={profile.familyPlans.familyCloseness} lowLabel="Independent" highLabel="Very close" />
+              <TraitBar
+                name="Family Closeness"
+                value={profile.familyPlans.familyCloseness}
+                lowLabel="Independent"
+                highLabel="Very close"
+              />
             </ProfileSection>
           </View>
         </View>
@@ -557,11 +734,15 @@ export default function ProfileAuditScreen() {
 
       {/* Footer */}
       <View style={s.footer}>
-        <Pressable style={[s.doneButton, saving && s.doneButtonDisabled]} onPress={handleDone} disabled={saving}>
+        <Pressable
+          style={[s.doneButton, saving && s.doneButtonDisabled]}
+          onPress={handleDone}
+          disabled={saving}
+        >
           {saving ? (
             <ActivityIndicator color={colors.primaryText} size="small" />
           ) : (
-            <Text style={s.doneButtonText}>{isMandatory ? "Looks Good" : "Done"}</Text>
+            <Text style={s.doneButtonText}>{isMandatory ? 'Looks Good' : 'Done'}</Text>
           )}
         </Pressable>
       </View>
@@ -585,7 +766,11 @@ export default function ProfileAuditScreen() {
               Hold and drag photos to reorder. Your first photo is your main profile picture.
             </Text>
             {currentUser._id && (
-              <PhotoGrid userId={currentUser._id} existingPhotos={userPhotos} showRequired={false} />
+              <PhotoGrid
+                userId={currentUser._id}
+                existingPhotos={userPhotos}
+                showRequired={false}
+              />
             )}
           </ScrollView>
         </SafeAreaView>
@@ -597,107 +782,249 @@ export default function ProfileAuditScreen() {
 // --- Styles ---
 
 const photoStyles = StyleSheet.create({
-  container: { marginTop: spacing.md - PHOTO_HEIGHT * 0.1, marginBottom: -spacing.md, paddingVertical: 20, overflow: "visible" },
-  photoWrapper: { width: PHOTO_WIDTH, height: PHOTO_HEIGHT },
-  photo: { width: "100%", height: "100%", borderRadius: 12 },
-  placeholder: { width: "100%", height: "100%", backgroundColor: "#E0E0E0", justifyContent: "center", alignItems: "center", borderRadius: 12 },
+  container: {
+    marginBottom: -spacing.md,
+    marginTop: spacing.md - PHOTO_HEIGHT * 0.1,
+    overflow: 'visible',
+    paddingVertical: 20,
+  },
+  photo: { borderRadius: 12, height: '100%', width: '100%' },
+  photoWrapper: { height: PHOTO_HEIGHT, width: PHOTO_WIDTH },
+  placeholder: {
+    alignItems: 'center',
+    backgroundColor: '#E0E0E0',
+    borderRadius: 12,
+    height: '100%',
+    justifyContent: 'center',
+    width: '100%',
+  },
 });
 
 const basicsStyles = StyleSheet.create({
   container: { backgroundColor: colors.surface, borderRadius: 12, marginBottom: spacing.xs },
-  topRow: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.md, paddingHorizontal: spacing.md },
-  topItem: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  topDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: spacing.sm },
-  topLabel: { fontSize: fontSizes.xs, color: colors.text },
-  dividerLine: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
+  dividerLine: { backgroundColor: colors.border, height: 1, marginHorizontal: spacing.md },
+  topDivider: {
+    backgroundColor: colors.border,
+    height: 20,
+    marginHorizontal: spacing.sm,
+    width: 1,
+  },
+  topItem: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  topLabel: { color: colors.text, fontSize: fontSizes.xs },
+  topRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
 });
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-  analyzingContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing["2xl"] },
-  analyzingTitle: { fontFamily: fonts.serifBold, fontSize: fontSizes["4xl"], color: colors.text, textAlign: "center", marginTop: spacing.xl, marginBottom: spacing.lg },
-  analyzingSubtitle: { fontSize: fontSizes.base, color: colors.textSecondary, textAlign: "center", lineHeight: 24, paddingHorizontal: spacing.lg },
-  navBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  navButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
+  container: { backgroundColor: colors.background, flex: 1 },
+  loading: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  analyzingContainer: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing['2xl'],
+  },
+  analyzingTitle: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['4xl'],
+    marginBottom: spacing.lg,
+    marginTop: spacing.xl,
+    textAlign: 'center',
+  },
+  analyzingSubtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    lineHeight: 24,
+    paddingHorizontal: spacing.lg,
+    textAlign: 'center',
+  },
+  navBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  navButton: { alignItems: 'center', height: 40, justifyContent: 'center', width: 40 },
   navTitle: { ...textStyles.pageTitle },
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: spacing["3xl"] },
-  subtitle: { fontSize: fontSizes.sm, color: colors.textSecondary, lineHeight: 20, paddingHorizontal: spacing.xl, marginBottom: spacing.lg, textAlign: "center" },
+  scrollContent: { paddingBottom: spacing['3xl'] },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    textAlign: 'center',
+  },
 
   // Card (mirrors matchCard from matches.tsx)
-  card: { marginHorizontal: spacing.lg, borderRadius: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 3, backgroundColor: colors.surface },
-  cardInner: { padding: spacing.lg, backgroundColor: colors.surface, borderRadius: 12, overflow: "hidden" },
-  matchHeader: { flexDirection: "row", alignItems: "center", marginBottom: spacing.sm },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    elevation: 3,
+    marginHorizontal: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+  },
+  cardInner: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+    padding: spacing.lg,
+  },
+  matchHeader: { alignItems: 'center', flexDirection: 'row', marginBottom: spacing.sm },
   matchInfo: { flex: 1 },
-  matchName: { fontFamily: fonts.serifBold, fontSize: fontSizes["3xl"], color: colors.text },
-  matchLocation: { fontSize: fontSizes.base, color: colors.textSecondary, marginTop: 2 },
-  bioSection: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
-  shortBio: { fontSize: fontSizes.sm, color: colors.text, lineHeight: 20, fontStyle: "italic" },
+  matchName: { color: colors.text, fontFamily: fonts.serifBold, fontSize: fontSizes['3xl'] },
+  matchLocation: { color: colors.textSecondary, fontSize: fontSizes.base, marginTop: 2 },
+  bioSection: { paddingBottom: spacing.md, paddingHorizontal: spacing.md },
+  shortBio: { color: colors.text, fontSize: fontSizes.sm, fontStyle: 'italic', lineHeight: 20 },
 
   // Full profile
-  fullProfile: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
-  profileSection: { marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  sectionTitle: { fontFamily: fonts.serifBold, fontSize: fontSizes.base, color: colors.text, marginBottom: spacing.sm },
+  fullProfile: { paddingBottom: spacing.lg, paddingHorizontal: spacing.md },
+  profileSection: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes.base,
+    marginBottom: spacing.sm,
+  },
 
   // Tags (shared)
-  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  tag: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: 12 },
-  tagText: { fontSize: fontSizes.xs, flexShrink: 1 },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  tag: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  tagText: { flexShrink: 1, fontSize: fontSizes.xs },
   tagHidden: { backgroundColor: `${colors.border}40` },
-  hiddenText: { color: colors.textMuted, textDecorationLine: "line-through" },
-  tagValue: { backgroundColor: "#dbeafe" },
-  tagValueText: { color: "#1e40af" },
-  tagInterest: { backgroundColor: "#fef3c7" },
-  tagInterestText: { color: "#92400e" },
-  tagDealbreaker: { backgroundColor: "#fee2e2" },
-  tagDealbreakerText: { color: "#991b1b" },
-  tagMustHave: { backgroundColor: "#dcfce7" },
-  tagMustHaveText: { color: "#166534" },
-  tagRedFlag: { backgroundColor: "#fee2e2" },
-  tagRedFlagText: { color: "#991b1b" },
-  tagQuirk: { backgroundColor: "#f3e8ff" },
-  tagQuirkText: { color: "#7c3aed" },
-  tagPassion: { backgroundColor: "#fce7f3" },
-  tagPassionText: { color: "#be185d" },
+  hiddenText: { color: colors.textMuted, textDecorationLine: 'line-through' },
+  tagValue: { backgroundColor: '#dbeafe' },
+  tagValueText: { color: '#1e40af' },
+  tagInterest: { backgroundColor: '#fef3c7' },
+  tagInterestText: { color: '#92400e' },
+  tagDealbreaker: { backgroundColor: '#fee2e2' },
+  tagDealbreakerText: { color: '#991b1b' },
+  tagMustHave: { backgroundColor: '#dcfce7' },
+  tagMustHaveText: { color: '#166534' },
+  tagRedFlag: { backgroundColor: '#fee2e2' },
+  tagRedFlagText: { color: '#991b1b' },
+  tagQuirk: { backgroundColor: '#f3e8ff' },
+  tagQuirkText: { color: '#7c3aed' },
+  tagPassion: { backgroundColor: '#fce7f3' },
+  tagPassionText: { color: '#be185d' },
   tagSmall: { backgroundColor: colors.background },
 
   // Trait bars
   traitRow: { marginBottom: spacing.sm },
-  traitName: { fontSize: fontSizes.xs, color: colors.textSecondary, marginBottom: 4 },
-  traitBarContainer: { flexDirection: "row", alignItems: "center" },
-  traitLabelLeft: { fontSize: 10, color: colors.textMuted, width: 70 },
-  traitLabelRight: { fontSize: 10, color: colors.textMuted, width: 70, textAlign: "right" },
-  traitBar: { flex: 1, height: 8, backgroundColor: colors.border, borderRadius: 4, marginHorizontal: spacing.xs, position: "relative" },
-  traitBarFill: { height: "100%", backgroundColor: colors.text, borderRadius: 4 },
-  traitIndicator: { position: "absolute", top: -2, width: 12, height: 12, backgroundColor: colors.text, borderRadius: 6, marginLeft: -6, borderWidth: 2, borderColor: colors.surface },
+  traitName: { color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: 4 },
+  traitBarContainer: { alignItems: 'center', flexDirection: 'row' },
+  traitLabelLeft: { color: colors.textMuted, fontSize: 10, width: 70 },
+  traitLabelRight: { color: colors.textMuted, fontSize: 10, textAlign: 'right', width: 70 },
+  traitBar: {
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    flex: 1,
+    height: 8,
+    marginHorizontal: spacing.xs,
+    position: 'relative',
+  },
+  traitBarFill: { backgroundColor: colors.text, borderRadius: 4, height: '100%' },
+  traitIndicator: {
+    backgroundColor: colors.text,
+    borderColor: colors.surface,
+    borderRadius: 6,
+    borderWidth: 2,
+    height: 12,
+    marginLeft: -6,
+    position: 'absolute',
+    top: -2,
+    width: 12,
+  },
 
   // Info grid
-  infoGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  infoItem: { minWidth: 100, marginBottom: spacing.xs },
-  infoLabel: { fontSize: 10, color: colors.textMuted, textTransform: "uppercase", letterSpacing: 0.5 },
-  infoValue: { fontSize: fontSizes.sm, color: colors.text, marginTop: 2 },
+  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  infoItem: { marginBottom: spacing.xs, minWidth: 100 },
+  infoLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  infoValue: { color: colors.text, fontSize: fontSizes.sm, marginTop: 2 },
 
   // Story items
   storyItem: { marginBottom: spacing.sm },
-  storyLabel: { fontSize: fontSizes.xs, color: colors.textSecondary, marginBottom: 4 },
-  storyLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  storyText: { fontSize: fontSizes.sm, color: colors.text, lineHeight: 20 },
-  bulletText: { fontSize: fontSizes.sm, color: colors.text, lineHeight: 20, marginLeft: spacing.sm },
+  storyLabel: { color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: 4 },
+  storyLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  storyText: { color: colors.text, fontSize: fontSizes.sm, lineHeight: 20 },
+  bulletText: {
+    color: colors.text,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+    marginLeft: spacing.sm,
+  },
 
   // Footer
-  bottomPadding: { height: spacing["2xl"] },
-  footer: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background },
-  doneButton: { backgroundColor: colors.primary, paddingVertical: spacing.md, borderRadius: 12, alignItems: "center" },
+  bottomPadding: { height: spacing['2xl'] },
+  footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  doneButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+  },
   doneButtonDisabled: { opacity: 0.6 },
-  doneButtonText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primaryText },
+  doneButtonText: { color: colors.primaryText, fontSize: fontSizes.base, fontWeight: '600' },
 
   // Photo editor modal
-  modalContainer: { flex: 1, backgroundColor: colors.background },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalContainer: { backgroundColor: colors.background, flex: 1 },
+  modalHeader: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   modalHeaderSpacer: { width: 60 },
   modalTitle: { ...textStyles.pageTitle },
-  modalDoneButton: { width: 60, alignItems: "flex-end" },
-  modalDoneText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primary },
-  modalSubtitle: { fontSize: fontSizes.sm, color: colors.textSecondary, textAlign: "center", paddingHorizontal: spacing.xl, marginBottom: spacing.lg, lineHeight: 20 },
+  modalDoneButton: { alignItems: 'flex-end', width: 60 },
+  modalDoneText: { color: colors.primary, fontSize: fontSizes.base, fontWeight: '600' },
+  modalSubtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    textAlign: 'center',
+  },
 });

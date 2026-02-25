@@ -1,9 +1,9 @@
-import { api } from "@/convex/_generated/api";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useSignIn, useSignUp } from "@clerk/clerk-expo";
-import { useMutation } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { api } from '@/convex/_generated/api';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { useSignIn, useSignUp } from '@clerk/clerk-expo';
+import { useMutation } from 'convex/react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,14 +12,14 @@ import {
   Text,
   TextInput,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Verify() {
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState('');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   const hiddenInputRef = useRef<TextInput>(null);
   const { phone, isSignUp } = useLocalSearchParams<{
@@ -37,9 +37,9 @@ export default function Verify() {
   }, []);
 
   const handleCodeChange = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 6);
+    const digits = value.replace(/\D/g, '').slice(0, 6);
     setCode(digits);
-    setError("");
+    setError('');
 
     if (digits.length === 6) {
       handleVerify(digits);
@@ -49,30 +49,30 @@ export default function Verify() {
   const handleVerify = async (fullCode?: string) => {
     const codeToVerify = fullCode ?? code;
     if (codeToVerify.length !== 6) {
-      setError("Please enter the 6-digit code");
+      setError('Please enter the 6-digit code');
       return;
     }
 
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
-      if (isSignUp === "true") {
+      if (isSignUp === 'true') {
         const result = await signUp?.attemptPhoneNumberVerification({
           code: codeToVerify,
         });
 
-        if (result?.status === "complete") {
+        if (result?.status === 'complete') {
           await setSignUpActive?.({ session: result.createdSessionId });
           try {
             await createUser({
               phone: phone!,
             });
           } catch (convexErr) {
-            console.log("Convex error (continuing anyway):", convexErr);
+            console.log('Convex error (continuing anyway):', convexErr);
           }
           return;
-        } else if (result?.status === "missing_requirements") {
+        } else if (result?.status === 'missing_requirements') {
           if (result.createdSessionId) {
             await setSignUpActive?.({ session: result.createdSessionId });
             if (result.createdUserId) {
@@ -81,12 +81,12 @@ export default function Verify() {
                   phone: phone!,
                 });
               } catch (e) {
-                console.log("Convex user creation error:", e);
+                console.log('Convex user creation error:', e);
               }
             }
             return;
           }
-          setError("Additional info required. Check Clerk settings.");
+          setError('Additional info required. Check Clerk settings.');
           setLoading(false);
         } else {
           setError(`Unexpected status: ${result?.status}`);
@@ -94,11 +94,11 @@ export default function Verify() {
         }
       } else {
         const result = await signIn?.attemptFirstFactor({
-          strategy: "phone_code",
+          strategy: 'phone_code',
           code: codeToVerify,
         });
 
-        if (result?.status === "complete") {
+        if (result?.status === 'complete') {
           await setSignInActive?.({ session: result.createdSessionId });
           return;
         } else {
@@ -107,46 +107,46 @@ export default function Verify() {
         }
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.message ?? "Invalid code");
-      setCode("");
+      setError(err?.errors?.[0]?.message ?? 'Invalid code');
+      setCode('');
       hiddenInputRef.current?.focus();
       setLoading(false);
     }
   };
 
   const formatPhone = (phoneE164: string) => {
-    const digits = phoneE164.replace(/\D/g, "").slice(-10);
+    const digits = phoneE164.replace(/\D/g, '').slice(-10);
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   };
 
   const handleResend = async () => {
-    if (resendStatus !== "idle") return;
-    setResendStatus("sending");
+    if (resendStatus !== 'idle') return;
+    setResendStatus('sending');
     try {
-      if (isSignUp === "true") {
+      if (isSignUp === 'true') {
         await signUp?.preparePhoneNumberVerification();
       } else {
         const phoneFactor = signIn?.supportedFirstFactors?.find(
-          (f) => f.strategy === "phone_code"
+          (f) => f.strategy === 'phone_code'
         ) as { phoneNumberId: string } | undefined;
         if (phoneFactor) {
           await signIn?.prepareFirstFactor({
-            strategy: "phone_code",
+            strategy: 'phone_code',
             phoneNumberId: phoneFactor.phoneNumberId,
           });
         }
       }
     } catch (err) {
-      console.log("Resend error:", err);
+      console.log('Resend error:', err);
     }
-    setResendStatus("sent");
-    setTimeout(() => setResendStatus("idle"), 2000);
+    setResendStatus('sent');
+    setTimeout(() => setResendStatus('idle'), 2000);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.content}
       >
         <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -156,15 +156,12 @@ export default function Verify() {
         <View style={styles.header}>
           <Text style={styles.title}>Enter code</Text>
           <Text style={styles.subtitle}>
-            We sent a 6-digit code to{"\n"}
-            {formatPhone(phone ?? "")}
+            We sent a 6-digit code to{'\n'}
+            {formatPhone(phone ?? '')}
           </Text>
         </View>
 
-        <Pressable
-          style={styles.codeContainer}
-          onPress={() => hiddenInputRef.current?.focus()}
-        >
+        <Pressable style={styles.codeContainer} onPress={() => hiddenInputRef.current?.focus()}>
           <TextInput
             testID="code-input"
             ref={hiddenInputRef}
@@ -177,11 +174,8 @@ export default function Verify() {
             textContentType="oneTimeCode"
           />
           {[0, 1, 2, 3, 4, 5].map((index) => (
-            <View
-              key={index}
-              style={[styles.codeBox, code[index] && styles.codeBoxFilled]}
-            >
-              <Text style={styles.codeDigit}>{code[index] || ""}</Text>
+            <View key={index} style={[styles.codeBox, code[index] && styles.codeBoxFilled]}>
+              <Text style={styles.codeDigit}>{code[index] || ''}</Text>
             </View>
           ))}
         </Pressable>
@@ -193,25 +187,21 @@ export default function Verify() {
           onPress={() => handleVerify()}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>
-            {loading ? "Verifying..." : "Verify"}
-          </Text>
+          <Text style={styles.buttonText}>{loading ? 'Verifying...' : 'Verify'}</Text>
         </Pressable>
 
         <Pressable
           style={styles.resendButton}
           onPress={handleResend}
-          disabled={resendStatus !== "idle"}
+          disabled={resendStatus !== 'idle'}
         >
           <Text style={styles.resendText}>
-            {resendStatus === "sending"
-              ? "Sending..."
-              : resendStatus === "sent"
-                ? "Sent!"
+            {resendStatus === 'sending'
+              ? 'Sending...'
+              : resendStatus === 'sent'
+                ? 'Sent!'
                 : "Didn't receive a code? "}
-            {resendStatus === "idle" && (
-              <Text style={styles.resendLink}>Resend</Text>
-            )}
+            {resendStatus === 'idle' && <Text style={styles.resendLink}>Resend</Text>}
           </Text>
         </Pressable>
       </KeyboardAvoidingView>
@@ -220,95 +210,95 @@ export default function Verify() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-  },
   backButton: {
+    marginBottom: spacing['2xl'],
     marginTop: spacing.lg,
-    marginBottom: spacing["2xl"],
   },
   backText: {
     color: colors.textSecondary,
     fontSize: fontSizes.base,
   },
-  header: {
-    marginBottom: spacing["2xl"],
-  },
-  title: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    lineHeight: 24,
-  },
-  codeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.xl,
-  },
-  hiddenInput: {
-    position: "absolute",
-    opacity: 0,
-    height: 1,
-    width: 1,
-  },
-  codeBox: {
-    width: 48,
-    height: 56,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  codeBoxFilled: {
-    borderColor: colors.primary,
-  },
-  codeDigit: {
-    fontSize: fontSizes["2xl"],
-    fontWeight: "600",
-    color: colors.text,
-  },
-  error: {
-    color: colors.error,
-    fontSize: fontSizes.sm,
-    marginBottom: spacing.lg,
-    textAlign: "center",
-  },
   button: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
-    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
     color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  codeBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: 'center',
+    width: 48,
+  },
+  codeBoxFilled: {
+    borderColor: colors.primary,
+  },
+  codeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xl,
+  },
+  codeDigit: {
+    color: colors.text,
+    fontSize: fontSizes['2xl'],
+    fontWeight: '600',
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  error: {
+    color: colors.error,
+    fontSize: fontSizes.sm,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  header: {
+    marginBottom: spacing['2xl'],
+  },
+  hiddenInput: {
+    height: 1,
+    opacity: 0,
+    position: 'absolute',
+    width: 1,
   },
   resendButton: {
+    alignItems: 'center',
     marginTop: spacing.xl,
-    alignItems: "center",
+  },
+  resendLink: {
+    color: colors.text,
+    textDecorationLine: 'underline',
   },
   resendText: {
     color: colors.textSecondary,
     fontSize: fontSizes.sm,
   },
-  resendLink: {
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    lineHeight: 24,
+  },
+  title: {
     color: colors.text,
-    textDecorationLine: "underline",
+    fontFamily: fonts.serif,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.sm,
   },
 });

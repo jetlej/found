@@ -1,10 +1,10 @@
-import { BasicOptionScreen } from "@/components/BasicOptionScreen";
+import { BasicOptionScreen } from '@/components/BasicOptionScreen';
 
 const OPTIONS = [
-  { value: "Monogamy", label: "Monogamy" },
-  { value: "Non-monogamy", label: "Non-monogamy" },
-  { value: "Open to either", label: "Open to either" },
-  { value: "Prefer not to say", label: "Prefer not to say" },
+  { value: 'Monogamy', label: 'Monogamy' },
+  { value: 'Non-monogamy', label: 'Non-monogamy' },
+  { value: 'Open to either', label: 'Open to either' },
+  { value: 'Prefer not to say', label: 'Prefer not to say' },
 ];
 
 export default function RelationshipTypeScreen() {

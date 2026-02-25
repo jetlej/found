@@ -1,35 +1,35 @@
 // Onboarding Flow Configuration
 // Defines the linear flow and provides navigation helpers
 
-import { Router } from "expo-router";
+import { Router } from 'expo-router';
 
 // The onboarding screens in order (after auth)
 // To reorder steps, just move items in this array
 export const ONBOARDING_FLOW = [
-  "referral",
-  "name",
-  "pronouns",
-  "gender",
-  "sexuality",
-  "location",
-  "birthday",
-  "age-range",
-  "height",
-  "relationship-goals",
-  "relationship-type",
-  "kids",
-  "wants-kids",
-  "ethnicity",
-  "hometown",
-  "religion",
-  "politics",
-  "pets",
-  "drinking",
-  "smoking",
-  "marijuana",
-  "drugs",
-  "tattoos",
-  "photos",
+  'referral',
+  'name',
+  'pronouns',
+  'gender',
+  'sexuality',
+  'location',
+  'birthday',
+  'age-range',
+  'height',
+  'relationship-goals',
+  'relationship-type',
+  'kids',
+  'wants-kids',
+  'ethnicity',
+  'hometown',
+  'religion',
+  'politics',
+  'pets',
+  'drinking',
+  'smoking',
+  'marijuana',
+  'drugs',
+  'tattoos',
+  'photos',
 ] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_FLOW)[number];
@@ -58,20 +58,20 @@ export function goToNextStep(router: Router, current: OnboardingStep, editing?: 
   if (next) {
     router.push({
       pathname: `/(onboarding)/${next}`,
-      params: editing ? { editing: "true" } : undefined,
+      params: editing ? { editing: 'true' } : undefined,
     });
   } else {
     // End of onboarding - go to main app
-    router.replace("/(tabs)");
+    router.replace('/(tabs)');
   }
 }
 
 // Steps excluded from visible progress (still in flow for navigation)
-const PROGRESS_EXCLUDED: readonly OnboardingStep[] = ["referral"];
+const PROGRESS_EXCLUDED: readonly OnboardingStep[] = ['referral'];
 
 // Visible steps only (for progress bar / step counter)
 export const ONBOARDING_VISIBLE_STEPS = ONBOARDING_FLOW.filter(
-  (s) => !PROGRESS_EXCLUDED.includes(s),
+  (s) => !PROGRESS_EXCLUDED.includes(s)
 );
 
 // Get progress as a fraction (0 to 1), excluding non-visible steps

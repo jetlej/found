@@ -23,7 +23,21 @@
     "test:e2e:onboarding": "$HOME/.maestro/bin/maestro test .maestro/flows/03_onboarding.yaml",
     "test:e2e:edge": "$HOME/.maestro/bin/maestro test .maestro/edge_cases/",
     "test": "vitest",
-    "test:once": "vitest run"
+    "test:once": "vitest run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,mjs,json,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@bsky.app/expo-image-crop-tool": "^0.5.0",
@@ -83,10 +97,20 @@
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
+    "@eslint/js": "^9",
     "@types/react": "~19.1.0",
     "convex-test": "^0.0.41",
+    "eslint": "^9",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-native": "^5.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   },
   "private": true

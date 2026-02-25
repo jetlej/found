@@ -1,12 +1,12 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { goToNextStep } from "@/lib/onboarding-flow";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation } from "convex/react";
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { goToNextStep } from '@/lib/onboarding-flow';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { useAuth } from '@clerk/clerk-expo';
+import { useFocusEffect } from '@react-navigation/native';
+import { useMutation } from 'convex/react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Keyboard,
   Platform,
@@ -17,14 +17,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ReferralScreen() {
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
 
@@ -37,8 +37,8 @@ export default function ReferralScreen() {
 
   // Listen for keyboard events to get actual keyboard height
   useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height - insets.bottom);
@@ -61,19 +61,19 @@ export default function ReferralScreen() {
 
   const handleLogout = async () => {
     await signOut();
-    router.replace("/");
+    router.replace('/');
   };
 
   const handleApply = async () => {
     if (!code.trim()) {
-      setError("Please enter a referral code");
+      setError('Please enter a referral code');
       return;
     }
 
     if (!userId) return;
 
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       const result = await applyReferralCode({
@@ -84,34 +84,34 @@ export default function ReferralScreen() {
         setSuccess(
           result.referrerName
             ? `Code applied! ${result.referrerName} referred you.`
-            : "Code applied!"
+            : 'Code applied!'
         );
         // Wait a moment to show success, then continue
         setTimeout(() => {
           continueToNext();
         }, 1500);
       } else {
-        setError(result.error ?? "Invalid code");
+        setError(result.error ?? 'Invalid code');
         setLoading(false);
       }
     } catch (err) {
-      setError("Something went wrong. Try again.");
+      setError('Something went wrong. Try again.');
       setLoading(false);
     }
   };
 
   const continueToNext = async () => {
     if (userId) {
-      await setOnboardingStep({ step: "name" });
+      await setOnboardingStep({ step: 'name' });
     }
-    goToNextStep(router, "referral");
+    goToNextStep(router, 'referral');
   };
 
   const handleSkip = async () => {
     if (userId) {
-      setOnboardingStep({ step: "name" });
+      setOnboardingStep({ step: 'name' });
     }
-    goToNextStep(router, "referral");
+    goToNextStep(router, 'referral');
   };
 
   return (
@@ -134,8 +134,8 @@ export default function ReferralScreen() {
             value={code}
             onChangeText={(text) => {
               setCode(text.toUpperCase());
-              setError("");
-              setSuccess("");
+              setError('');
+              setSuccess('');
             }}
             placeholder="Enter code"
             placeholderTextColor={colors.textMuted}
@@ -155,9 +155,7 @@ export default function ReferralScreen() {
           disabled={loading || !!success || !code.trim()}
           activeOpacity={0.7}
         >
-          <Text style={styles.buttonText}>
-            {loading ? "Submitting..." : "Submit"}
-          </Text>
+          <Text style={styles.buttonText}>{loading ? 'Submitting...' : 'Submit'}</Text>
         </TouchableOpacity>
 
         <Text style={styles.orText}>or</Text>
@@ -180,97 +178,97 @@ export default function ReferralScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  inner: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    justifyContent: "center",
-  },
-  header: {
-    marginBottom: spacing["2xl"],
-  },
-  title: {
-    fontFamily: fonts.logo,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    textAlign: "center",
-    marginBottom: spacing.md,
-  },
-  subtitle: {
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  inputContainer: {
-    marginBottom: spacing.lg,
-  },
-  input: {
-    backgroundColor: colors.surface,
+  button: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
-    fontSize: fontSizes.xl,
-    color: colors.text,
-    textAlign: "center",
-    fontWeight: "600",
   },
-  inputWithText: {
-    letterSpacing: 4,
+  buttonText: {
+    color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  buttonTextDisabled: {
+    opacity: 0.5,
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
   error: {
     color: colors.error,
     fontSize: fontSizes.sm,
     marginBottom: spacing.lg,
-    textAlign: "center",
+    textAlign: 'center',
   },
-  success: {
-    color: colors.success,
-    fontSize: fontSizes.sm,
+  header: {
+    marginBottom: spacing['2xl'],
+  },
+  inner: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    color: colors.text,
+    fontSize: fontSizes.xl,
+    fontWeight: '600',
+    padding: spacing.lg,
+    textAlign: 'center',
+  },
+  inputContainer: {
     marginBottom: spacing.lg,
-    textAlign: "center",
   },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-  },
-  buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.primaryText,
-  },
-  buttonTextDisabled: {
-    opacity: 0.5,
-  },
-  orText: {
-    textAlign: "center",
-    color: colors.textMuted,
-    fontSize: fontSizes.sm,
-    marginVertical: spacing.lg,
-  },
-  skipButton: {
-    alignItems: "center",
-    padding: spacing.lg,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.textMuted,
-  },
-  skipText: {
-    color: colors.textSecondary,
-    fontSize: fontSizes.base,
+  inputWithText: {
+    letterSpacing: 4,
   },
   logoutButton: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingBottom: spacing.lg,
   },
   logoutText: {
     color: colors.textMuted,
     fontSize: fontSizes.sm,
+  },
+  orText: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+    marginVertical: spacing.lg,
+    textAlign: 'center',
+  },
+  skipButton: {
+    alignItems: 'center',
+    borderColor: colors.textMuted,
+    borderRadius: 12,
+    borderWidth: 2,
+    padding: spacing.lg,
+  },
+  skipText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  success: {
+    color: colors.success,
+    fontSize: fontSizes.sm,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  title: {
+    color: colors.text,
+    fontFamily: fonts.logo,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.md,
+    textAlign: 'center',
   },
 });

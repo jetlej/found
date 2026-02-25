@@ -1,8 +1,8 @@
-import { BasicOptionScreen } from "@/components/BasicOptionScreen";
+import { BasicOptionScreen } from '@/components/BasicOptionScreen';
 
 const OPTIONS = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
 ];
 
 export default function KidsScreen() {

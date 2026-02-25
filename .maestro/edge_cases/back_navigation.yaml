@@ -14,27 +14,27 @@ appId: com.jetlej.found
 - runFlow: ../flows/02_auth.yaml
 
 # Step 1: Skip referral
-- assertVisible: "Have a referral code?"
+- assertVisible: 'Have a referral code?'
 - tapOn: "I don't have a code"
 
 # Step 2: Enter name
 - assertVisible: "What's your first name?"
 - tapOn:
-    id: "name-input"
-- inputText: "BackNavTest"
+    id: 'name-input'
+- inputText: 'BackNavTest'
 - hideKeyboard
-- tapOn: "Next"
+- tapOn: 'Next'
 
 # Step 3: Pronouns (auto-advances)
-- assertVisible: "What are your pronouns?"
-- tapOn: "she/her"
+- assertVisible: 'What are your pronouns?'
+- tapOn: 'she/her'
 
 # Step 4: Should be on Gender now
-- assertVisible: "I am a..."
+- assertVisible: 'I am a...'
 
 # Tap the back button (chevron in layout header)
 - tapOn:
-    point: "10%,6%"
+    point: '10%,6%'
 
 # Should be back on Pronouns
-- assertVisible: "What are your pronouns?"
+- assertVisible: 'What are your pronouns?'

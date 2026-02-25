@@ -1,8 +1,8 @@
-import { useBasicsStep } from "@/hooks/useBasicsStep";
-import { useScreenReady } from "@/hooks/useScreenReady";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft } from "@tabler/icons-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useBasicsStep } from '@/hooks/useBasicsStep';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { IconChevronLeft } from '@tabler/icons-react-native';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Keyboard,
@@ -14,16 +14,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function NameScreen() {
   const { currentUser, isEditing, loading, save, close } = useBasicsStep({
-    stepName: "name",
+    stepName: 'name',
   });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
-  const [firstName, setFirstName] = useState("");
+  const [firstName, setFirstName] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -46,10 +46,8 @@ export default function NameScreen() {
 
   // Listen for keyboard events to get actual keyboard height
   useEffect(() => {
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       // Subtract bottom safe area since parent SafeAreaView already accounts for it
@@ -89,9 +87,7 @@ export default function NameScreen() {
           bounces={false}
         >
           <Text style={styles.question}>What's your first name?</Text>
-          <Text style={styles.questionSubtext}>
-            This is how you'll appear to matches
-          </Text>
+          <Text style={styles.questionSubtext}>This is how you'll appear to matches</Text>
           <TextInput
             testID="name-input"
             ref={inputRef}
@@ -105,23 +101,15 @@ export default function NameScreen() {
           />
         </ScrollView>
 
-        <View
-          style={[
-            styles.footer,
-            { paddingBottom: spacing.lg + keyboardHeight },
-          ]}
-        >
+        <View style={[styles.footer, { paddingBottom: spacing.lg + keyboardHeight }]}>
           <TouchableOpacity
-            style={[
-              styles.button,
-              (!canProceed || loading) && styles.buttonDisabled,
-            ]}
+            style={[styles.button, (!canProceed || loading) && styles.buttonDisabled]}
             onPress={handleContinue}
             disabled={!canProceed || loading}
             activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
+              {loading ? 'Saving...' : isEditing ? 'Save' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -131,67 +119,67 @@ export default function NameScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
+  button: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: spacing.lg,
   },
-  closeHeader: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
   },
   closeButton: {
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
     padding: spacing.xs,
+  },
+  closeHeader: {
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
   flex: {
     flex: 1,
+  },
+  footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  nameInput: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 2,
+    color: colors.text,
+    fontSize: fontSizes.xl,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  question: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.sm,
+  },
+  questionSubtext: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    marginBottom: spacing.xl,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-  },
-  question: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  questionSubtext: {
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
-  nameInput: {
-    fontSize: fontSizes.xl,
-    color: colors.text,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.border,
-    paddingVertical: spacing.md,
-    marginTop: spacing.lg,
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.primaryText,
+    paddingTop: spacing['2xl'],
   },
 });

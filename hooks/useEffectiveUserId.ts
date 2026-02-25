@@ -1,5 +1,5 @@
-import { useOfflineStore } from "@/stores/offline";
-import { useAuth } from "@clerk/clerk-expo";
+import { useOfflineStore } from '@/stores/offline';
+import { useAuth } from '@clerk/clerk-expo';
 
 /**
  * Returns the effective user ID, respecting dev mode impersonation.

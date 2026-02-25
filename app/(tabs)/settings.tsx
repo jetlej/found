@@ -1,15 +1,15 @@
-import { AppHeader } from "@/components/AppHeader";
-import { PhotoGrid } from "@/components/PhotoGrid";
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
-import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
-import { useAuth } from "@clerk/clerk-expo";
-import { useIsFocused } from "@react-navigation/native";
-import { IconPencil } from "@tabler/icons-react-native";
-import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { AppHeader } from '@/components/AppHeader';
+import { PhotoGrid } from '@/components/PhotoGrid';
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { TOTAL_VOICE_QUESTIONS } from '@/lib/voice-questions';
+import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
+import { useAuth } from '@clerk/clerk-expo';
+import { useIsFocused } from '@react-navigation/native';
+import { IconPencil } from '@tabler/icons-react-native';
+import { useMutation, useQuery } from 'convex/react';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,13 +20,9 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const { signOut } = useAuth();
@@ -38,7 +34,7 @@ export default function SettingsScreen() {
   const versionTapCountRef = useRef(0);
   const versionTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
 
   // Fade in once data is ready
   const fadeOpacity = useSharedValue(0);
@@ -55,18 +51,16 @@ export default function SettingsScreen() {
 
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
-  const firstPhotoUrl =
-    userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
+  const firstPhotoUrl = userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   const recordingCount = useQuery(
     api.voiceRecordings.getCompletedCount,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
-  const questionsComplete =
-    recordingCount !== undefined && recordingCount >= TOTAL_VOICE_QUESTIONS;
+  const questionsComplete = recordingCount !== undefined && recordingCount >= TOTAL_VOICE_QUESTIONS;
 
   const handleSignOut = async () => {
     await signOut();
@@ -81,21 +75,21 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert("Delete Account", "Are you sure?", [
+    Alert.alert('Delete Account', 'Are you sure?', [
       {
-        text: "Cancel",
-        style: "cancel",
+        text: 'Cancel',
+        style: 'cancel',
         onPress: resetVersionTapState,
       },
       {
-        text: "Delete",
-        style: "destructive",
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
           try {
             await deleteCurrentUserAccount({});
             await signOut();
           } catch {
-            Alert.alert("Error", "Could not delete account. Please try again.");
+            Alert.alert('Error', 'Could not delete account. Please try again.');
           } finally {
             resetVersionTapState();
           }
@@ -132,7 +126,7 @@ export default function SettingsScreen() {
 
   if (isUserLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <AppHeader />
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.text} />
@@ -142,74 +136,64 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
-      <AppHeader />
+        <AppHeader />
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Pressable
-            style={styles.avatarContainer}
-            onPress={() => setShowPhotoEditor(true)}
-          >
-            {firstPhotoUrl ? (
-              <Image source={{ uri: firstPhotoUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitial}>
-                  {currentUser?.name?.charAt(0)?.toUpperCase() || "?"}
-                </Text>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.header}>
+            <Pressable style={styles.avatarContainer} onPress={() => setShowPhotoEditor(true)}>
+              {firstPhotoUrl ? (
+                <Image source={{ uri: firstPhotoUrl }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>
+                    {currentUser?.name?.charAt(0)?.toUpperCase() || '?'}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.editBadge}>
+                <IconPencil size={12} color={colors.primaryText} />
               </View>
-            )}
-            <View style={styles.editBadge}>
-              <IconPencil size={12} color={colors.primaryText} />
-            </View>
-          </Pressable>
-          <Text style={styles.name}>{currentUser?.name ?? "User"}</Text>
-        </View>
+            </Pressable>
+            <Text style={styles.name}>{currentUser?.name ?? 'User'}</Text>
+          </View>
 
-        {/* Profile section -- only shown after voice questions are complete */}
-        {questionsComplete && (
+          {/* Profile section -- only shown after voice questions are complete */}
+          {questionsComplete && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Profile</Text>
+              <Pressable style={styles.menuItem} onPress={() => router.push('/profile-audit')}>
+                <Text style={styles.menuText}>My Profile</Text>
+                <Text style={styles.menuArrow}>→</Text>
+              </Pressable>
+              <Pressable style={styles.menuItem} onPress={() => router.push('/edit-answers')}>
+                <Text style={styles.menuText}>Edit Answers</Text>
+                <Text style={styles.menuArrow}>→</Text>
+              </Pressable>
+            </View>
+          )}
+
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile</Text>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push("/profile-audit")}
-            >
-              <Text style={styles.menuText}>My Profile</Text>
+            <Text style={styles.sectionTitle}>About</Text>
+            <Pressable style={styles.menuItem}>
+              <Text style={styles.menuText}>Privacy Policy</Text>
               <Text style={styles.menuArrow}>→</Text>
             </Pressable>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push("/edit-answers")}
-            >
-              <Text style={styles.menuText}>Edit Answers</Text>
+            <Pressable style={styles.menuItem}>
+              <Text style={styles.menuText}>Terms of Service</Text>
               <Text style={styles.menuArrow}>→</Text>
             </Pressable>
           </View>
-        )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Pressable style={styles.menuItem}>
-            <Text style={styles.menuText}>Privacy Policy</Text>
-            <Text style={styles.menuArrow}>→</Text>
+          <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+            <Text style={styles.signOutText}>Sign Out</Text>
           </Pressable>
-          <Pressable style={styles.menuItem}>
-            <Text style={styles.menuText}>Terms of Service</Text>
-            <Text style={styles.menuArrow}>→</Text>
+
+          <Pressable onPress={handleVersionPress} hitSlop={8}>
+            <Text style={styles.version}>v1.0.0</Text>
           </Pressable>
-        </View>
-
-        <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </Pressable>
-
-        <Pressable onPress={handleVersionPress} hitSlop={8}>
-          <Text style={styles.version}>v1.0.0</Text>
-        </Pressable>
-      </ScrollView>
-
+        </ScrollView>
       </Animated.View>
 
       <Modal
@@ -231,7 +215,11 @@ export default function SettingsScreen() {
               Hold and drag photos to reorder. Your first photo is your main profile picture.
             </Text>
             {currentUser?._id && (
-              <PhotoGrid userId={currentUser._id} existingPhotos={userPhotos} showRequired={false} />
+              <PhotoGrid
+                userId={currentUser._id}
+                existingPhotos={userPhotos}
+                showRequired={false}
+              />
             )}
           </ScrollView>
         </SafeAreaView>
@@ -241,62 +229,100 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scrollView: { flex: 1 },
-  header: {
-    alignItems: "center",
-    paddingVertical: spacing["2xl"],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
-  },
-  avatarContainer: { position: "relative" },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.border },
+  avatar: { backgroundColor: colors.border, borderRadius: 40, height: 80, width: 80 },
+  avatarContainer: { position: 'relative' },
+  avatarInitial: { color: colors.text, fontSize: fontSizes['2xl'], fontWeight: '600' },
   avatarPlaceholder: {
-    width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surfaceSecondary,
-    justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.border,
+    borderRadius: 40,
+    borderWidth: 1,
+    height: 80,
+    justifyContent: 'center',
+    width: 80,
   },
-  avatarInitial: { fontSize: fontSizes["2xl"], fontWeight: "600", color: colors.text },
+  container: { backgroundColor: colors.background, flex: 1 },
   editBadge: {
-    position: "absolute", bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14,
-    backgroundColor: colors.primary, justifyContent: "center", alignItems: "center",
-    borderWidth: 2, borderColor: colors.background,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderColor: colors.background,
+    borderRadius: 14,
+    borderWidth: 2,
+    bottom: 0,
+    height: 28,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
+    width: 28,
   },
-  name: { fontSize: fontSizes.xl, fontWeight: "600", color: colors.text },
-  section: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
-  sectionTitle: {
-    fontSize: fontSizes.xs, fontWeight: "600", color: colors.textMuted,
-    textTransform: "uppercase", marginBottom: spacing.md, letterSpacing: 1,
+  header: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    gap: spacing.md,
+    paddingVertical: spacing['2xl'],
   },
+  loading: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  menuArrow: { color: colors.textMuted, fontSize: fontSizes.base },
   menuItem: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
   },
-  menuText: { fontSize: fontSizes.base, color: colors.text },
-  menuArrow: { fontSize: fontSizes.base, color: colors.textMuted },
-  signOutButton: {
-    marginHorizontal: spacing.xl, marginTop: spacing["3xl"], paddingVertical: spacing.md,
-    alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: colors.error,
-  },
-  signOutText: { fontSize: fontSizes.base, fontWeight: "500", color: colors.error },
-  version: {
-    textAlign: "center", marginTop: spacing.xl, marginBottom: spacing["3xl"],
-    fontSize: fontSizes.xs, color: colors.textMuted,
-  },
-  modalContainer: { flex: 1, backgroundColor: colors.background },
+  menuText: { color: colors.text, fontSize: fontSizes.base },
+  modalContainer: { backgroundColor: colors.background, flex: 1 },
+  modalContent: { flex: 1, paddingTop: spacing.lg },
+  modalDoneButton: { alignItems: 'flex-end', width: 60 },
+  modalDoneText: { color: colors.primary, fontSize: fontSizes.base, fontWeight: '600' },
   modalHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   modalHeaderSpacer: { width: 60 },
-  modalTitle: { ...textStyles.pageTitle },
-  modalDoneButton: { width: 60, alignItems: "flex-end" },
-  modalDoneText: { fontSize: fontSizes.base, fontWeight: "600", color: colors.primary },
-  modalContent: { flex: 1, paddingTop: spacing.lg },
   modalSubtitle: {
-    fontSize: fontSizes.sm, color: colors.textSecondary, textAlign: "center",
-    paddingHorizontal: spacing.xl, marginBottom: spacing.lg, lineHeight: 20,
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    textAlign: 'center',
+  },
+  modalTitle: { ...textStyles.pageTitle },
+  name: { color: colors.text, fontSize: fontSizes.xl, fontWeight: '600' },
+  scrollView: { flex: 1 },
+  section: { paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
+  sectionTitle: {
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: spacing.md,
+    textTransform: 'uppercase',
+  },
+  signOutButton: {
+    alignItems: 'center',
+    borderColor: colors.error,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing['3xl'],
+    paddingVertical: spacing.md,
+  },
+  signOutText: { color: colors.error, fontSize: fontSizes.base, fontWeight: '500' },
+  version: {
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
+    marginBottom: spacing['3xl'],
+    marginTop: spacing.xl,
+    textAlign: 'center',
   },
 });

@@ -1,7 +1,14 @@
-import { BasicOptionScreen } from "@/components/BasicOptionScreen";
+import { BasicOptionScreen } from '@/components/BasicOptionScreen';
 
-const OPTIONS = ["Yes", "No", "Prefer not to say"];
+const OPTIONS = ['Yes', 'No', 'Prefer not to say'];
 
 export default function TattoosScreen() {
-  return <BasicOptionScreen stepName="tattoos" field="tattoos" question="Do you have tattoos?" options={OPTIONS} />;
+  return (
+    <BasicOptionScreen
+      stepName="tattoos"
+      field="tattoos"
+      question="Do you have tattoos?"
+      options={OPTIONS}
+    />
+  );
 }

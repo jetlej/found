@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI from 'openai';
 
 // OpenRouter client for chat completions (lazy singleton)
 let openRouterClient: OpenAI | null = null;
@@ -7,11 +7,11 @@ export function getOpenAIClient(): OpenAI {
   if (!openRouterClient) {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      throw new Error("OPENROUTER_API_KEY environment variable is not set");
+      throw new Error('OPENROUTER_API_KEY environment variable is not set');
     }
     openRouterClient = new OpenAI({
       apiKey,
-      baseURL: "https://openrouter.ai/api/v1",
+      baseURL: 'https://openrouter.ai/api/v1',
     });
   }
   return openRouterClient;
@@ -24,7 +24,7 @@ export function getDirectOpenAIClient(): OpenAI {
   if (!directOpenAIClient) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY environment variable is not set");
+      throw new Error('OPENAI_API_KEY environment variable is not set');
     }
     directOpenAIClient = new OpenAI({ apiKey });
   }
@@ -32,17 +32,17 @@ export function getDirectOpenAIClient(): OpenAI {
 }
 
 // Default model (OpenRouter model ID)
-export const DEFAULT_MODEL = "openai/gpt-5-mini";
+export const DEFAULT_MODEL = 'openai/gpt-5-mini';
 
 // Higher accuracy model for complex extractions
-export const ACCURATE_MODEL = "openai/gpt-5-mini";
+export const ACCURATE_MODEL = 'openai/gpt-5-mini';
 
 // Pricing per 1M tokens (OpenRouter pricing)
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  "openai/gpt-5-mini": { input: 0.25, output: 2.00 },
-  "moonshotai/kimi-k2.5": { input: 0.45, output: 2.25 },
+  'openai/gpt-5-mini': { input: 0.25, output: 2.0 },
+  'moonshotai/kimi-k2.5': { input: 0.45, output: 2.25 },
   // legacy keys kept as fallback
-  "gpt-5-mini-2025-08-07": { input: 0.25, output: 2.00 },
+  'gpt-5-mini-2025-08-07': { input: 0.25, output: 2.0 },
 };
 
 // Type for tracking API usage
@@ -67,13 +67,13 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Type for chat completion messages
 type ChatMessage = {
-  role: "system" | "user" | "assistant";
+  role: 'system' | 'user' | 'assistant';
   content: string;
 };
 
 // Calculate cost from token usage
 export function calculateCost(usage: TokenUsage, model: string = DEFAULT_MODEL): number {
-  const pricing = MODEL_PRICING[model] || MODEL_PRICING["openai/gpt-5-mini"];
+  const pricing = MODEL_PRICING[model] || MODEL_PRICING['openai/gpt-5-mini'];
   const inputCost = (usage.promptTokens / 1_000_000) * pricing.input;
   const outputCost = (usage.completionTokens / 1_000_000) * pricing.output;
   return inputCost + outputCost;
@@ -86,7 +86,7 @@ export async function callOpenAI<T>(
     model?: string;
     temperature?: number;
     maxTokens?: number;
-    responseFormat?: "json" | "text";
+    responseFormat?: 'json' | 'text';
   } = {}
 ): Promise<T> {
   const result = await callOpenAIWithUsage<T>(messages, options);
@@ -100,16 +100,11 @@ export async function callOpenAIWithUsage<T>(
     model?: string;
     temperature?: number;
     maxTokens?: number;
-    responseFormat?: "json" | "text";
+    responseFormat?: 'json' | 'text';
   } = {}
 ): Promise<ApiCallResult<T>> {
   const client = getOpenAIClient();
-  const {
-    model = DEFAULT_MODEL,
-    temperature,
-    maxTokens,
-    responseFormat = "json",
-  } = options;
+  const { model = DEFAULT_MODEL, temperature, maxTokens, responseFormat = 'json' } = options;
 
   let lastError: Error | null = null;
 
@@ -121,13 +116,12 @@ export async function callOpenAIWithUsage<T>(
         messages,
         ...(temperature !== undefined && { temperature }),
         ...(maxTokens !== undefined && { max_completion_tokens: maxTokens }),
-        response_format:
-          responseFormat === "json" ? { type: "json_object" } : { type: "text" },
+        response_format: responseFormat === 'json' ? { type: 'json_object' } : { type: 'text' },
       });
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
-        throw new Error("No content in OpenAI response");
+        throw new Error('No content in OpenAI response');
       }
 
       // Extract usage data
@@ -140,7 +134,7 @@ export async function callOpenAIWithUsage<T>(
       const cost = calculateCost(usage, model);
 
       let data: T;
-      if (responseFormat === "json") {
+      if (responseFormat === 'json') {
         try {
           data = JSON.parse(content) as T;
         } catch (parseError) {
@@ -177,7 +171,7 @@ export async function callOpenAIWithUsage<T>(
     }
   }
 
-  throw lastError || new Error("OpenAI call failed after retries");
+  throw lastError || new Error('OpenAI call failed after retries');
 }
 
 // Structured extraction helper with validation
@@ -191,14 +185,14 @@ export async function extractStructuredData<T>(
   } = {}
 ): Promise<T> {
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userContent },
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userContent },
   ];
 
   return callOpenAI<T>(messages, {
     ...options,
     maxTokens: options.maxTokens,
-    responseFormat: "json",
+    responseFormat: 'json',
   });
 }
 
@@ -213,14 +207,14 @@ export async function extractStructuredDataWithUsage<T>(
   } = {}
 ): Promise<ApiCallResult<T>> {
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userContent },
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userContent },
   ];
 
   return callOpenAIWithUsage<T>(messages, {
     ...options,
     maxTokens: options.maxTokens,
-    responseFormat: "json",
+    responseFormat: 'json',
   });
 }
 
@@ -248,23 +242,23 @@ export function formatCost(cost: number): string {
 export async function generateImage(
   prompt: string,
   options: {
-    size?: "1024x1024" | "1024x1792" | "1792x1024";
+    size?: '1024x1024' | '1024x1792' | '1792x1024';
   } = {}
 ): Promise<ArrayBuffer> {
   const client = getDirectOpenAIClient();
-  const { size = "1024x1024" } = options;
+  const { size = '1024x1024' } = options;
 
   const response = await client.images.generate({
-    model: "dall-e-3",
+    model: 'dall-e-3',
     prompt,
     n: 1,
     size,
-    response_format: "b64_json",
+    response_format: 'b64_json',
   });
 
   const b64 = response.data[0].b64_json;
   if (!b64) {
-    throw new Error("No image data returned from OpenAI");
+    throw new Error('No image data returned from OpenAI');
   }
 
   // Convert base64 to ArrayBuffer for Convex

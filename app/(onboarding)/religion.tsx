@@ -1,17 +1,17 @@
-import { BasicOptionScreen } from "@/components/BasicOptionScreen";
+import { BasicOptionScreen } from '@/components/BasicOptionScreen';
 
 const OPTIONS = [
-  "Christian",
-  "Catholic",
-  "Jewish",
-  "Muslim",
-  "Hindu",
-  "Buddhist",
-  "Spiritual",
-  "Agnostic",
-  "Atheist",
-  "Other",
-  "Prefer not to say",
+  'Christian',
+  'Catholic',
+  'Jewish',
+  'Muslim',
+  'Hindu',
+  'Buddhist',
+  'Spiritual',
+  'Agnostic',
+  'Atheist',
+  'Other',
+  'Prefer not to say',
 ];
 
 export default function ReligionScreen() {

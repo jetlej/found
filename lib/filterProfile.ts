@@ -11,17 +11,14 @@
 
 type AnyProfile = Record<string, any>;
 
-export function filterProfile<T extends AnyProfile>(
-  profile: T,
-  hiddenFields?: string[],
-): T {
+export function filterProfile<T extends AnyProfile>(profile: T, hiddenFields?: string[]): T {
   if (!hiddenFields?.length) return profile;
 
   // Group hidden paths by top-level key
   // e.g. { values: ["2"], lifeStory: ["fears.1"], generatedBio: [] }
   const grouped = new Map<string, string[]>();
   for (const path of hiddenFields) {
-    const dotIdx = path.indexOf(".");
+    const dotIdx = path.indexOf('.');
     if (dotIdx === -1) {
       // Scalar hide: "generatedBio" -> key="generatedBio", rest=""
       grouped.set(path, []);
@@ -53,7 +50,7 @@ export function filterProfile<T extends AnyProfile>(
     }
 
     // Nested object (e.g. "lifeStory", "partnerPreferences", "bioElements")
-    if (val && typeof val === "object") {
+    if (val && typeof val === 'object') {
       result[key as keyof T] = filterNestedObject(val, subPaths) as any;
     }
   }
@@ -64,7 +61,7 @@ export function filterProfile<T extends AnyProfile>(
 function filterNestedObject(obj: Record<string, any>, subPaths: string[]): Record<string, any> {
   const grouped = new Map<string, string[]>();
   for (const path of subPaths) {
-    const dotIdx = path.indexOf(".");
+    const dotIdx = path.indexOf('.');
     if (dotIdx === -1) {
       grouped.set(path, []);
     } else {
@@ -95,8 +92,8 @@ function filterNestedObject(obj: Record<string, any>, subPaths: string[]): Recor
  * Each entry is { path, label, value } for display.
  */
 export interface AuditItem {
-  path: string;   // dot-path, e.g. "values.2"
-  label: string;  // display text, e.g. the value itself
+  path: string; // dot-path, e.g. "values.2"
+  label: string; // display text, e.g. the value itself
   section: string; // section header, e.g. "Values"
 }
 
@@ -105,10 +102,10 @@ export function getAuditableItems(profile: AnyProfile): AuditItem[] {
 
   // Top-level arrays
   const arrayFields: { key: string; section: string }[] = [
-    { key: "values", section: "Values" },
-    { key: "interests", section: "Interests" },
-    { key: "dealbreakers", section: "Dealbreakers" },
-    { key: "keywords", section: "Keywords" },
+    { key: 'values', section: 'Values' },
+    { key: 'interests', section: 'Interests' },
+    { key: 'dealbreakers', section: 'Dealbreakers' },
+    { key: 'keywords', section: 'Keywords' },
   ];
   for (const { key, section } of arrayFields) {
     const arr = profile[key];
@@ -121,18 +118,18 @@ export function getAuditableItems(profile: AnyProfile): AuditItem[] {
 
   // Nested object arrays
   const nestedFields: { key: string; subKey: string; section: string }[] = [
-    { key: "lifeStory", subKey: "dreams", section: "Life Story" },
-    { key: "lifeStory", subKey: "fears", section: "Life Story" },
-    { key: "lifeStory", subKey: "formativeExperiences", section: "Life Story" },
-    { key: "partnerPreferences", subKey: "mustHaves", section: "Partner Preferences" },
-    { key: "partnerPreferences", subKey: "niceToHaves", section: "Partner Preferences" },
-    { key: "partnerPreferences", subKey: "redFlags", section: "Partner Preferences" },
-    { key: "partnerPreferences", subKey: "importantQualities", section: "Partner Preferences" },
-    { key: "partnerPreferences", subKey: "dealbreakersInPartner", section: "Partner Preferences" },
-    { key: "bioElements", subKey: "conversationStarters", section: "Fun Facts" },
-    { key: "bioElements", subKey: "interestingFacts", section: "Fun Facts" },
-    { key: "bioElements", subKey: "uniqueQuirks", section: "Fun Facts" },
-    { key: "bioElements", subKey: "passions", section: "Fun Facts" },
+    { key: 'lifeStory', subKey: 'dreams', section: 'Life Story' },
+    { key: 'lifeStory', subKey: 'fears', section: 'Life Story' },
+    { key: 'lifeStory', subKey: 'formativeExperiences', section: 'Life Story' },
+    { key: 'partnerPreferences', subKey: 'mustHaves', section: 'Partner Preferences' },
+    { key: 'partnerPreferences', subKey: 'niceToHaves', section: 'Partner Preferences' },
+    { key: 'partnerPreferences', subKey: 'redFlags', section: 'Partner Preferences' },
+    { key: 'partnerPreferences', subKey: 'importantQualities', section: 'Partner Preferences' },
+    { key: 'partnerPreferences', subKey: 'dealbreakersInPartner', section: 'Partner Preferences' },
+    { key: 'bioElements', subKey: 'conversationStarters', section: 'Fun Facts' },
+    { key: 'bioElements', subKey: 'interestingFacts', section: 'Fun Facts' },
+    { key: 'bioElements', subKey: 'uniqueQuirks', section: 'Fun Facts' },
+    { key: 'bioElements', subKey: 'passions', section: 'Fun Facts' },
   ];
   for (const { key, subKey, section } of nestedFields) {
     const nested = profile[key];
@@ -145,11 +142,11 @@ export function getAuditableItems(profile: AnyProfile): AuditItem[] {
 
   // Nested scalar strings
   const nestedScalars: { key: string; subKey: string; section: string }[] = [
-    { key: "lifeStory", subKey: "proudestAchievement", section: "Life Story" },
-    { key: "lifeStory", subKey: "definingHardship", section: "Life Story" },
-    { key: "lifeStory", subKey: "biggestRisk", section: "Life Story" },
-    { key: "lifeStory", subKey: "favoriteStory", section: "Life Story" },
-    { key: "bioElements", subKey: "whatTheySek", section: "Fun Facts" },
+    { key: 'lifeStory', subKey: 'proudestAchievement', section: 'Life Story' },
+    { key: 'lifeStory', subKey: 'definingHardship', section: 'Life Story' },
+    { key: 'lifeStory', subKey: 'biggestRisk', section: 'Life Story' },
+    { key: 'lifeStory', subKey: 'favoriteStory', section: 'Life Story' },
+    { key: 'bioElements', subKey: 'whatTheySek', section: 'Fun Facts' },
   ];
   for (const { key, subKey, section } of nestedScalars) {
     const nested = profile[key];

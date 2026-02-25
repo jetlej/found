@@ -1,10 +1,10 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { getNextStep, goToNextStep, type OnboardingStep } from "@/lib/onboarding-flow";
-import { useFocusEffect } from "@react-navigation/native";
-import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { getNextStep, goToNextStep, type OnboardingStep } from '@/lib/onboarding-flow';
+import { useFocusEffect } from '@react-navigation/native';
+import { useMutation, useQuery } from 'convex/react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseBasicsStepOptions {
   stepName: OnboardingStep;
@@ -14,9 +14,9 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
+  const isEditing = editing === 'true';
 
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
   const updateBasics = useMutation(api.users.updateBasics);
   const setOnboardingStep = useMutation(api.users.setOnboardingStep);
   const completeCategory = useMutation(api.users.completeCategory);
@@ -24,7 +24,11 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
   const [loading, setLoading] = useState(false);
 
   // Reset loading when screen regains focus (e.g. navigating back)
-  useFocusEffect(useCallback(() => { setLoading(false); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(false);
+    }, [])
+  );
 
   /**
    * Save data and navigate. Pass the fields to save via updateBasics.
@@ -46,8 +50,8 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
           goToNextStep(router, stepName);
         } else {
           // Last step — complete the basics category and exit
-          await completeCategory({ categoryId: "the_basics" });
-          router.replace("/(tabs)/questions");
+          await completeCategory({ categoryId: 'the_basics' });
+          router.replace('/(tabs)/questions');
         }
       }
     } catch {
@@ -57,7 +61,7 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
 
   const close = () => {
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/questions");
+    else router.replace('/(tabs)/questions');
   };
 
   return {
@@ -77,7 +81,7 @@ export function useBasicsStep({ stepName }: UseBasicsStepOptions) {
 export function useSavedValue<T>(
   currentUser: any,
   field: string,
-  defaultValue: T,
+  defaultValue: T
 ): [T, React.Dispatch<React.SetStateAction<T>>, boolean] {
   const [value, setValue] = useState<T>(defaultValue);
   const hasLoadedRef = useRef(false);

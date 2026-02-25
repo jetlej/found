@@ -1,26 +1,18 @@
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { getAvatarUrl } from "@/lib/avatar";
-import ExpoImageCropTool from "@bsky.app/expo-image-crop-tool";
-import { useMutation } from "convex/react";
-import * as ExpoImagePicker from "expo-image-picker";
-import { useState } from "react";
-import {
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+import { getAvatarUrl } from '@/lib/avatar';
+import ExpoImageCropTool from '@bsky.app/expo-image-crop-tool';
+import { useMutation } from 'convex/react';
+import * as ExpoImagePicker from 'expo-image-picker';
+import { useState } from 'react';
+import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface AvatarPickerProps {
   avatarUrl?: string | null;
   userId?: string; // Used for Pravatar fallback
   name?: string;
   size?: number;
-  onAvatarUploaded?: (storageId: Id<"_storage">) => void;
+  onAvatarUploaded?: (storageId: Id<'_storage'>) => void;
   editable?: boolean;
   showPlaceholder?: boolean; // If false, shows empty circle when no avatar
 }
@@ -41,28 +33,28 @@ export function AvatarPicker({
   const pickImage = async () => {
     try {
       const result = await ExpoImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: Platform.OS === "web",
+        mediaTypes: ['images'],
+        allowsEditing: Platform.OS === 'web',
         aspect: [1, 1],
-        quality: Platform.OS === "web" ? 0.8 : 1,
+        quality: Platform.OS === 'web' ? 0.8 : 1,
       });
       if (result.canceled || !result.assets?.[0]) return;
 
-      if (Platform.OS === "web") {
+      if (Platform.OS === 'web') {
         await uploadImage(result.assets[0].uri);
       } else {
         const cropped = await ExpoImageCropTool.openCropperAsync({
           imageUri: result.assets[0].uri,
           aspectRatio: 1,
-          shape: "circle",
+          shape: 'circle',
           compressImageQuality: 0.8,
         });
         await uploadImage(cropped.path);
       }
     } catch (error: any) {
-      if (error?.code === "E_PICKER_CANCELLED") return;
-      console.error("Image picker error:", error);
-      Alert.alert("Error", "Could not select image. Please try again.");
+      if (error?.code === 'E_PICKER_CANCELLED') return;
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Could not select image. Please try again.');
     }
   };
 
@@ -70,7 +62,7 @@ export function AvatarPicker({
     setUploading(true);
 
     // Ensure file:// prefix for local paths
-    const fileUri = uri.startsWith("file://") ? uri : `file://${uri}`;
+    const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
     setLocalUri(fileUri);
 
     try {
@@ -80,13 +72,11 @@ export function AvatarPicker({
       const blob = await response.blob();
 
       // Ensure correct content type for images
-      const contentType = blob.type.startsWith("image/")
-        ? blob.type
-        : "image/jpeg";
+      const contentType = blob.type.startsWith('image/') ? blob.type : 'image/jpeg';
 
       const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": contentType },
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
         body: blob,
       });
 
@@ -95,12 +85,12 @@ export function AvatarPicker({
       if (result.storageId) {
         onAvatarUploaded?.(result.storageId);
       } else {
-        Alert.alert("Upload failed", "No storage ID returned");
+        Alert.alert('Upload failed', 'No storage ID returned');
         setLocalUri(null);
       }
     } catch (error) {
-      console.error("Upload failed:", error);
-      Alert.alert("Upload failed", "Please try again");
+      console.error('Upload failed:', error);
+      Alert.alert('Upload failed', 'Please try again');
       setLocalUri(null);
     } finally {
       setUploading(false);
@@ -116,34 +106,21 @@ export function AvatarPicker({
   const displayUri =
     localUri ??
     avatarUrl ??
-    (showPlaceholder
-      ? getAvatarUrl(null, userId ?? name ?? "user", size * 2)
-      : null);
+    (showPlaceholder ? getAvatarUrl(null, userId ?? name ?? 'user', size * 2) : null);
 
   return (
     <Pressable
       onPress={showOptions}
       disabled={!editable || uploading}
-      style={[
-        styles.container,
-        { width: size, height: size, borderRadius: size / 2 },
-      ]}
+      style={[styles.container, { width: size, height: size, borderRadius: size / 2 }]}
     >
       {displayUri ? (
         <Image
           source={{ uri: displayUri }}
-          style={[
-            styles.image,
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
+          style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
         />
       ) : (
-        <View
-          style={[
-            styles.emptyAvatar,
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
-        />
+        <View style={[styles.emptyAvatar, { width: size, height: size, borderRadius: size / 2 }]} />
       )}
       {editable && (
         <View style={styles.editBadge}>
@@ -161,42 +138,42 @@ export function AvatarPicker({
 
 const styles = StyleSheet.create({
   container: {
-    position: "relative",
-  },
-  image: {
-    backgroundColor: "#333",
-  },
-  emptyAvatar: {
-    backgroundColor: "#1a1a1a",
-    borderWidth: 2,
-    borderColor: "#333",
-    borderStyle: "dashed",
+    position: 'relative',
   },
   editBadge: {
-    position: "absolute",
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    borderColor: '#333',
+    borderRadius: 14,
+    borderWidth: 2,
     bottom: 0,
+    height: 28,
+    justifyContent: 'center',
+    position: 'absolute',
     right: 0,
     width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#1a1a1a",
-    borderWidth: 2,
-    borderColor: "#333",
-    justifyContent: "center",
-    alignItems: "center",
   },
   editIcon: {
     fontSize: 12,
   },
+  emptyAvatar: {
+    backgroundColor: '#1a1a1a',
+    borderColor: '#333',
+    borderStyle: 'dashed',
+    borderWidth: 2,
+  },
+  image: {
+    backgroundColor: '#333',
+  },
   uploadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
   },
   uploadingText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 18,
   },
 });

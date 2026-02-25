@@ -1,30 +1,34 @@
-import { GradientBackground } from "@/components/GradientBackground";
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors } from "@/lib/theme";
-import { TOTAL_VOICE_QUESTIONS } from "@/lib/voice-questions";
-import { BottomTabBar, BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { IconHeart, IconMessageCircle, IconMessageQuestion, IconUser } from "@tabler/icons-react-native";
-import { useQuery } from "convex/react";
-import { Tabs } from "expo-router";
-import { useEffect, useRef } from "react";
-import { View } from "react-native";
+import { GradientBackground } from '@/components/GradientBackground';
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { colors } from '@/lib/theme';
+import { TOTAL_VOICE_QUESTIONS } from '@/lib/voice-questions';
+import { BottomTabBar, BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import {
+  IconHeart,
+  IconMessageCircle,
+  IconMessageQuestion,
+  IconUser,
+} from '@tabler/icons-react-native';
+import { useQuery } from 'convex/react';
+import { Tabs } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
-} from "react-native-reanimated";
+} from 'react-native-reanimated';
 
 export default function TabLayout() {
   const userId = useEffectiveUserId();
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
   const recordingCount = useQuery(
     api.voiceRecordings.getCompletedCount,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
-  const questionsComplete =
-    recordingCount !== undefined && recordingCount >= TOTAL_VOICE_QUESTIONS;
+  const questionsComplete = recordingCount !== undefined && recordingCount >= TOTAL_VOICE_QUESTIONS;
 
   // Entrance animations (run once on mount)
   const hasAnimated = useRef(false);
@@ -62,24 +66,24 @@ export default function TabLayout() {
         <Animated.View style={contentStyle}>
           <Tabs
             tabBar={renderTabBar}
-          screenOptions={{
-            lazy: false,
-            tabBarActiveTintColor: "#FFFFFF",
-              tabBarInactiveTintColor: "rgba(255,255,255,0.4)",
+            screenOptions={{
+              lazy: false,
+              tabBarActiveTintColor: '#FFFFFF',
+              tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
               tabBarShowLabel: false,
               tabBarStyle: {
-                backgroundColor: "#000000",
-                borderTopColor: "rgba(255,255,255,0.1)",
+                backgroundColor: '#000000',
+                borderTopColor: 'rgba(255,255,255,0.1)',
                 paddingTop: 8,
               },
               headerStyle: {
-                backgroundColor: "transparent",
+                backgroundColor: 'transparent',
               },
               headerTintColor: colors.text,
               sceneStyle: {
-                backgroundColor: "transparent",
+                backgroundColor: 'transparent',
               },
-              animation: "fade",
+              animation: 'fade',
             }}
           >
             {/* Questions tab -- visible only before questions are complete */}
@@ -87,7 +91,7 @@ export default function TabLayout() {
               name="questions"
               options={{
                 headerShown: false,
-                href: questionsComplete ? null : "/(tabs)/questions",
+                href: questionsComplete ? null : '/(tabs)/questions',
                 tabBarIcon: ({ color }) => <IconMessageQuestion size={24} color={color} />,
               }}
             />
@@ -97,7 +101,7 @@ export default function TabLayout() {
               name="matches"
               options={{
                 headerShown: false,
-                href: questionsComplete ? "/(tabs)/matches" : null,
+                href: questionsComplete ? '/(tabs)/matches' : null,
                 tabBarIcon: ({ color }) => <IconHeart size={24} color={color} />,
               }}
             />
@@ -107,7 +111,7 @@ export default function TabLayout() {
               name="chats"
               options={{
                 headerShown: false,
-                href: questionsComplete ? "/(tabs)/chats" : null,
+                href: questionsComplete ? '/(tabs)/chats' : null,
                 tabBarIcon: ({ color }) => <IconMessageCircle size={24} color={color} />,
               }}
             />

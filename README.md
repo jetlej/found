@@ -28,6 +28,7 @@ bunx convex dev
 ```
 
 This will:
+
 - Prompt you to log in
 - Create a new Convex project
 - Generate the `EXPO_PUBLIC_CONVEX_URL` for you
@@ -88,4 +89,3 @@ bun start
 - **Auth**: Clerk (phone/SMS)
 - **State**: Zustand (offline queue)
 - **Notifications**: Expo Notifications
-

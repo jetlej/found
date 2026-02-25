@@ -1,37 +1,30 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { filterProfile } from "@/lib/filterProfile";
-import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
-import { useQuery } from "convex/react";
-import { useRouter } from "expo-router";
-import { useMemo } from "react";
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { filterProfile } from '@/lib/filterProfile';
+import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
+import { useQuery } from 'convex/react';
+import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MyProfileScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
 
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
   const myProfile = useQuery(
     api.userProfiles.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   const filteredProfile = useMemo(
     () => (myProfile ? filterProfile(myProfile, myProfile.hiddenFields ?? undefined) : null),
-    [myProfile],
+    [myProfile]
   );
 
   const sortedPhotos = userPhotos?.sort((a, b) => a.order - b.order) ?? [];
@@ -41,7 +34,7 @@ export default function MyProfileScreen() {
     : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.navBar}>
         <Pressable onPress={() => router.back()} style={styles.closeButton}>
           <Text style={styles.closeIcon}>✕</Text>
@@ -67,12 +60,10 @@ export default function MyProfileScreen() {
         {/* Name & basics */}
         <View style={styles.nameSection}>
           <Text style={styles.name}>
-            {currentUser?.name?.split(" ")[0] || "You"}
-            {age ? `, ${age}` : ""}
+            {currentUser?.name?.split(' ')[0] || 'You'}
+            {age ? `, ${age}` : ''}
           </Text>
-          {currentUser?.location && (
-            <Text style={styles.location}>{currentUser.location}</Text>
-          )}
+          {currentUser?.location && <Text style={styles.location}>{currentUser.location}</Text>}
         </View>
 
         {/* Bio */}
@@ -132,35 +123,46 @@ export default function MyProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  bioText: { color: colors.text, fontSize: fontSizes.base, lineHeight: 24 },
+  bottomPadding: { height: spacing['2xl'] },
+  closeButton: { alignItems: 'center', height: 40, justifyContent: 'center', width: 40 },
+  closeIcon: { color: colors.textMuted, fontSize: 20 },
+  container: { backgroundColor: colors.background, flex: 1 },
+  location: { color: colors.textSecondary, fontSize: fontSizes.base, marginTop: spacing.xs },
+  name: { color: colors.text, fontFamily: fonts.serifBold, fontSize: fontSizes['3xl'] },
+  nameSection: { paddingBottom: spacing.md, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
   navBar: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  closeButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
-  closeIcon: { fontSize: 20, color: colors.textMuted },
   navTitle: { ...textStyles.pageTitle },
+  photo: { backgroundColor: colors.border, borderRadius: 12, height: 250, width: 200 },
+  photoStrip: { gap: 10, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  scrollContent: { paddingBottom: spacing['3xl'] },
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: spacing["3xl"] },
-  photoStrip: { paddingHorizontal: spacing.lg, gap: 10, paddingVertical: spacing.md },
-  photo: { width: 200, height: 250, borderRadius: 12, backgroundColor: colors.border },
-  nameSection: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md },
-  name: { fontFamily: fonts.serifBold, fontSize: fontSizes["3xl"], color: colors.text },
-  location: { fontSize: fontSizes.base, color: colors.textSecondary, marginTop: spacing.xs },
   section: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
   sectionTitle: {
-    fontSize: fontSizes.xs, fontWeight: "600", color: colors.textMuted,
-    textTransform: "uppercase", letterSpacing: 1, marginBottom: spacing.sm,
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
   },
-  bioText: { fontSize: fontSizes.base, color: colors.text, lineHeight: 24 },
-  tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   tag: {
-    backgroundColor: colors.surface, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderRadius: 8, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  tagText: { fontSize: fontSizes.sm, color: colors.text },
-  tagInterest: { backgroundColor: "#EEF2FF", borderColor: "#C7D2FE" },
-  tagInterestText: { color: "#4338CA" },
-  tagKeyword: { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" },
-  bottomPadding: { height: spacing["2xl"] },
+  tagInterest: { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' },
+  tagInterestText: { color: '#4338CA' },
+  tagKeyword: { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
+  tagText: { color: colors.text, fontSize: fontSizes.sm },
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

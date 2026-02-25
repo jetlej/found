@@ -1,34 +1,27 @@
-import { v } from "convex/values";
-import {
-  internalQuery,
-  mutation,
-  query,
-  QueryCtx,
-  MutationCtx,
-} from "./_generated/server";
-import { paginationOptsValidator } from "convex/server";
-import { requireAdmin } from "./lib/admin";
-import { internal } from "./_generated/api";
-import { TOTAL_VOICE_QUESTIONS } from "./lib/voiceConfig";
+import { v } from 'convex/values';
+import { internalQuery, mutation, query, QueryCtx, MutationCtx } from './_generated/server';
+import { paginationOptsValidator } from 'convex/server';
+import { requireAdmin } from './lib/admin';
+import { internal } from './_generated/api';
+import { TOTAL_VOICE_QUESTIONS } from './lib/voiceConfig';
 
 const REGENERATE_PROFILE_COOLDOWN_MS = 30 * 1000; // 30s for dev, raise to 60*60*1000 for prod
-const analyzeAllForUserInternal = (internal as any).actions.analyzeCompatibility
-  .analyzeAllForUser;
+const analyzeAllForUserInternal = (internal as any).actions.analyzeCompatibility.analyzeAllForUser;
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
+  if (!identity) throw new Error('Not authenticated');
   return await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .query('users')
+    .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
     .first();
 }
 
 /** Get the authenticated Clerk ID from ctx.auth, or throw. */
 async function getAuthClerkId(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
+  if (!identity) throw new Error('Not authenticated');
   return identity.subject;
 }
 
@@ -42,8 +35,8 @@ export const getOrCreate = mutation({
 
     // First check by clerkId
     const existingByClerk = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
+      .query('users')
+      .withIndex('by_clerk_id', (q) => q.eq('clerkId', clerkId))
       .first();
 
     if (existingByClerk) {
@@ -51,11 +44,11 @@ export const getOrCreate = mutation({
     }
 
     // No existing user - create new
-    return await ctx.db.insert("users", {
+    return await ctx.db.insert('users', {
       clerkId,
       phone: args.phone,
       name: args.name,
-      type: "human",
+      type: 'human',
     });
   },
 });
@@ -66,8 +59,8 @@ export const current = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     return await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .query('users')
+      .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
       .first();
   },
 });
@@ -87,7 +80,7 @@ export const updatePushToken = mutation({
 export const updateProfile = mutation({
   args: {
     name: v.optional(v.string()),
-    avatarStorageId: v.optional(v.id("_storage")),
+    avatarStorageId: v.optional(v.id('_storage')),
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
@@ -115,11 +108,7 @@ export const updateProfile = mutation({
 
     // Keep compatibility analyses fresh after profile edits.
     if (user.onboardingComplete) {
-      await ctx.scheduler.runAfter(
-        0,
-        analyzeAllForUserInternal,
-        { userId: user._id },
-      );
+      await ctx.scheduler.runAfter(0, analyzeAllForUserInternal, { userId: user._id });
     }
   },
 });
@@ -175,19 +164,15 @@ export const updateBasics = mutation({
 
     // Keep compatibility analyses fresh after profile edits.
     if (user.onboardingComplete) {
-      await ctx.scheduler.runAfter(
-        0,
-        analyzeAllForUserInternal,
-        { userId: user._id },
-      );
+      await ctx.scheduler.runAfter(0, analyzeAllForUserInternal, { userId: user._id });
     }
   },
 });
 
 // Generate a unique 6-character referral code
 function generateReferralCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude confusing chars like 0/O, 1/I
-  let code = "";
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars like 0/O, 1/I
+  let code = '';
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -203,14 +188,14 @@ export const completeOnboarding = mutation({
     // Generate unique referral code
     let referralCode = generateReferralCode();
     let existingCode = await ctx.db
-      .query("users")
-      .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+      .query('users')
+      .withIndex('by_referral_code', (q) => q.eq('referralCode', referralCode))
       .first();
     while (existingCode) {
       referralCode = generateReferralCode();
       existingCode = await ctx.db
-        .query("users")
-        .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+        .query('users')
+        .withIndex('by_referral_code', (q) => q.eq('referralCode', referralCode))
         .first();
     }
 
@@ -220,7 +205,7 @@ export const completeOnboarding = mutation({
 
     await ctx.db.patch(user._id, {
       onboardingComplete: true,
-      status: "waitlist",
+      status: 'waitlist',
       referralCode,
       waitlistEndsAt,
       referralCount: user.referralCount ?? 0,
@@ -233,7 +218,7 @@ export const completeOnboarding = mutation({
         const newReferralCount = (referrer.referralCount ?? 0) + 1;
         await ctx.db.patch(referrer._id, {
           referralCount: newReferralCount,
-          status: "active", // Referrer gets in immediately
+          status: 'active', // Referrer gets in immediately
         });
       }
     }
@@ -248,7 +233,7 @@ export const applyReferralCode = mutation({
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
-    if (!user) return { success: false, error: "User not found" };
+    if (!user) return { success: false, error: 'User not found' };
 
     // Can't use your own code
     if (user.referralCode === args.code.toUpperCase()) {
@@ -262,12 +247,12 @@ export const applyReferralCode = mutation({
 
     // Find the referrer
     const referrer = await ctx.db
-      .query("users")
-      .withIndex("by_referral_code", (q) => q.eq("referralCode", args.code.toUpperCase()))
+      .query('users')
+      .withIndex('by_referral_code', (q) => q.eq('referralCode', args.code.toUpperCase()))
       .first();
 
     if (!referrer) {
-      return { success: false, error: "Invalid referral code" };
+      return { success: false, error: 'Invalid referral code' };
     }
 
     // Update the current user with referredBy (referrer gets credit when this user completes onboarding)
@@ -285,13 +270,13 @@ export const completeProfileAudit = mutation({
   args: {},
   handler: async (ctx) => {
     const user = await getAuthUser(ctx);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error('User not found');
 
     const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('userProfiles')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .first();
-    if (!profile) throw new Error("Profile not ready");
+    if (!profile) throw new Error('Profile not ready');
 
     if (!user.profileAuditCompletedAt) {
       await ctx.db.patch(user._id, { profileAuditCompletedAt: Date.now() });
@@ -299,22 +284,18 @@ export const completeProfileAudit = mutation({
 
     // Clear existing analyses so they get regenerated fresh
     const asUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', user._id))
       .collect();
     const asUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', user._id))
       .collect();
     for (const doc of [...asUser1, ...asUser2]) {
       await ctx.db.delete(doc._id);
     }
 
-    await ctx.scheduler.runAfter(
-      0,
-      analyzeAllForUserInternal,
-      { userId: user._id },
-    );
+    await ctx.scheduler.runAfter(0, analyzeAllForUserInternal, { userId: user._id });
 
     return { started: true };
   },
@@ -324,33 +305,27 @@ export const regenerateProfile = mutation({
   args: {},
   handler: async (ctx) => {
     const user = await getAuthUser(ctx);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error('User not found');
 
     const lastRegeneratedAt = user.lastProfileRegeneratedAt ?? 0;
     const elapsedMs = Date.now() - lastRegeneratedAt;
     if (elapsedMs < REGENERATE_PROFILE_COOLDOWN_MS) {
-      const retryInMinutes = Math.ceil(
-        (REGENERATE_PROFILE_COOLDOWN_MS - elapsedMs) / (60 * 1000),
-      );
-      throw new Error(
-        `You can regenerate once per hour. Try again in ${retryInMinutes}m.`,
-      );
+      const retryInMinutes = Math.ceil((REGENERATE_PROFILE_COOLDOWN_MS - elapsedMs) / (60 * 1000));
+      throw new Error(`You can regenerate once per hour. Try again in ${retryInMinutes}m.`);
     }
 
     const recordings = await ctx.db
-      .query("voiceRecordings")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('voiceRecordings')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     if (recordings.length < TOTAL_VOICE_QUESTIONS) {
-      throw new Error("Complete all voice answers before regenerating.");
+      throw new Error('Complete all voice answers before regenerating.');
     }
 
     await ctx.db.patch(user._id, { lastProfileRegeneratedAt: Date.now() });
-    await ctx.scheduler.runAfter(
-      0,
-      internal.actions.parseVoiceProfile.parseVoiceProfile,
-      { userId: user._id },
-    );
+    await ctx.scheduler.runAfter(0, internal.actions.parseVoiceProfile.parseVoiceProfile, {
+      userId: user._id,
+    });
 
     return { scheduled: true };
   },
@@ -409,13 +384,13 @@ export const updateNotificationSettings = mutation({
 export const listAll = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+    return await ctx.db.query('users').collect();
   },
 });
 
 // Internal query to get user by ID (for profile parsing)
 export const getById = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.id('users') },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.userId);
   },
@@ -431,7 +406,7 @@ export const completeCategory = mutation({
     if (!user) return;
 
     const completedCategories = user.completedCategories ?? [];
-    
+
     // Don't add if already completed
     if (completedCategories.includes(args.categoryId)) {
       return { level: user.level ?? 1, completedCategories };
@@ -446,18 +421,18 @@ export const completeCategory = mutation({
     });
 
     // If this is the first category (the_basics), also mark onboarding complete
-    if (args.categoryId === "the_basics" && !user.onboardingComplete) {
+    if (args.categoryId === 'the_basics' && !user.onboardingComplete) {
       // Generate unique referral code
       let referralCode = generateReferralCode();
       let existingCode = await ctx.db
-        .query("users")
-        .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+        .query('users')
+        .withIndex('by_referral_code', (q) => q.eq('referralCode', referralCode))
         .first();
       while (existingCode) {
         referralCode = generateReferralCode();
         existingCode = await ctx.db
-          .query("users")
-          .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+          .query('users')
+          .withIndex('by_referral_code', (q) => q.eq('referralCode', referralCode))
           .first();
       }
 
@@ -467,7 +442,7 @@ export const completeCategory = mutation({
 
       await ctx.db.patch(user._id, {
         onboardingComplete: true,
-        status: "waitlist",
+        status: 'waitlist',
         referralCode,
         waitlistEndsAt,
         referralCount: user.referralCount ?? 0,
@@ -480,7 +455,7 @@ export const completeCategory = mutation({
           const newReferralCount = (referrer.referralCount ?? 0) + 1;
           await ctx.db.patch(referrer._id, {
             referralCount: newReferralCount,
-            status: "active", // Referrer gets in immediately
+            status: 'active', // Referrer gets in immediately
           });
         }
       }
@@ -490,7 +465,6 @@ export const completeCategory = mutation({
   },
 });
 
-
 // ============ Dev Admin Panel ============
 
 // Search users by name or phone (for dev admin)
@@ -499,12 +473,10 @@ export const searchUsers = query({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.adminSecret);
 
-    const allUsers = await ctx.db.query("users").collect();
+    const allUsers = await ctx.db.query('users').collect();
     const q = args.query.toLowerCase();
     return allUsers
-      .filter(
-        (u) => u.name?.toLowerCase().includes(q) || u.phone?.includes(q)
-      )
+      .filter((u) => u.name?.toLowerCase().includes(q) || u.phone?.includes(q))
       .slice(0, 20);
   },
 });
@@ -516,11 +488,11 @@ export const createDevTestUser = mutation({
     await requireAdmin(ctx, args.adminSecret);
 
     const clerkId = `dev_test_${Date.now()}`;
-    await ctx.db.insert("users", {
+    await ctx.db.insert('users', {
       clerkId,
       phone: `+1555${Math.floor(Math.random() * 10000000)
         .toString()
-        .padStart(7, "0")}`,
+        .padStart(7, '0')}`,
     });
     return clerkId;
   },
@@ -533,18 +505,18 @@ export const deleteUserByPhone = mutation({
     await requireAdmin(ctx, args.adminSecret);
 
     const user = await ctx.db
-      .query("users")
-      .withIndex("by_phone", (q) => q.eq("phone", args.phone))
+      .query('users')
+      .withIndex('by_phone', (q) => q.eq('phone', args.phone))
       .first();
 
     if (!user) {
-      return { success: false, error: "User not found" };
+      return { success: false, error: 'User not found' };
     }
 
     // Delete related photos
     const photos = await ctx.db
-      .query("photos")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('photos')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const photo of photos) {
       await ctx.db.delete(photo._id);
@@ -552,8 +524,8 @@ export const deleteUserByPhone = mutation({
 
     // Delete related voice recordings
     const recordings = await ctx.db
-      .query("voiceRecordings")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('voiceRecordings')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const recording of recordings) {
       await ctx.db.delete(recording._id);
@@ -561,8 +533,8 @@ export const deleteUserByPhone = mutation({
 
     // Delete related answers
     const answers = await ctx.db
-      .query("answers")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('answers')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const answer of answers) {
       await ctx.db.delete(answer._id);
@@ -570,8 +542,8 @@ export const deleteUserByPhone = mutation({
 
     // Delete user profile
     const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('userProfiles')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .first();
     if (profile) {
       await ctx.db.delete(profile._id);
@@ -594,8 +566,8 @@ export const deleteCurrentUserAccount = mutation({
 
     // Delete related photos.
     const photos = await ctx.db
-      .query("photos")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('photos')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const photo of photos) {
       await ctx.db.delete(photo._id);
@@ -603,8 +575,8 @@ export const deleteCurrentUserAccount = mutation({
 
     // Delete related voice recordings.
     const recordings = await ctx.db
-      .query("voiceRecordings")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('voiceRecordings')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const recording of recordings) {
       await ctx.db.delete(recording._id);
@@ -612,8 +584,8 @@ export const deleteCurrentUserAccount = mutation({
 
     // Delete related answers.
     const answers = await ctx.db
-      .query("answers")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('answers')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const answer of answers) {
       await ctx.db.delete(answer._id);
@@ -621,8 +593,8 @@ export const deleteCurrentUserAccount = mutation({
 
     // Delete related user profile rows.
     const profiles = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .query('userProfiles')
+      .withIndex('by_user', (q) => q.eq('userId', user._id))
       .collect();
     for (const profile of profiles) {
       await ctx.db.delete(profile._id);
@@ -630,15 +602,15 @@ export const deleteCurrentUserAccount = mutation({
 
     // Delete compatibility analyses where this user appears in either side.
     const analysesAsUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", user._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', user._id))
       .collect();
     const analysesAsUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", user._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', user._id))
       .collect();
     const analysisIds = new Set(
-      [...analysesAsUser1, ...analysesAsUser2].map((analysis) => analysis._id),
+      [...analysesAsUser1, ...analysesAsUser2].map((analysis) => analysis._id)
     );
     for (const analysisId of analysisIds) {
       await ctx.db.delete(analysisId);
@@ -655,6 +627,6 @@ export const deleteCurrentUserAccount = mutation({
 export const listPaginated = internalQuery({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    return await ctx.db.query("users").paginate(args.paginationOpts);
+    return await ctx.db.query('users').paginate(args.paginationOpts);
   },
 });

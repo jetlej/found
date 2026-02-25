@@ -1,7 +1,7 @@
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import { useOfflineStore } from "@/stores/offline";
-import { IconCloudOff } from "@tabler/icons-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { colors, fontSizes, spacing } from '@/lib/theme';
+import { useOfflineStore } from '@/stores/offline';
+import { IconCloudOff } from '@tabler/icons-react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 export function OfflineBanner() {
   const { isOnline } = useOfflineStore();
@@ -20,17 +20,17 @@ export function OfflineBanner() {
 
 const styles = StyleSheet.create({
   offlineBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: "#fef3c7",
-    paddingVertical: spacing.sm,
+    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   offlineText: {
-    fontSize: fontSizes.sm,
     color: colors.warning,
-    fontWeight: "500",
+    fontSize: fontSizes.sm,
+    fontWeight: '500',
   },
 });

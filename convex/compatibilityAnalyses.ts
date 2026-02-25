@@ -1,58 +1,65 @@
-import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery, QueryCtx, MutationCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { v } from 'convex/values';
+import {
+  mutation,
+  query,
+  internalMutation,
+  internalQuery,
+  QueryCtx,
+  MutationCtx,
+} from './_generated/server';
+import { Id } from './_generated/dataModel';
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
+  if (!identity) throw new Error('Not authenticated');
   return await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .query('users')
+    .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
     .first();
 }
 
 // Build a deterministic pair key from two user IDs
 function makePairKey(id1: string, id2: string): string {
-  return [id1, id2].sort().join("_");
+  return [id1, id2].sort().join('_');
 }
 
 // Public query: get analysis for a pair
 export const getForPair = query({
-  args: { user1Id: v.id("users"), user2Id: v.id("users") },
+  args: { user1Id: v.id('users'), user2Id: v.id('users') },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error('User not found');
     if (user._id !== args.user1Id && user._id !== args.user2Id) {
-      throw new Error("Forbidden");
+      throw new Error('Forbidden');
     }
 
     const pairKey = makePairKey(args.user1Id, args.user2Id);
     return await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_pair", (q) => q.eq("userIdPair", pairKey))
+      .query('compatibilityAnalyses')
+      .withIndex('by_pair', (q) => q.eq('userIdPair', pairKey))
       .first();
   },
 });
 
 // Public query: list all analyses for a user
 export const listForUser = query({
-  args: { userId: v.id("users"), limit: v.optional(v.number()) },
+  args: { userId: v.id('users'), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
-    if (!user) throw new Error("User not found");
-    if (user._id !== args.userId) throw new Error("Forbidden");
+    if (!user) throw new Error('User not found');
+    if (user._id !== args.userId) throw new Error('Forbidden');
     const requestedLimit = args.limit ?? 500;
     const safeLimit = Math.max(1, Math.min(requestedLimit, 2000));
     const perSideLimit = Math.ceil(safeLimit / 2);
 
     const asUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", args.userId))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', args.userId))
       .take(perSideLimit);
     const asUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", args.userId))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', args.userId))
       .take(perSideLimit);
     return [...asUser1, ...asUser2].slice(0, safeLimit);
   },
@@ -60,18 +67,18 @@ export const listForUser = query({
 
 // Internal query: list all analyses for a user
 export const listForUserInternal = internalQuery({
-  args: { userId: v.id("users"), limit: v.optional(v.number()) },
+  args: { userId: v.id('users'), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const requestedLimit = args.limit ?? 500;
     const safeLimit = Math.max(1, Math.min(requestedLimit, 5000));
     const perSideLimit = Math.ceil(safeLimit / 2);
     const asUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", args.userId))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', args.userId))
       .take(perSideLimit);
     const asUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", args.userId))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', args.userId))
       .take(perSideLimit);
     return [...asUser1, ...asUser2].slice(0, safeLimit);
   },
@@ -81,7 +88,7 @@ export const listForUserInternal = internalQuery({
 export const listAllInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("compatibilityAnalyses").collect();
+    return await ctx.db.query('compatibilityAnalyses').collect();
   },
 });
 
@@ -89,7 +96,7 @@ export const listAllInternal = internalQuery({
 export const listPairs = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("compatibilityAnalyses").collect();
+    const all = await ctx.db.query('compatibilityAnalyses').collect();
     return all.map((a) => ({ user1Id: a.user1Id, user2Id: a.user2Id }));
   },
 });
@@ -98,7 +105,7 @@ export const listPairs = internalQuery({
 export const modelStats = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("compatibilityAnalyses").collect();
+    const all = await ctx.db.query('compatibilityAnalyses').collect();
     const counts: Record<string, number> = {};
     for (const a of all) {
       counts[a.openaiModel] = (counts[a.openaiModel] || 0) + 1;
@@ -109,12 +116,12 @@ export const modelStats = internalQuery({
 
 // Internal query: check if analysis exists (for action dedup)
 export const getForPairInternal = internalQuery({
-  args: { user1Id: v.id("users"), user2Id: v.id("users") },
+  args: { user1Id: v.id('users'), user2Id: v.id('users') },
   handler: async (ctx, args) => {
     const pairKey = makePairKey(args.user1Id, args.user2Id);
     return await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_pair", (q) => q.eq("userIdPair", pairKey))
+      .query('compatibilityAnalyses')
+      .withIndex('by_pair', (q) => q.eq('userIdPair', pairKey))
       .first();
   },
 });
@@ -122,8 +129,8 @@ export const getForPairInternal = internalQuery({
 // Internal mutation: store analysis result
 export const store = internalMutation({
   args: {
-    user1Id: v.id("users"),
-    user2Id: v.id("users"),
+    user1Id: v.id('users'),
+    user2Id: v.id('users'),
     summary: v.string(),
     greenFlags: v.array(v.string()),
     yellowFlags: v.array(v.string()),
@@ -148,11 +155,14 @@ export const store = internalMutation({
 
     // Upsert: replace if exists
     const existing = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_pair", (q) => q.eq("userIdPair", pairKey))
+      .query('compatibilityAnalyses')
+      .withIndex('by_pair', (q) => q.eq('userIdPair', pairKey))
       .first();
 
-    const [sortedId1, sortedId2] = [args.user1Id, args.user2Id].sort() as [Id<"users">, Id<"users">];
+    const [sortedId1, sortedId2] = [args.user1Id, args.user2Id].sort() as [
+      Id<'users'>,
+      Id<'users'>,
+    ];
 
     const doc = {
       userIdPair: pairKey,
@@ -172,7 +182,7 @@ export const store = internalMutation({
       await ctx.db.replace(existing._id, doc);
       return existing._id;
     }
-    return await ctx.db.insert("compatibilityAnalyses", doc);
+    return await ctx.db.insert('compatibilityAnalyses', doc);
   },
 });
 
@@ -181,16 +191,16 @@ export const clearForUser = mutation({
   args: {},
   handler: async (ctx) => {
     const user = await getAuthUser(ctx);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error('User not found');
     const userId = user._id;
 
     const asUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", userId))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', userId))
       .collect();
     const asUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", userId))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', userId))
       .collect();
     const all = [...asUser1, ...asUser2];
     for (const doc of all) {

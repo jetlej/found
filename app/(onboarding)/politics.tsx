@@ -1,12 +1,6 @@
-import { BasicOptionScreen } from "@/components/BasicOptionScreen";
+import { BasicOptionScreen } from '@/components/BasicOptionScreen';
 
-const OPTIONS = [
-  "Liberal",
-  "Moderate",
-  "Conservative",
-  "Not political",
-  "Prefer not to say",
-];
+const OPTIONS = ['Liberal', 'Moderate', 'Conservative', 'Not political', 'Prefer not to say'];
 
 export default function PoliticsScreen() {
   return (

@@ -1,6 +1,6 @@
-import { BasicOptionScreen } from "@/components/BasicOptionScreen";
+import { BasicOptionScreen } from '@/components/BasicOptionScreen';
 
-const OPTIONS = ["Yes", "Sometimes", "No", "Prefer not to say"];
+const OPTIONS = ['Yes', 'Sometimes', 'No', 'Prefer not to say'];
 
 export default function DrinkingScreen() {
   return (

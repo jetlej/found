@@ -1,7 +1,7 @@
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from "@/lib/voice-questions";
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from '@/lib/voice-questions';
 import {
   IconEraser,
   IconEyeOff,
@@ -11,14 +11,22 @@ import {
   IconX,
   IconFileText,
   IconSparkles,
-} from "@tabler/icons-react-native";
-import { useMutation, useQuery } from "convex/react";
-import { Audio } from "expo-av";
-import * as Haptics from "expo-haptics";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+} from '@tabler/icons-react-native';
+import { useMutation, useQuery } from 'convex/react';
+import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -28,17 +36,30 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 // Confetti particle component - explosive burst from center
-const CONFETTI_COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9", "#FF85A2", "#7BED9F", "#70A1FF", "#FFC048"];
+const CONFETTI_COLORS = [
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#FFA07A',
+  '#98D8C8',
+  '#F7DC6F',
+  '#BB8FCE',
+  '#85C1E9',
+  '#FF85A2',
+  '#7BED9F',
+  '#70A1FF',
+  '#FFC048',
+];
 const CONFETTI_COUNT = 240;
 
 function ConfettiParticle({ index }: { index: number }) {
@@ -64,28 +85,34 @@ function ConfettiParticle({ index }: { index: number }) {
 
     scale.value = withDelay(delay, withTiming(1, { duration: 80 }));
     // Burst out fast, then fall with gravity
-    translateX.value = withDelay(delay, withTiming(targetX, { duration, easing: Easing.out(Easing.quad) }));
+    translateX.value = withDelay(
+      delay,
+      withTiming(targetX, { duration, easing: Easing.out(Easing.quad) })
+    );
     translateY.value = withDelay(
       delay,
       withSequence(
         withTiming(targetY, { duration, easing: Easing.out(Easing.quad) }),
-        withTiming(targetY + 600 + Math.random() * 300, { duration: fallDuration, easing: Easing.in(Easing.quad) }),
-      ),
+        withTiming(targetY + 600 + Math.random() * 300, {
+          duration: fallDuration,
+          easing: Easing.in(Easing.quad),
+        })
+      )
     );
     rotate.value = withDelay(
       delay,
-      withTiming(720 * (Math.random() > 0.5 ? 1 : -1), { duration: duration + fallDuration }),
+      withTiming(720 * (Math.random() > 0.5 ? 1 : -1), { duration: duration + fallDuration })
     );
     opacity.value = withDelay(
       delay + duration + fallDuration * 0.5,
-      withTiming(0, { duration: fallDuration * 0.5 }),
+      withTiming(0, { duration: fallDuration * 0.5 })
     );
   }, []);
 
   const style = useAnimatedStyle(() => ({
-    position: "absolute" as const,
-    top: "40%",
-    left: "50%",
+    position: 'absolute' as const,
+    top: '40%',
+    left: '50%',
     width: size,
     height: isCircle ? size : size * 2.5,
     borderRadius: isCircle ? size / 2 : 2,
@@ -119,7 +146,12 @@ function CelebrationText({ children }: { children: React.ReactNode }) {
   }, []);
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
   return (
-    <Animated.View style={[{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }, style]}>
+    <Animated.View
+      style={[
+        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+        style,
+      ]}
+    >
       {children}
     </Animated.View>
   );
@@ -131,22 +163,21 @@ const NUM_BARS = 7;
 function SoundWave({ isRecording }: { isRecording: boolean }) {
   const bars = Array(NUM_BARS)
     .fill(0)
+    /* eslint-disable react-hooks/rules-of-hooks -- constant-length array, safe to use hooks in .map() */
     .map((_, i) => {
       const height = useSharedValue(8);
 
       useEffect(() => {
         if (isRecording) {
-          // Each bar animates with slightly different timing for organic feel
-          const delay = i * 50;
           const duration = 150 + Math.random() * 100;
 
           height.value = withRepeat(
             withSequence(
               withTiming(20 + Math.random() * 40, { duration }),
-              withTiming(8 + Math.random() * 15, { duration }),
+              withTiming(8 + Math.random() * 15, { duration })
             ),
             -1,
-            true,
+            true
           );
         } else {
           height.value = withTiming(8, { duration: 200 });
@@ -159,6 +190,7 @@ function SoundWave({ isRecording }: { isRecording: boolean }) {
 
       return <Animated.View key={i} style={[styles.soundBar, animatedStyle]} />;
     });
+  /* eslint-enable react-hooks/rules-of-hooks */
 
   return <View style={styles.soundWave}>{bars}</View>;
 }
@@ -167,25 +199,20 @@ export default function VoiceQuestionsScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
   const params = useLocalSearchParams<{ startIndex?: string }>();
-  const startIndex = parseInt(params.startIndex || "0", 10);
+  const startIndex = parseInt(params.startIndex || '0', 10);
 
-  const currentUser = useQuery(
-    api.users.current,
-    userId ? {} : "skip",
-  );
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const saveRecording = useMutation(api.voiceRecordings.saveRecording);
-  const deleteRecordingMutation = useMutation(
-    api.voiceRecordings.deleteRecording,
-  );
+  const deleteRecordingMutation = useMutation(api.voiceRecordings.deleteRecording);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   const hasProfile = useQuery(
     api.userProfiles.hasProfile,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -244,7 +271,9 @@ export default function VoiceQuestionsScreen() {
       prevIndexRef.current = currentIndex;
       questionOpacity.value = 0;
       questionOpacity.value = withTiming(1, { duration: 400 });
-      progressWidth.value = withTiming((currentIndex + 1) / TOTAL_VOICE_QUESTIONS, { duration: 300 });
+      progressWidth.value = withTiming((currentIndex + 1) / TOTAL_VOICE_QUESTIONS, {
+        duration: 300,
+      });
     }
   }, [currentIndex]);
 
@@ -252,12 +281,9 @@ export default function VoiceQuestionsScreen() {
   useEffect(() => {
     if (isRecording) {
       pulseScale.value = withRepeat(
-        withSequence(
-          withTiming(1.1, { duration: 600 }),
-          withTiming(1, { duration: 600 }),
-        ),
+        withSequence(withTiming(1.1, { duration: 600 }), withTiming(1, { duration: 600 })),
         -1,
-        false,
+        false
       );
     } else {
       pulseScale.value = withTiming(1, { duration: 200 });
@@ -296,7 +322,7 @@ export default function VoiceQuestionsScreen() {
 
       // Start recording
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       recordingRef.current = recording;
       setIsRecording(true);
@@ -310,7 +336,7 @@ export default function VoiceQuestionsScreen() {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
     } catch (err) {
-      console.error("Failed to begin recording:", err);
+      console.error('Failed to begin recording:', err);
     }
   };
 
@@ -318,7 +344,7 @@ export default function VoiceQuestionsScreen() {
     try {
       const { status: existingStatus } = await Audio.getPermissionsAsync();
 
-      if (existingStatus === "granted") {
+      if (existingStatus === 'granted') {
         await beginRecording();
       } else {
         const { granted } = await Audio.requestPermissionsAsync();
@@ -327,11 +353,11 @@ export default function VoiceQuestionsScreen() {
           await new Promise((r) => setTimeout(r, 300));
           await beginRecording();
         } else {
-          console.error("Audio permission not granted");
+          console.error('Audio permission not granted');
         }
       }
     } catch (err) {
-      console.error("Failed to start recording:", err);
+      console.error('Failed to start recording:', err);
     }
   };
 
@@ -362,11 +388,11 @@ export default function VoiceQuestionsScreen() {
       (async () => {
         try {
           const uploadUrl = await generateUploadUrl();
-          const resp = await fetch(uri, { method: "GET" });
+          const resp = await fetch(uri, { method: 'GET' });
           const blob = await resp.blob();
           const uploadResp = await fetch(uploadUrl, {
-            method: "POST",
-            headers: { "Content-Type": blob.type || "audio/m4a" },
+            method: 'POST',
+            headers: { 'Content-Type': blob.type || 'audio/m4a' },
             body: blob,
           });
           const { storageId } = await uploadResp.json();
@@ -377,11 +403,11 @@ export default function VoiceQuestionsScreen() {
           });
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (err) {
-          console.error("Failed to upload recording:", err);
+          console.error('Failed to upload recording:', err);
         }
       })();
     } catch (err) {
-      console.error("Failed to stop recording:", err);
+      console.error('Failed to stop recording:', err);
     }
   };
 
@@ -427,7 +453,7 @@ export default function VoiceQuestionsScreen() {
         questionIndex: currentIndex,
       });
     } catch (err) {
-      console.error("Failed to delete recording:", err);
+      console.error('Failed to delete recording:', err);
     }
   };
 
@@ -490,15 +516,21 @@ export default function VoiceQuestionsScreen() {
   if (submitted) {
     const profileReady = hasProfile === true;
     return (
-      <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
         <View style={styles.celebrationContainer}>
           <Confetti />
           <CelebrationText>
-            {profileReady
-              ? <IconSparkles size={48} color={colors.text} />
-              : <ActivityIndicator size="large" color={colors.text} style={{ marginBottom: spacing.sm }} />}
+            {profileReady ? (
+              <IconSparkles size={48} color={colors.text} />
+            ) : (
+              <ActivityIndicator
+                size="large"
+                color={colors.text}
+                style={{ marginBottom: spacing.sm }}
+              />
+            )}
             <Text style={styles.celebrationTitle}>
-              {profileReady ? "Time to Review Your Profile" : "Thanks for sharing!"}
+              {profileReady ? 'Time to Review Your Profile' : 'Thanks for sharing!'}
             </Text>
             {profileReady ? (
               <View style={styles.checkmarkList}>
@@ -513,7 +545,8 @@ export default function VoiceQuestionsScreen() {
               </View>
             ) : (
               <Text style={styles.celebrationSubtitle}>
-                We're using AI to craft your profile and compatibility scores. This usually takes about a minute.
+                We're using AI to craft your profile and compatibility scores. This usually takes
+                about a minute.
               </Text>
             )}
           </CelebrationText>
@@ -521,7 +554,9 @@ export default function VoiceQuestionsScreen() {
             <View style={styles.footer}>
               <Pressable
                 style={styles.nextButton}
-                onPress={() => router.push({ pathname: "/profile-audit", params: { firstTime: "true" } })}
+                onPress={() =>
+                  router.push({ pathname: '/profile-audit', params: { firstTime: 'true' } })
+                }
               >
                 <Text style={styles.nextButtonText}>Edit My Profile</Text>
               </Pressable>
@@ -533,7 +568,7 @@ export default function VoiceQuestionsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <Animated.View style={[styles.flex, fadeStyle]}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
@@ -570,10 +605,7 @@ export default function VoiceQuestionsScreen() {
                   <IconTrash size={18} color={colors.error} />
                   <Text style={styles.deleteText}>Delete & Re-record</Text>
                 </Pressable>
-                <Pressable
-                  style={styles.transcriptLink}
-                  onPress={() => setShowTranscript(true)}
-                >
+                <Pressable style={styles.transcriptLink} onPress={() => setShowTranscript(true)}>
                   <IconFileText size={14} color={colors.textMuted} />
                   <Text style={styles.transcriptLinkText}>Show transcript</Text>
                 </Pressable>
@@ -624,24 +656,18 @@ export default function VoiceQuestionsScreen() {
 
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
-            <Pressable
-              style={styles.backButton}
-              onPress={handleBack}
-              disabled={isRecording}
-            >
+            <Pressable style={styles.backButton} onPress={handleBack} disabled={isRecording}>
               <Text style={styles.backButtonText}>Back</Text>
             </Pressable>
             <Pressable
               style={[
                 styles.nextButton,
-                (!canProceed && !isPaused || (isRecording && !isPaused)) && styles.buttonDisabled,
+                ((!canProceed && !isPaused) || (isRecording && !isPaused)) && styles.buttonDisabled,
               ]}
               onPress={handleNext}
-              disabled={!canProceed && !isPaused || (isRecording && !isPaused)}
+              disabled={(!canProceed && !isPaused) || (isRecording && !isPaused)}
             >
-              <Text style={styles.nextButtonText}>
-                {isLastQuestion ? "Done" : "Next"}
-              </Text>
+              <Text style={styles.nextButtonText}>{isLastQuestion ? 'Done' : 'Next'}</Text>
             </Pressable>
           </View>
         </View>
@@ -667,7 +693,7 @@ export default function VoiceQuestionsScreen() {
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.modalTranscript}>
-              {existingRecording?.transcription || "No transcript available yet."}
+              {existingRecording?.transcription || 'No transcript available yet.'}
             </Text>
           </ScrollView>
         </View>
@@ -677,209 +703,158 @@ export default function VoiceQuestionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  backButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
     flex: 1,
-    backgroundColor: colors.background,
+    padding: spacing.lg,
   },
-  flex: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  headerLeft: {
-    width: 36,
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryLabel: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes.lg,
+  backButtonText: {
     color: colors.text,
-    textAlign: "center",
+    fontSize: fontSizes.base,
+    fontWeight: '600',
   },
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  belowButton: {
+    alignItems: 'center',
+    height: 140,
+    justifyContent: 'flex-start',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonRow: {
+    flexDirection: 'row',
     gap: spacing.md,
   },
-  progressBar: {
+  categoryLabel: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes.lg,
+    textAlign: 'center',
+  },
+  celebrationContainer: {
     flex: 1,
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+  celebrationContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing['2xl'],
   },
-  progressText: {
-    fontSize: fontSizes.sm,
+  celebrationSubtitle: {
     color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    lineHeight: 24,
+    paddingHorizontal: spacing.lg,
+    textAlign: 'center',
+  },
+  celebrationTitle: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['4xl'],
+    marginBottom: spacing.lg,
+    marginTop: spacing.xl,
+    textAlign: 'center',
+  },
+  checkmarkList: {
+    gap: 9,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
+  checkmarkRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  checkmarkText: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: fontSizes.lg,
+    lineHeight: 26,
+  },
+  closeButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  container: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
   },
-  questionText: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["2xl"],
-    color: colors.text,
-    lineHeight: 36,
-    marginBottom: spacing["2xl"],
-  },
-  recordingArea: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  readyState: {
-    alignItems: "center",
-  },
-  recordButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.text,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.lg,
-  },
-  recordHint: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-  },
-  recordingState: {
-    alignItems: "center",
-  },
-  belowButton: {
-    height: 140,
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  stopButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.error,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.lg,
-  },
-  soundWave: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    height: 60,
-    marginBottom: spacing.md,
-  },
-  soundBar: {
-    width: 6,
-    backgroundColor: colors.error,
-    borderRadius: 3,
-    minHeight: 8,
-  },
-  recordingDuration: {
-    fontSize: fontSizes["3xl"],
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  recordingHint: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-  },
-  recordedState: {
-    alignItems: "center",
-  },
-  recordedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.text,
-    marginBottom: spacing.lg,
-  },
-  recordedDuration: {
-    fontSize: fontSizes["2xl"],
-    fontWeight: "700",
-    color: colors.text,
-  },
   deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   deleteText: {
-    fontSize: fontSizes.sm,
     color: colors.error,
-    fontWeight: "500",
+    fontSize: fontSizes.sm,
+    fontWeight: '500',
   },
   discardButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: spacing.xs,
     marginTop: spacing.md,
-    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  transcriptLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  transcriptLinkText: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-  },
-  modalContent: {
+  flex: {
     flex: 1,
-    backgroundColor: colors.surface,
   },
-  modalHandle: {
+  footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  header: {
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  headerLeft: {
     width: 36,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.border,
-    alignSelf: "center",
-    marginTop: spacing.sm,
+  },
+  headerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  modalContent: {
+    backgroundColor: colors.surface,
+    flex: 1,
   },
-  modalTitle: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes.lg,
-    color: colors.text,
+  modalHandle: {
+    alignSelf: 'center',
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    height: 5,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+    width: 36,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   modalScroll: {
     flex: 1,
@@ -887,90 +862,141 @@ const styles = StyleSheet.create({
   modalScrollContent: {
     padding: spacing.xl,
   },
+  modalTitle: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes.lg,
+  },
   modalTranscript: {
-    fontSize: fontSizes.base,
     color: colors.text,
+    fontSize: fontSizes.base,
     lineHeight: 24,
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  backButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  backButtonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.text,
   },
   nextButton: {
-    flex: 2,
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
+    flex: 2,
     padding: spacing.lg,
-    alignItems: "center",
   },
   nextButtonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
     color: colors.primaryText,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  celebrationContainer: {
-    flex: 1,
-    overflow: "hidden",
-  },
-  celebrationContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing["2xl"],
-  },
-  celebrationTitle: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["4xl"],
-    color: colors.text,
-    textAlign: "center",
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  celebrationSubtitle: {
     fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  progressBar: {
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    flex: 1,
+    height: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    height: '100%',
+  },
+  progressRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  progressText: {
     color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: spacing.lg,
+    fontSize: fontSizes.sm,
   },
-  checkmarkList: {
-    marginTop: spacing.lg,
-    gap: 9,
-    paddingHorizontal: spacing.xl,
-  },
-  checkmarkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  checkmarkText: {
-    fontSize: fontSizes.lg,
+  questionText: {
     color: colors.text,
-    lineHeight: 26,
-    flexShrink: 1,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['2xl'],
+    lineHeight: 36,
+    marginBottom: spacing['2xl'],
+  },
+  readyState: {
+    alignItems: 'center',
+  },
+  recordButton: {
+    alignItems: 'center',
+    backgroundColor: colors.text,
+    borderRadius: 50,
+    height: 100,
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    width: 100,
+  },
+  recordHint: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+  },
+  recordedBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.text,
+    borderRadius: 16,
+    borderWidth: 2,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  recordedDuration: {
+    color: colors.text,
+    fontSize: fontSizes['2xl'],
+    fontWeight: '700',
+  },
+  recordedState: {
+    alignItems: 'center',
+  },
+  recordingArea: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  recordingDuration: {
+    color: colors.text,
+    fontSize: fontSizes['3xl'],
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  recordingHint: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+  },
+  recordingState: {
+    alignItems: 'center',
+  },
+  soundBar: {
+    backgroundColor: colors.error,
+    borderRadius: 3,
+    minHeight: 8,
+    width: 6,
+  },
+  soundWave: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    height: 60,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  stopButton: {
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    borderRadius: 50,
+    height: 100,
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    width: 100,
+  },
+  transcriptLink: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  transcriptLinkText: {
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
   },
 });

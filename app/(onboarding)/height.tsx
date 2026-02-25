@@ -1,24 +1,17 @@
-import { useBasicsStep } from "@/hooks/useBasicsStep";
-import { useScreenReady } from "@/hooks/useScreenReady";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { Picker } from "@react-native-picker/picker";
-import { IconChevronLeft } from "@tabler/icons-react-native";
-import { useEffect, useState } from "react";
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useBasicsStep } from '@/hooks/useBasicsStep';
+import { useScreenReady } from '@/hooks/useScreenReady';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { Picker } from '@react-native-picker/picker';
+import { IconChevronLeft } from '@tabler/icons-react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const FEET = [4, 5, 6, 7];
 const INCHES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 export default function HeightScreen() {
   const { currentUser, isEditing, loading, save, close } = useBasicsStep({
-    stepName: "height",
+    stepName: 'height',
   });
   const { setReady: setScreenReady, fadeAnim } = useScreenReady();
 
@@ -101,7 +94,7 @@ export default function HeightScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Saving..." : isEditing ? "Save" : "Next"}
+              {loading ? 'Saving...' : isEditing ? 'Save' : 'Next'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -111,65 +104,65 @@ export default function HeightScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  closeHeader: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  closeButton: {
-    alignSelf: "flex-start",
-    padding: spacing.xs,
-  },
-  flex: { flex: 1 },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing["2xl"],
-  },
-  question: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes["3xl"],
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  pickerRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: spacing.lg,
-  },
-  pickerColumn: { alignItems: "center", flex: 1 },
-  pickerLabel: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  picker: { height: 200, width: "100%" },
-  pickerItem: { fontSize: fontSizes["2xl"], color: colors.text },
-  heightDisplay: {
-    alignItems: "center",
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  heightText: { fontSize: fontSizes.xl, fontWeight: "600", color: colors.text },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
-  },
   button: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: spacing.lg,
-    alignItems: "center",
   },
   buttonDisabled: { opacity: 0.5 },
   buttonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
     color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  closeButton: {
+    alignSelf: 'flex-start',
+    padding: spacing.xs,
+  },
+  closeHeader: {
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  container: { backgroundColor: colors.background, flex: 1 },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing['2xl'],
+  },
+  flex: { flex: 1 },
+  footer: {
+    backgroundColor: colors.background,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  heightDisplay: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  heightText: { color: colors.text, fontSize: fontSizes.xl, fontWeight: '600' },
+  picker: { height: 200, width: '100%' },
+  pickerColumn: { alignItems: 'center', flex: 1 },
+  pickerItem: { color: colors.text, fontSize: fontSizes['2xl'] },
+  pickerLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+  },
+  question: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes['3xl'],
+    marginBottom: spacing.sm,
   },
 });

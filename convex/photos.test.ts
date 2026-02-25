@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { api } from "./_generated/api";
-import { setupTest } from "./test.setup";
+import { describe, it, expect } from 'vitest';
+import { api } from './_generated/api';
+import { setupTest } from './test.setup';
 
-const identity = { subject: "clerk_photo_user" };
+const identity = { subject: 'clerk_photo_user' };
 
 async function setupPhotoUser(t: ReturnType<typeof setupTest>) {
   const as = t.withIdentity(identity);
@@ -11,11 +11,11 @@ async function setupPhotoUser(t: ReturnType<typeof setupTest>) {
 }
 
 async function storeBlob(t: ReturnType<typeof setupTest>) {
-  return await t.run(async (ctx) => ctx.storage.store(new Blob(["img"])));
+  return await t.run(async (ctx) => ctx.storage.store(new Blob(['img'])));
 }
 
-describe("add", () => {
-  it("creates photo at order slot", async () => {
+describe('add', () => {
+  it('creates photo at order slot', async () => {
     const t = setupTest();
     const { as, userId } = await setupPhotoUser(t);
     const storageId = await storeBlob(t);
@@ -23,13 +23,16 @@ describe("add", () => {
     expect(photoId).toBeTruthy();
 
     const photos = await t.run(async (ctx) =>
-      ctx.db.query("photos").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+      ctx.db
+        .query('photos')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect()
     );
     expect(photos).toHaveLength(1);
     expect(photos[0].order).toBe(0);
   });
 
-  it("replaces existing photo at same order slot", async () => {
+  it('replaces existing photo at same order slot', async () => {
     const t = setupTest();
     const { as, userId } = await setupPhotoUser(t);
     const storageId1 = await storeBlob(t);
@@ -39,14 +42,17 @@ describe("add", () => {
     await as.mutation(api.photos.add, { storageId: storageId2, order: 0 });
 
     const photos = await t.run(async (ctx) =>
-      ctx.db.query("photos").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+      ctx.db
+        .query('photos')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .collect()
     );
     expect(photos).toHaveLength(1);
     expect(photos[0].storageId).toEqual(storageId2);
   });
 });
 
-describe("remove", () => {
+describe('remove', () => {
   it("deletes photo, forbidden for other user's photo", async () => {
     const t = setupTest();
     const { as } = await setupPhotoUser(t);
@@ -55,17 +61,15 @@ describe("remove", () => {
 
     // Own photo: should succeed
     await as.mutation(api.photos.remove, { photoId });
-    const remaining = await t.run(async (ctx) =>
-      ctx.db.query("photos").collect()
-    );
+    const remaining = await t.run(async (ctx) => ctx.db.query('photos').collect());
     expect(remaining).toHaveLength(0);
 
     // Other user's photo: should throw
     const otherPhotoId = await t.run(async (ctx) => {
-      const otherId = await ctx.db.insert("users", { clerkId: "clerk_other" });
-      const sid = await ctx.storage.store(new Blob(["img"]));
+      const otherId = await ctx.db.insert('users', { clerkId: 'clerk_other' });
+      const sid = await ctx.storage.store(new Blob(['img']));
       const url = await ctx.storage.getUrl(sid);
-      return await ctx.db.insert("photos", {
+      return await ctx.db.insert('photos', {
         userId: otherId,
         storageId: sid,
         url: url!,
@@ -73,14 +77,14 @@ describe("remove", () => {
       });
     });
 
-    await expect(
-      as.mutation(api.photos.remove, { photoId: otherPhotoId }),
-    ).rejects.toThrowError(/not found/i);
+    await expect(as.mutation(api.photos.remove, { photoId: otherPhotoId })).rejects.toThrowError(
+      /not found/i
+    );
   });
 });
 
-describe("reorder", () => {
-  it("updates order values for multiple photos", async () => {
+describe('reorder', () => {
+  it('updates order values for multiple photos', async () => {
     const t = setupTest();
     const { as } = await setupPhotoUser(t);
     const s1 = await storeBlob(t);
@@ -102,8 +106,8 @@ describe("reorder", () => {
   });
 });
 
-describe("countByUser", () => {
-  it("returns correct count", async () => {
+describe('countByUser', () => {
+  it('returns correct count', async () => {
     const t = setupTest();
     const { as, userId } = await setupPhotoUser(t);
     const s1 = await storeBlob(t);

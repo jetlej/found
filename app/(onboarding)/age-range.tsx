@@ -1,11 +1,11 @@
-import { OnboardingScreen } from "@/components/OnboardingScreen";
-import { useBasicsStep } from "@/hooks/useBasicsStep";
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import MultiSlider from "@ptomasroos/react-native-multi-slider";
-import { useEffect, useState } from "react";
-import { Dimensions, StyleSheet, Switch, Text, View } from "react-native";
+import { OnboardingScreen } from '@/components/OnboardingScreen';
+import { useBasicsStep } from '@/hooks/useBasicsStep';
+import { colors, fontSizes, spacing } from '@/lib/theme';
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
+import { useEffect, useState } from 'react';
+import { Dimensions, StyleSheet, Switch, Text, View } from 'react-native';
 
-const SLIDER_LENGTH = Dimensions.get("window").width - spacing.xl * 2;
+const SLIDER_LENGTH = Dimensions.get('window').width - spacing.xl * 2;
 
 function calculateAge(birthdate: string): number {
   const today = new Date();
@@ -18,7 +18,7 @@ function calculateAge(birthdate: string): number {
 
 export default function AgeRangeScreen() {
   const { currentUser, isEditing, loading, save, close } = useBasicsStep({
-    stepName: "age-range",
+    stepName: 'age-range',
   });
 
   const [minAge, setMinAge] = useState(23);
@@ -55,7 +55,7 @@ export default function AgeRangeScreen() {
       canProceed={true}
       loading={loading}
       onNext={handleContinue}
-      submitLabel={isEditing ? "Save" : undefined}
+      submitLabel={isEditing ? 'Save' : undefined}
       onClose={isEditing ? close : undefined}
     >
       <Text style={styles.rangeDisplay}>
@@ -98,57 +98,57 @@ export default function AgeRangeScreen() {
 }
 
 const styles = StyleSheet.create({
-  rangeDisplay: {
-    fontSize: fontSizes["2xl"],
-    fontWeight: "600",
-    color: colors.text,
-    textAlign: "center",
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
+  dealbreakerContainer: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing['2xl'],
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  sliderContainer: {
-    alignItems: "center",
+  dealbreakerLabel: {
+    color: colors.text,
+    fontSize: fontSizes.base,
+    fontWeight: '500',
+  },
+  endLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+  },
+  labels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xs,
+    width: '100%',
   },
   marker: {
     backgroundColor: colors.primary,
-    height: 24,
-    width: 24,
     borderRadius: 12,
-    shadowColor: "#000",
+    elevation: 3,
+    height: 24,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
-    elevation: 3,
+    width: 24,
   },
   markerPressed: {
     backgroundColor: colors.primary,
+    borderRadius: 14,
     height: 28,
     width: 28,
-    borderRadius: 14,
   },
-  labels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: spacing.xs,
-  },
-  endLabel: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-  dealbreakerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 12,
-    marginTop: spacing["2xl"],
-  },
-  dealbreakerLabel: {
-    fontSize: fontSizes.base,
+  rangeDisplay: {
     color: colors.text,
-    fontWeight: "500",
+    fontSize: fontSizes['2xl'],
+    fontWeight: '600',
+    marginBottom: spacing.lg,
+    marginTop: spacing.xl,
+    textAlign: 'center',
+  },
+  sliderContainer: {
+    alignItems: 'center',
   },
 });

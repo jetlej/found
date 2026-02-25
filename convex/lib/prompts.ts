@@ -1,14 +1,14 @@
 // Prompt templates for AI profile extraction
 
-import { CANONICAL_VALUES, RELATIONSHIP_VALUES } from "./canonicalValues";
+import { CANONICAL_VALUES, RELATIONSHIP_VALUES } from './canonicalValues';
 
 export const SYSTEM_PROMPT_BASE = `You are an AI assistant helping to analyze dating profile answers to extract structured data for compatibility matching. 
 Be accurate, concise, and extract only what is clearly stated or strongly implied. 
 Always respond with valid JSON matching the requested schema.`;
 
 // Canonical values list for the prompt
-const CANONICAL_VALUES_LIST = CANONICAL_VALUES.join(", ");
-const RELATIONSHIP_VALUES_LIST = RELATIONSHIP_VALUES.join(", ");
+const CANONICAL_VALUES_LIST = CANONICAL_VALUES.join(', ');
+const RELATIONSHIP_VALUES_LIST = RELATIONSHIP_VALUES.join(', ');
 
 // Extract ONLY canonical values from essays - used for matching
 export const CANONICAL_VALUES_PROMPT = `${SYSTEM_PROMPT_BASE}
@@ -304,7 +304,7 @@ Respond with JSON:
 // Gender-aware bio generation prompt
 export function getBioGenerationPrompt(gender?: string): string {
   const pronounInfo = getPronounInfo(gender);
-  
+
   return `${SYSTEM_PROMPT_BASE}
 
 Write a comprehensive, engaging paragraph bio (150-200 words) for this person based on their answers. The bio should:
@@ -316,7 +316,7 @@ Write a comprehensive, engaging paragraph bio (150-200 words) for this person ba
 - Touch on what they're looking for (relationship goals)
 - Mention something memorable or distinctive about them
 - Avoid clichés and generic phrases
-- Use ${pronounInfo.subject}/${pronounInfo.object}/${pronounInfo.possessive} pronouns (this person identifies as ${gender || "unspecified"})
+- Use ${pronounInfo.subject}/${pronounInfo.object}/${pronounInfo.possessive} pronouns (this person identifies as ${gender || 'unspecified'})
 
 Write in a warm, engaging tone that would make someone want to learn more about this person.
 
@@ -355,13 +355,13 @@ Respond with JSON:
 // Helper to get pronouns based on gender
 function getPronounInfo(gender?: string): { subject: string; object: string; possessive: string } {
   switch (gender?.toLowerCase()) {
-    case "man":
-      return { subject: "he", object: "him", possessive: "his" };
-    case "woman":
-      return { subject: "she", object: "her", possessive: "her" };
-    case "non-binary":
+    case 'man':
+      return { subject: 'he', object: 'him', possessive: 'his' };
+    case 'woman':
+      return { subject: 'she', object: 'her', possessive: 'her' };
+    case 'non-binary':
     default:
-      return { subject: "they", object: "them", possessive: "their" };
+      return { subject: 'they', object: 'them', possessive: 'their' };
   }
 }
 
@@ -372,7 +372,7 @@ export function formatQAPairs(
   return answers
     .sort((a, b) => a.questionOrder - b.questionOrder)
     .map((qa) => `Q${qa.questionOrder}: ${qa.questionText}\nA: ${qa.answer}`)
-    .join("\n\n");
+    .join('\n\n');
 }
 
 // Question categories and which questions belong to each extraction type
@@ -381,51 +381,51 @@ export const EXTRACTION_QUESTION_GROUPS = {
   // For values/interests extraction - questions about personality, hobbies, values
   // Category 2 essays + hobbies + lifestyle essays
   valuesInterests: [24, 44, 45, 70, 71, 86, 87, 88, 89],
-  
+
   // For personality traits (expanded to 11 dimensions) - questions revealing personality
   // Category 2 (Who You Are) + some relationship style questions
   personalityTraits: [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 46, 47, 48, 51, 52, 67, 68],
-  
+
   // For family plans - questions about kids and family
   // Category 1 kids questions + Category 5 family questions
   familyPlans: [5, 6, 7, 8, 9, 72, 73, 74, 79, 80],
-  
+
   // For lifestyle extraction - questions about daily life
   // Category 4 (Lifestyle) + substance questions from Category 1
   lifestyle: [25, 27, 29, 31, 60, 61, 62, 65, 66, 67],
-  
+
   // For dealbreakers - questions explicitly about requirements/dealbreakers
   // Essay dealbreaker + all checklist preference questions
   dealbreakers: [2, 4, 6, 8, 15, 17, 20, 23, 26, 28, 30, 32, 45, 59],
-  
+
   // For life story extraction - narrative elements
   // Category 5 (Life & Future) essays + Category 6 essays
   lifeStory: [79, 80, 81, 83, 84, 85],
-  
+
   // For social profile - social style and preferences
   // Category 2 social questions + Category 4 social questions
   socialProfile: [33, 67, 68, 69, 70],
-  
+
   // For intimacy profile - physical and emotional intimacy
   // Category 3 (Relationship Style) intimacy questions
   intimacyProfile: [53, 54, 55, 58],
-  
+
   // For love philosophy - beliefs about love and relationships
   // Category 6 (The Deeper Stuff) + healthy relationship essay
   lovePhilosophy: [58, 82, 83],
-  
+
   // For partner preferences - what they want in a partner
   // All checklist questions + dealbreaker essays
   partnerPreferences: [2, 4, 6, 8, 15, 17, 20, 23, 26, 28, 30, 32, 45, 59],
-  
+
   // For bio elements - conversation starters and unique facts
   // Essays that reveal personality + hobbies + quirks
   bioElements: [24, 44, 45, 70, 84, 85, 86, 87, 88, 89],
-  
+
   // For health snapshot
   // Category 4 health questions + health essay
   health: [63, 64, 71],
-  
+
   // All open-ended questions for keyword extraction
   // Essays and text questions only
   allOpenEnded: [24, 44, 45, 58, 59, 70, 71, 79, 80, 81, 83, 84, 85, 86, 87, 88, 89],

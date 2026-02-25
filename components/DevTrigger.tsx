@@ -1,9 +1,9 @@
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconX } from "@tabler/icons-react-native";
-import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { DevAdminPanel } from "./DevAdminPanel";
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { IconX } from '@tabler/icons-react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { DevAdminPanel } from './DevAdminPanel';
 
 interface DevTriggerProps {
   children: React.ReactNode;
@@ -37,14 +37,11 @@ export function DevTrigger({ children }: DevTriggerProps) {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowPanel(false)}
       >
-        <SafeAreaView style={styles.modalContainer} edges={["top"]}>
+        <SafeAreaView style={styles.modalContainer} edges={['top']}>
           <View style={styles.modalHeader}>
             <View style={styles.headerSpacer} />
             <Text style={styles.modalTitle}>Dev Tools</Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setShowPanel(false)}
-            >
+            <Pressable style={styles.closeButton} onPress={() => setShowPanel(false)}>
               <IconX size={24} color={colors.text} />
             </Pressable>
           </View>
@@ -58,49 +55,49 @@ export function DevTrigger({ children }: DevTriggerProps) {
 }
 
 const styles = StyleSheet.create({
+  closeButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
   container: {
     flex: 1,
-  },
-  triggerWrapper: {
-    position: "absolute",
-    top: 60,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 9999,
-  },
-  trigger: {
-    width: 70,
-    height: 50,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   headerSpacer: {
     width: 40,
   },
-  modalTitle: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes.lg,
-    color: colors.text,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+  modalContainer: {
+    backgroundColor: colors.background,
+    flex: 1,
   },
   modalContent: {
     flex: 1,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  modalTitle: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes.lg,
+  },
+  trigger: {
+    height: 50,
+    width: 70,
+  },
+  triggerWrapper: {
+    alignItems: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 60,
+    zIndex: 9999,
   },
 });

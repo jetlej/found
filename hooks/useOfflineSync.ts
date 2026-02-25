@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import NetInfo from "@react-native-community/netinfo";
-import { useOfflineStore } from "@/stores/offline";
+import { useEffect } from 'react';
+import NetInfo from '@react-native-community/netinfo';
+import { useOfflineStore } from '@/stores/offline';
 
 export function useOfflineSync() {
   const { isOnline, setOnline } = useOfflineStore();

@@ -1,4 +1,4 @@
-import { QuestionsScreenContent } from "./(tabs)/questions";
+import { QuestionsScreenContent } from './(tabs)/questions';
 
 export default function EditAnswersScreen() {
   return <QuestionsScreenContent forceEditing />;

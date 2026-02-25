@@ -65,13 +65,18 @@ During initial onboarding, single-question screens (no visibility toggle, no imp
 - Auto-saves recordings to Convex storage
 - All 8 complete -> auto-triggers `parseVoiceProfile` action (profile parsing only, no compatibility)
 - Re-recording any question re-triggers full parsing
-- **Celebration screen after Done**: waits for profile to be parsed (disabled button: "Building Your Profile..."), then enables "Review Your Profile" -> navigates to `/profile-audit?firstTime=true`. No `router.back()` fallback.
+- **Two-phase celebration screen after Done**:
+  - **Phase A (processing)**: large spinner, "Thanks for sharing!", subtitle about AI crafting profile. No button — footer is hidden.
+  - **Phase B (profile ready)**: sparkles icon, "Time to Review Your Profile", two icon+text rows (eye-off: hide inaccurate, eraser: remove private), "Edit My Profile" button -> `/profile-audit?firstTime=true`
 
 ## Profile Audit Screen (`profile-audit.tsx`)
 - Shows the user's AI-generated profile with toggle-able visibility on each field
-- **Mandatory mode** (`firstTime=true` or `fromRegenerate=true`): no back button, "Looks Good" button calls `completeProfileAudit` (saves hidden fields + schedules compatibility generation), then navigates to matches (first-time) or back (regeneration)
-- **Casual mode** (from Settings > My Profile): back button visible, "Done" button only saves hidden fields
+- **Mandatory mode** (`firstTime=true` or `fromRegenerate=true`): no back button, "Looks Good" calls `completeProfileAudit` (saves hidden fields, clears old analyses, schedules fresh compatibility generation), then shows "Finding Your Matches" loading screen with large spinner until first analysis lands, then navigates to matches
+- **Casual mode** (from Settings > My Profile): back button visible, "Done" button only saves hidden fields, navigates back
+- `completeProfileAudit` always clears all existing `compatibilityAnalyses` for the user before scheduling `analyzeAllForUser`, ensuring fresh scores
+- Completion detected via `getMatchGenerationStatusForCurrentUser` query (`hasAnyAnalyses` flips true)
 - Hidden fields are stored as dot-paths in `userProfiles.hiddenFields` and stripped before compatibility prompt via `filterProfile()`
+- SafeAreaView uses `edges={["top", "bottom"]}` for home indicator support
 
 ## Regenerate Profile (`(tabs)/questions.tsx`)
 - "Regenerate Profile" button in sticky footer on Edit Answers screen
@@ -79,5 +84,5 @@ During initial onboarding, single-question screens (no visibility toggle, no imp
   - User has made a change since last regeneration (`lastProfileEditedAt > lastProfileRegeneratedAt` or new recording `createdAt > lastProfileRegeneratedAt`)
   - Cooldown not active (1 hour between regenerations, `REGENERATE_PROFILE_COOLDOWN_MS`)
 - Calls `api.users.regenerateProfile` mutation (rate-limited server-side)
-- Shows celebration overlay while parsing; when `myProfile.processedAt` updates, navigates to `/profile-audit?fromRegenerate=true`
+- Shows two-phase celebration overlay: large spinner + "Regenerating!" while parsing, then sparkles + "Time to Review Your Profile" with icon+text rows and "Edit My Profile" button when `processedAt` updates -> navigates to `/profile-audit?fromRegenerate=true`
 - Profile updates (`updateBasics`, `updateProfile`) are NOT rate-limited; only regeneration is

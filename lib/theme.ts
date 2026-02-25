@@ -6,26 +6,26 @@ export const colors = {
   background: '#F0F0F0',
   surface: '#FFFFFF',
   surfaceSecondary: '#F5F5F5',
-  
+
   // Text
   text: '#1A1A1A',
   textSecondary: '#666666',
   textMuted: '#999999',
   textPlaceholder: '#BBBBBB',
-  
+
   // Accent / Interactive
   primary: '#000000',
   primaryText: '#FFFFFF',
-  
+
   // Borders
   border: '#E5E5E5',
   borderFocused: '#000000',
-  
+
   // Status
   success: '#22c55e',
   error: '#ef4444',
   warning: '#f59e0b',
-  
+
   // Overlay
   overlay: 'rgba(0, 0, 0, 0.5)',
 } as const;

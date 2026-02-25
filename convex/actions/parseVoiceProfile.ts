@@ -1,8 +1,8 @@
-"use node";
+'use node';
 
-import { v } from "convex/values";
-import { internalAction, action } from "../_generated/server";
-import { internal } from "../_generated/api";
+import { v } from 'convex/values';
+import { internalAction, action } from '../_generated/server';
+import { internal } from '../_generated/api';
 import {
   getDirectOpenAIClient,
   extractStructuredDataWithUsage,
@@ -10,10 +10,10 @@ import {
   TokenUsage,
   aggregateUsage,
   formatCost,
-} from "../lib/openai";
-import { CANONICAL_VALUES } from "../lib/canonicalValues";
-import { VOICE_QUESTIONS } from "./voiceQuestionDefinitions";
-import { requireAdmin } from "../lib/admin";
+} from '../lib/openai';
+import { CANONICAL_VALUES } from '../lib/canonicalValues';
+import { VOICE_QUESTIONS } from './voiceQuestionDefinitions';
+import { requireAdmin } from '../lib/admin';
 
 // Cost tracking helper
 interface ExtractionCost {
@@ -24,14 +24,14 @@ interface ExtractionCost {
 
 // The 9 voice questions and what they capture
 const VOICE_QUESTION_MAPPING = [
-  { index: 0, captures: "values, identity, priorities" },
-  { index: 1, captures: "love language, relationship style, attachment" },
-  { index: 2, captures: "background, formative moments, life story" },
-  { index: 3, captures: "lifestyle, career, daily routine, social life" },
-  { index: 4, captures: "family closeness, kids, location, future plans" },
-  { index: 5, captures: "partner preferences, dealbreakers" },
-  { index: 6, captures: "interests, hobbies, passions" },
-  { index: 7, captures: "growth mindset, self-awareness, evolution" },
+  { index: 0, captures: 'values, identity, priorities' },
+  { index: 1, captures: 'love language, relationship style, attachment' },
+  { index: 2, captures: 'background, formative moments, life story' },
+  { index: 3, captures: 'lifestyle, career, daily routine, social life' },
+  { index: 4, captures: 'family closeness, kids, location, future plans' },
+  { index: 5, captures: 'partner preferences, dealbreakers' },
+  { index: 6, captures: 'interests, hobbies, passions' },
+  { index: 7, captures: 'growth mindset, self-awareness, evolution' },
 ];
 
 // Comprehensive extraction prompt for voice transcripts
@@ -40,7 +40,7 @@ const VOICE_PROFILE_EXTRACTION_PROMPT = `You are an AI assistant analyzing voice
 Your job is to extract a comprehensive dating profile from these transcripts.
 
 CANONICAL VALUES LIST (only use these for canonicalValues field):
-${CANONICAL_VALUES.join(", ")}
+${CANONICAL_VALUES.join(', ')}
 
 Extract the following information. Use null for fields where information is not provided or unclear.
 
@@ -145,7 +145,7 @@ Use 5 as default when information is insufficient.`;
 
 function enforceGeneratedBioName(
   generatedBio: string | undefined,
-  expectedName: string | undefined,
+  expectedName: string | undefined
 ): string | undefined {
   if (!generatedBio) return generatedBio;
   const name = expectedName?.trim();
@@ -165,33 +165,34 @@ const WHISPER_BASE_DELAY_MS = 1000;
 
 async function transcribeAudio(audioUrl: string): Promise<{ text: string; cost: number }> {
   const client = getDirectOpenAIClient();
-  
+
   // Fetch the audio file
   const response = await fetch(audioUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
   }
   const audioBuffer = await response.arrayBuffer();
-  
+
   // Create a File object for the API
-  const audioFile = new File([audioBuffer], "recording.m4a", { type: "audio/m4a" });
-  
+  const audioFile = new File([audioBuffer], 'recording.m4a', { type: 'audio/m4a' });
+
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= WHISPER_MAX_RETRIES; attempt++) {
     try {
       const transcription = await client.audio.transcriptions.create({
         file: audioFile,
-        model: "whisper-1",
-        response_format: "text",
+        model: 'whisper-1',
+        response_format: 'text',
       });
 
       // Ensure we have a string (SDK may return object in some versions)
-      const text = typeof transcription === "string"
-        ? transcription
-        : (transcription as any).text ?? String(transcription);
+      const text =
+        typeof transcription === 'string'
+          ? transcription
+          : ((transcription as any).text ?? String(transcription));
 
       if (!text || text.trim().length === 0) {
-        throw new Error("Whisper returned empty transcription");
+        throw new Error('Whisper returned empty transcription');
       }
 
       // Whisper pricing: $0.006 per minute
@@ -203,26 +204,32 @@ async function transcribeAudio(audioUrl: string): Promise<{ text: string; cost: 
       if (err?.status === 401 || err?.status === 403) throw err;
       if (attempt < WHISPER_MAX_RETRIES) {
         const delayMs = WHISPER_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-        console.warn(`Whisper attempt ${attempt}/${WHISPER_MAX_RETRIES} failed, retrying in ${delayMs}ms...`, err?.message);
+        console.warn(
+          `Whisper attempt ${attempt}/${WHISPER_MAX_RETRIES} failed, retrying in ${delayMs}ms...`,
+          err?.message
+        );
         await new Promise((r) => setTimeout(r, delayMs));
       }
     }
   }
-  throw lastError || new Error("Whisper transcription failed after retries");
+  throw lastError || new Error('Whisper transcription failed after retries');
 }
 
 // Internal action to parse voice recordings into a profile
 export const parseVoiceProfile = internalAction({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
   },
-  handler: async (ctx, args): Promise<{ success: boolean; error?: string; confidence?: number }> => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ success: boolean; error?: string; confidence?: number }> => {
     console.log(`Starting voice profile parsing for user ${args.userId}`);
 
     // Get user info
     const user = await ctx.runQuery(internal.users.getById, { userId: args.userId });
     if (!user) {
-      return { success: false, error: "User not found" };
+      return { success: false, error: 'User not found' };
     }
 
     // Get all voice recordings for this user
@@ -231,7 +238,7 @@ export const parseVoiceProfile = internalAction({
     });
 
     if (!recordings || recordings.length === 0) {
-      return { success: false, error: "No voice recordings found" };
+      return { success: false, error: 'No voice recordings found' };
     }
 
     console.log(`Found ${recordings.length} voice recordings to process`);
@@ -242,7 +249,7 @@ export const parseVoiceProfile = internalAction({
 
     // Transcribe recordings (reuse existing transcriptions when available)
     const transcripts: { questionIndex: number; text: string }[] = [];
-    
+
     for (const recording of recordings) {
       try {
         // Reuse existing transcription if available
@@ -264,7 +271,7 @@ export const parseVoiceProfile = internalAction({
 
         const { text, cost } = await transcribeAudio(audioUrl);
         totalTranscriptionCost += cost;
-        
+
         transcripts.push({
           questionIndex: recording.questionIndex,
           text,
@@ -283,13 +290,13 @@ export const parseVoiceProfile = internalAction({
     }
 
     costs.push({
-      name: "Transcription (Whisper)",
+      name: 'Transcription (Whisper)',
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       cost: totalTranscriptionCost,
     });
 
     if (transcripts.length === 0) {
-      return { success: false, error: "Failed to transcribe any recordings" };
+      return { success: false, error: 'Failed to transcribe any recordings' };
     }
 
     // Format transcripts for the extraction prompt
@@ -297,59 +304,59 @@ export const parseVoiceProfile = internalAction({
       .sort((a, b) => a.questionIndex - b.questionIndex)
       .map((t) => {
         const question = VOICE_QUESTION_MAPPING[t.questionIndex];
-        return `QUESTION ${t.questionIndex + 1} (captures: ${question?.captures || "general"}):\n"${VOICE_QUESTIONS[t.questionIndex]?.text || `Question ${t.questionIndex + 1}`}"\n\nRESPONSE:\n${t.text}`;
+        return `QUESTION ${t.questionIndex + 1} (captures: ${question?.captures || 'general'}):\n"${VOICE_QUESTIONS[t.questionIndex]?.text || `Question ${t.questionIndex + 1}`}"\n\nRESPONSE:\n${t.text}`;
       })
-      .join("\n\n---\n\n");
+      .join('\n\n---\n\n');
 
     const extractionInput = [
-      "PROFILE CONTEXT:",
-      `Name: ${user.name?.trim() || ""}`,
-      `Gender: ${user.gender || "unknown"}`,
-      "",
-      "VOICE TRANSCRIPTS:",
+      'PROFILE CONTEXT:',
+      `Name: ${user.name?.trim() || ''}`,
+      `Gender: ${user.gender || 'unknown'}`,
+      '',
+      'VOICE TRANSCRIPTS:',
       formattedTranscripts,
-    ].join("\n");
+    ].join('\n');
 
     // Run the comprehensive extraction
-    console.log("Running profile extraction from transcripts...");
-    
+    console.log('Running profile extraction from transcripts...');
+
     const defaultUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
-    
+
     let extractedProfile: any;
     try {
       const result = await extractStructuredDataWithUsage<any>(
         VOICE_PROFILE_EXTRACTION_PROMPT,
-        extractionInput,
+        extractionInput
       );
       extractedProfile = result.data;
       costs.push({
-        name: "Profile Extraction",
+        name: 'Profile Extraction',
         usage: result.usage,
         cost: result.cost,
       });
     } catch (err) {
-      console.error("Profile extraction failed:", err);
-      return { success: false, error: "Profile extraction failed" };
+      console.error('Profile extraction failed:', err);
+      return { success: false, error: 'Profile extraction failed' };
     }
 
     // Log cost breakdown
     const totalUsage = aggregateUsage(costs.map((c) => c.usage));
     const totalCost = costs.reduce((sum, c) => sum + c.cost, 0);
 
-    console.log("\n========== VOICE PROFILE PARSING COST BREAKDOWN ==========");
+    console.log('\n========== VOICE PROFILE PARSING COST BREAKDOWN ==========');
     console.log(`User ID: ${args.userId}`);
     console.log(`Recordings processed: ${transcripts.length}`);
-    console.log("-----------------------------------------------------------");
+    console.log('-----------------------------------------------------------');
     costs.forEach((c) => {
       console.log(
         `  ${c.name.padEnd(25)} | ${c.usage.totalTokens.toString().padStart(6)} tokens | ${formatCost(c.cost)}`
       );
     });
-    console.log("-----------------------------------------------------------");
+    console.log('-----------------------------------------------------------');
     console.log(
-      `  ${"TOTAL".padEnd(25)} | ${totalUsage.totalTokens.toString().padStart(6)} tokens | ${formatCost(totalCost)}`
+      `  ${'TOTAL'.padEnd(25)} | ${totalUsage.totalTokens.toString().padStart(6)} tokens | ${formatCost(totalCost)}`
     );
-    console.log("===========================================================\n");
+    console.log('===========================================================\n');
 
     // Build the profile object matching the userProfiles schema
     // Use structured onboarding answers from the users table when available
@@ -379,30 +386,32 @@ export const parseVoiceProfile = internalAction({
       },
       // Relationship style
       relationshipStyle: {
-        loveLanguage: extractedProfile.relationshipStyle?.loveLanguage || "unknown",
-        conflictStyle: extractedProfile.relationshipStyle?.conflictStyle || "unknown",
-        communicationFrequency: extractedProfile.relationshipStyle?.communicationFrequency || "unknown",
-        financialApproach: extractedProfile.relationshipStyle?.financialApproach || "unknown",
+        loveLanguage: extractedProfile.relationshipStyle?.loveLanguage || 'unknown',
+        conflictStyle: extractedProfile.relationshipStyle?.conflictStyle || 'unknown',
+        communicationFrequency:
+          extractedProfile.relationshipStyle?.communicationFrequency || 'unknown',
+        financialApproach: extractedProfile.relationshipStyle?.financialApproach || 'unknown',
         aloneTimeNeed: extractedProfile.relationshipStyle?.aloneTimeNeed ?? 5,
       },
       // Family plans - prefer structured onboarding answer over AI extraction
       familyPlans: {
         wantsKids: user.wantsChildren
-          ? ({ yes: "yes", no: "no", open: "open", not_sure: "maybe" }[user.wantsChildren] ?? "unknown")
-          : (extractedProfile.familyPlans?.wantsKids || "unknown"),
+          ? ({ yes: 'yes', no: 'no', open: 'open', not_sure: 'maybe' }[user.wantsChildren] ??
+            'unknown')
+          : extractedProfile.familyPlans?.wantsKids || 'unknown',
         kidsTimeline: extractedProfile.familyPlans?.kidsTimeline ?? undefined,
         familyCloseness: extractedProfile.familyPlans?.familyCloseness ?? 5,
         parentingStyle: extractedProfile.familyPlans?.parentingStyle ?? undefined,
       },
       // Lifestyle
       lifestyle: {
-        sleepSchedule: extractedProfile.lifestyle?.sleepSchedule || "unknown",
-        exerciseLevel: extractedProfile.lifestyle?.exerciseLevel || "unknown",
+        sleepSchedule: extractedProfile.lifestyle?.sleepSchedule || 'unknown',
+        exerciseLevel: extractedProfile.lifestyle?.exerciseLevel || 'unknown',
         dietType: extractedProfile.lifestyle?.dietType ?? undefined,
-        alcoholUse: extractedProfile.lifestyle?.alcoholUse || "unknown",
-        drugUse: extractedProfile.lifestyle?.drugUse || "unknown",
-        petPreference: extractedProfile.lifestyle?.petPreference || "neutral",
-        locationPreference: extractedProfile.lifestyle?.locationPreference || "flexible",
+        alcoholUse: extractedProfile.lifestyle?.alcoholUse || 'unknown',
+        drugUse: extractedProfile.lifestyle?.drugUse || 'unknown',
+        petPreference: extractedProfile.lifestyle?.petPreference || 'neutral',
+        locationPreference: extractedProfile.lifestyle?.locationPreference || 'flexible',
       },
       // Life story
       lifeStory: extractedProfile.lifeStory
@@ -419,7 +428,7 @@ export const parseVoiceProfile = internalAction({
       // Social profile
       socialProfile: extractedProfile.socialProfile
         ? {
-            socialStyle: extractedProfile.socialProfile.socialStyle || "balanced",
+            socialStyle: extractedProfile.socialProfile.socialStyle || 'balanced',
             weekendStyle: extractedProfile.socialProfile.weekendStyle ?? undefined,
             idealFridayNight: undefined,
             goOutFrequency: extractedProfile.socialProfile.goOutFrequency ?? 5,
@@ -430,9 +439,11 @@ export const parseVoiceProfile = internalAction({
       // Intimacy profile
       intimacyProfile: extractedProfile.intimacyProfile
         ? {
-            physicalIntimacyImportance: extractedProfile.intimacyProfile.physicalIntimacyImportance ?? 5,
-            physicalAttractionImportance: extractedProfile.intimacyProfile.physicalAttractionImportance ?? 5,
-            pdaComfort: extractedProfile.intimacyProfile.pdaComfort || "moderate",
+            physicalIntimacyImportance:
+              extractedProfile.intimacyProfile.physicalIntimacyImportance ?? 5,
+            physicalAttractionImportance:
+              extractedProfile.intimacyProfile.physicalAttractionImportance ?? 5,
+            pdaComfort: extractedProfile.intimacyProfile.pdaComfort || 'moderate',
             emotionalIntimacyApproach: undefined,
             connectionTriggers: extractedProfile.intimacyProfile.connectionTriggers || [],
             healthyIntimacyVision: undefined,
@@ -445,7 +456,8 @@ export const parseVoiceProfile = internalAction({
             loveDefinition: extractedProfile.lovePhilosophy.loveDefinition ?? undefined,
             loveRecognition: [],
             romanticGestures: [],
-            healthyRelationshipVision: extractedProfile.lovePhilosophy.healthyRelationshipVision ?? undefined,
+            healthyRelationshipVision:
+              extractedProfile.lovePhilosophy.healthyRelationshipVision ?? undefined,
             bestAdviceReceived: undefined,
           }
         : undefined,
@@ -470,16 +482,17 @@ export const parseVoiceProfile = internalAction({
           }
         : undefined,
       // Demographics from structured onboarding answers
-      demographics: (user.religion || user.politicalLeaning || user.hasChildren)
-        ? {
-            ethnicity: undefined,
-            religion: user.religion ?? undefined,
-            religiosity: user.religionImportance ?? 5,
-            politicalLeaning: user.politicalLeaning ?? undefined,
-            politicalIntensity: user.politicalImportance ?? 5,
-            hasKids: user.hasChildren === "yes",
-          }
-        : undefined,
+      demographics:
+        user.religion || user.politicalLeaning || user.hasChildren
+          ? {
+              ethnicity: undefined,
+              religion: user.religion ?? undefined,
+              religiosity: user.religionImportance ?? 5,
+              politicalLeaning: user.politicalLeaning ?? undefined,
+              politicalIntensity: user.politicalImportance ?? 5,
+              hasKids: user.hasChildren === 'yes',
+            }
+          : undefined,
       // Generated content
       generatedBio: enforceGeneratedBioName(extractedProfile.generatedBio ?? undefined, user.name),
       shortBio: extractedProfile.shortBio ?? undefined,
@@ -501,14 +514,16 @@ export const parseVoiceProfile = internalAction({
 // Transcribe a single recording immediately after save
 export const transcribeRecording = internalAction({
   args: {
-    recordingId: v.id("voiceRecordings"),
+    recordingId: v.id('voiceRecordings'),
   },
   handler: async (ctx, args) => {
     const recording = await ctx.runQuery(internal.voiceRecordings.getRecordingById, {
       recordingId: args.recordingId,
     });
     if (!recording) {
-      console.error(`transcribeRecording: recording ${args.recordingId} not found (may have been deleted)`);
+      console.error(
+        `transcribeRecording: recording ${args.recordingId} not found (may have been deleted)`
+      );
       return;
     }
 
@@ -524,7 +539,9 @@ export const transcribeRecording = internalAction({
         recordingId: args.recordingId,
         transcription: text,
       });
-      console.log(`Transcribed recording ${args.recordingId} (Q${recording.questionIndex + 1}): ${text.substring(0, 80)}...`);
+      console.log(
+        `Transcribed recording ${args.recordingId} (Q${recording.questionIndex + 1}): ${text.substring(0, 80)}...`
+      );
     } catch (err) {
       console.error(`transcribeRecording failed for ${args.recordingId}:`, err);
     }
@@ -534,7 +551,7 @@ export const transcribeRecording = internalAction({
 // Public action to manually trigger voice profile parsing
 export const triggerVoiceProfileParsing = action({
   args: {
-    userId: v.id("users"),
+    userId: v.id('users'),
     adminSecret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -549,22 +566,20 @@ export const triggerVoiceProfileParsing = action({
 
 // Benchmark: clear transcriptions, re-run Whisper + GPT extraction, report costs
 export const benchmarkOnboardingCost = action({
-  args: { userId: v.id("users"), adminSecret: v.optional(v.string()) },
+  args: { userId: v.id('users'), adminSecret: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.adminSecret);
 
     // Clear existing transcriptions so Whisper runs fresh
-    const cleared = await ctx.runMutation(
-      internal.voiceRecordings.clearTranscriptionsForUser,
-      { userId: args.userId },
-    );
+    const cleared = await ctx.runMutation(internal.voiceRecordings.clearTranscriptionsForUser, {
+      userId: args.userId,
+    });
     console.log(`Cleared ${cleared} transcriptions for user ${args.userId}`);
 
     // Run the full parse (Whisper + GPT extraction) — costs are logged by parseVoiceProfile
-    const result = await ctx.runAction(
-      internal.actions.parseVoiceProfile.parseVoiceProfile,
-      { userId: args.userId },
-    );
+    const result = await ctx.runAction(internal.actions.parseVoiceProfile.parseVoiceProfile, {
+      userId: args.userId,
+    });
 
     return result;
   },

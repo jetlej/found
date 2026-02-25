@@ -1,5 +1,5 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { defineSchema, defineTable } from 'convex/server';
+import { v } from 'convex/values';
 
 export default defineSchema({
   users: defineTable({
@@ -54,13 +54,13 @@ export default defineSchema({
     // Status & Referrals
     status: v.optional(v.string()), // "waitlist", "active", "inactive", "paid", etc.
     referralCode: v.optional(v.string()), // unique 6-char code to share
-    referredBy: v.optional(v.id("users")), // who referred this user
+    referredBy: v.optional(v.id('users')), // who referred this user
     referralCount: v.optional(v.number()), // number of successful referrals
     waitlistEndsAt: v.optional(v.number()), // timestamp when 7-day wait ends
     // A/B test: onboarding type
-    onboardingType: v.optional(v.union(v.literal("journey"), v.literal("voice"))),
+    onboardingType: v.optional(v.union(v.literal('journey'), v.literal('voice'))),
     // User type: human (real user) or bot (seeded test user)
-    type: v.optional(v.union(v.literal("human"), v.literal("bot"))),
+    type: v.optional(v.union(v.literal('human'), v.literal('bot'))),
     // Timestamp of the latest profile edit (basics/profile fields)
     lastProfileEditedAt: v.optional(v.number()),
     // Rate limit profile regeneration action
@@ -68,28 +68,28 @@ export default defineSchema({
     // First-time profile audit gate completion timestamp
     profileAuditCompletedAt: v.optional(v.number()),
   })
-    .index("by_clerk_id", ["clerkId"])
-    .index("by_phone", ["phone"])
-    .index("by_referral_code", ["referralCode"]),
+    .index('by_clerk_id', ['clerkId'])
+    .index('by_phone', ['phone'])
+    .index('by_referral_code', ['referralCode']),
 
   photos: defineTable({
-    userId: v.id("users"),
-    storageId: v.id("_storage"),
+    userId: v.id('users'),
+    storageId: v.id('_storage'),
     url: v.string(),
     order: v.number(), // 0-5, determines display order
-  }).index("by_user", ["userId"]),
+  }).index('by_user', ['userId']),
 
   // Voice recordings for voice-based onboarding experiment
   voiceRecordings: defineTable({
-    userId: v.id("users"),
+    userId: v.id('users'),
     questionIndex: v.number(), // 0-8 for the 9 voice questions
-    storageId: v.id("_storage"),
+    storageId: v.id('_storage'),
     durationSeconds: v.number(),
     transcription: v.optional(v.string()), // Populated after AI transcription
     createdAt: v.number(),
   })
-    .index("by_user", ["userId"])
-    .index("by_user_question", ["userId", "questionIndex"]),
+    .index('by_user', ['userId'])
+    .index('by_user_question', ['userId', 'questionIndex']),
 
   // DEPRECATED: Old written-questions system, replaced by voiceRecordings.
   // Tables kept for data compatibility only — no code reads/writes these.
@@ -98,13 +98,13 @@ export default defineSchema({
     questionKey: v.optional(v.string()), // Stable identifier (e.g., "relationship_goals_self")
     text: v.string(),
     type: v.union(
-      v.literal("multiple_choice"),
-      v.literal("text"),
-      v.literal("essay"),
-      v.literal("scale"),
-      v.literal("range"), // Double-ended slider for min/max values
-      v.literal("checklist"), // Multi-select with "Open to any" option
-      v.literal("interest_picker") // Interest selection from library
+      v.literal('multiple_choice'),
+      v.literal('text'),
+      v.literal('essay'),
+      v.literal('scale'),
+      v.literal('range'), // Double-ended slider for min/max values
+      v.literal('checklist'), // Multi-select with "Open to any" option
+      v.literal('interest_picker') // Interest selection from library
     ),
     options: v.optional(v.array(v.string())), // For multiple_choice and checklist
     category: v.optional(v.string()), // e.g., "The Basics", "Who You Are"
@@ -117,23 +117,24 @@ export default defineSchema({
     linkedQuestionOrder: v.optional(v.number()), // DEPRECATED: kept for migration, use linkedQuestionKey
     // Whether this question can have a dealbreaker toggle (non-checklist questions)
     hasDealbreaker: v.optional(v.boolean()),
-  }).index("by_order", ["order"])
-    .index("by_key", ["questionKey"]),
+  })
+    .index('by_order', ['order'])
+    .index('by_key', ['questionKey']),
 
   // DEPRECATED: See questions above.
   answers: defineTable({
-    userId: v.id("users"),
-    questionId: v.id("questions"),
+    userId: v.id('users'),
+    questionId: v.id('questions'),
     value: v.string(), // JSON string for complex answers (checklist = JSON array), plain string for simple
-    source: v.optional(v.union(v.literal("ai"), v.literal("manual"))), // Who provided this answer
+    source: v.optional(v.union(v.literal('ai'), v.literal('manual'))), // Who provided this answer
     isDealbreaker: v.optional(v.boolean()), // Whether user marked this preference as a dealbreaker
   })
-    .index("by_user", ["userId"])
-    .index("by_user_question", ["userId", "questionId"]),
+    .index('by_user', ['userId'])
+    .index('by_user_question', ['userId', 'questionId']),
 
   // Structured profile data extracted from answers via AI
   userProfiles: defineTable({
-    userId: v.id("users"),
+    userId: v.id('users'),
 
     // User-selected interests from picker (IDs from interest library)
     selectedInterests: v.optional(v.array(v.string())),
@@ -142,68 +143,94 @@ export default defineSchema({
     canonicalValues: v.optional(v.array(v.string())),
 
     // Structured preferences from checklist questions (The Basics)
-    preferences: v.optional(v.object({
-      relationshipGoals: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      relationshipStyle: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      hasChildren: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      wantsChildren: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      ethnicity: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      religion: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      politics: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      education: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      alcohol: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      smoking: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      marijuana: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-      drugs: v.optional(v.object({
-        self: v.string(),
-        openTo: v.array(v.string()),
-        isDealbreaker: v.boolean(),
-      })),
-    })),
+    preferences: v.optional(
+      v.object({
+        relationshipGoals: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        relationshipStyle: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        hasChildren: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        wantsChildren: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        ethnicity: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        religion: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        politics: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        education: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        alcohol: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        smoking: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        marijuana: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+        drugs: v.optional(
+          v.object({
+            self: v.string(),
+            openTo: v.array(v.string()),
+            isDealbreaker: v.boolean(),
+          })
+        ),
+      })
+    ),
 
     // Raw AI extractions (kept for display, NOT used for matching)
     values: v.array(v.string()), // Raw values from essays
@@ -255,83 +282,99 @@ export default defineSchema({
     }),
 
     // Life story - narrative elements (Phase 2)
-    lifeStory: v.optional(v.object({
-      proudestAchievement: v.optional(v.string()),
-      definingHardship: v.optional(v.string()),
-      biggestRisk: v.optional(v.string()),
-      dreams: v.array(v.string()),
-      fears: v.array(v.string()),
-      formativeExperiences: v.array(v.string()),
-      favoriteStory: v.optional(v.string()),
-    })),
+    lifeStory: v.optional(
+      v.object({
+        proudestAchievement: v.optional(v.string()),
+        definingHardship: v.optional(v.string()),
+        biggestRisk: v.optional(v.string()),
+        dreams: v.array(v.string()),
+        fears: v.array(v.string()),
+        formativeExperiences: v.array(v.string()),
+        favoriteStory: v.optional(v.string()),
+      })
+    ),
 
     // Social profile (Phase 3)
-    socialProfile: v.optional(v.object({
-      socialStyle: v.string(), // "very active" | "balanced" | "introverted"
-      weekendStyle: v.optional(v.string()),
-      idealFridayNight: v.optional(v.string()),
-      goOutFrequency: v.number(), // 1-10
-      friendApprovalImportance: v.number(), // 1-10
-      socialCircleVision: v.optional(v.string()),
-    })),
+    socialProfile: v.optional(
+      v.object({
+        socialStyle: v.string(), // "very active" | "balanced" | "introverted"
+        weekendStyle: v.optional(v.string()),
+        idealFridayNight: v.optional(v.string()),
+        goOutFrequency: v.number(), // 1-10
+        friendApprovalImportance: v.number(), // 1-10
+        socialCircleVision: v.optional(v.string()),
+      })
+    ),
 
     // Intimacy profile (Phase 4)
-    intimacyProfile: v.optional(v.object({
-      physicalIntimacyImportance: v.number(), // 1-10
-      physicalAttractionImportance: v.number(), // 1-10
-      pdaComfort: v.string(),
-      emotionalIntimacyApproach: v.optional(v.string()),
-      connectionTriggers: v.array(v.string()),
-      healthyIntimacyVision: v.optional(v.string()),
-    })),
+    intimacyProfile: v.optional(
+      v.object({
+        physicalIntimacyImportance: v.number(), // 1-10
+        physicalAttractionImportance: v.number(), // 1-10
+        pdaComfort: v.string(),
+        emotionalIntimacyApproach: v.optional(v.string()),
+        connectionTriggers: v.array(v.string()),
+        healthyIntimacyVision: v.optional(v.string()),
+      })
+    ),
 
     // Love philosophy (Phase 5)
-    lovePhilosophy: v.optional(v.object({
-      believesInSoulmates: v.boolean(),
-      loveDefinition: v.optional(v.string()),
-      loveRecognition: v.array(v.string()), // signs they're in love
-      romanticGestures: v.array(v.string()),
-      healthyRelationshipVision: v.optional(v.string()),
-      bestAdviceReceived: v.optional(v.string()),
-    })),
+    lovePhilosophy: v.optional(
+      v.object({
+        believesInSoulmates: v.boolean(),
+        loveDefinition: v.optional(v.string()),
+        loveRecognition: v.array(v.string()), // signs they're in love
+        romanticGestures: v.array(v.string()),
+        healthyRelationshipVision: v.optional(v.string()),
+        bestAdviceReceived: v.optional(v.string()),
+      })
+    ),
 
     // Partner preferences (Phase 6)
-    partnerPreferences: v.optional(v.object({
-      mustHaves: v.array(v.string()),
-      niceToHaves: v.array(v.string()),
-      redFlags: v.array(v.string()),
-      importantQualities: v.array(v.string()),
-      dealbreakersInPartner: v.array(v.string()),
-    })),
+    partnerPreferences: v.optional(
+      v.object({
+        mustHaves: v.array(v.string()),
+        niceToHaves: v.array(v.string()),
+        redFlags: v.array(v.string()),
+        importantQualities: v.array(v.string()),
+        dealbreakersInPartner: v.array(v.string()),
+      })
+    ),
 
     // Bio elements for AI descriptions (Phase 7)
-    bioElements: v.optional(v.object({
-      conversationStarters: v.array(v.string()),
-      interestingFacts: v.array(v.string()),
-      uniqueQuirks: v.array(v.string()),
-      passions: v.array(v.string()),
-      whatTheySek: v.optional(v.string()),
-    })),
+    bioElements: v.optional(
+      v.object({
+        conversationStarters: v.array(v.string()),
+        interestingFacts: v.array(v.string()),
+        uniqueQuirks: v.array(v.string()),
+        passions: v.array(v.string()),
+        whatTheySek: v.optional(v.string()),
+      })
+    ),
 
     // Demographics snapshot (Phase 8)
-    demographics: v.optional(v.object({
-      ethnicity: v.optional(v.string()),
-      religion: v.optional(v.string()),
-      religiosity: v.number(), // 1-10
-      politicalLeaning: v.optional(v.string()),
-      politicalIntensity: v.number(), // 1-10
-      hasKids: v.boolean(),
-    })),
+    demographics: v.optional(
+      v.object({
+        ethnicity: v.optional(v.string()),
+        religion: v.optional(v.string()),
+        religiosity: v.number(), // 1-10
+        politicalLeaning: v.optional(v.string()),
+        politicalIntensity: v.number(), // 1-10
+        hasKids: v.boolean(),
+      })
+    ),
 
     // Health snapshot (Phase 9)
-    health: v.optional(v.object({
-      physicalHealthRating: v.number(), // 1-10
-      mentalHealthRating: v.number(), // 1-10
-      healthNotes: v.optional(v.string()),
-      smokingStatus: v.string(),
-      drinkingFrequency: v.string(),
-      drugUse: v.string(),
-    })),
+    health: v.optional(
+      v.object({
+        physicalHealthRating: v.number(), // 1-10
+        mentalHealthRating: v.number(), // 1-10
+        healthNotes: v.optional(v.string()),
+        smokingStatus: v.string(),
+        drinkingFrequency: v.string(),
+        drugUse: v.string(),
+      })
+    ),
 
     // Generated bio (Phase 10)
     generatedBio: v.optional(v.string()),
@@ -347,13 +390,13 @@ export default defineSchema({
     processedAt: v.number(),
     openaiModel: v.string(),
     confidence: v.number(), // 0-1 confidence score
-  }).index("by_user", ["userId"]),
+  }).index('by_user', ['userId']),
 
   // AI-generated compatibility analyses (secondary score)
   compatibilityAnalyses: defineTable({
     userIdPair: v.string(), // sorted "id1_id2" for dedup
-    user1Id: v.id("users"),
-    user2Id: v.id("users"),
+    user1Id: v.id('users'),
+    user2Id: v.id('users'),
     // AI-generated content
     summary: v.string(),
     greenFlags: v.array(v.string()),
@@ -377,12 +420,12 @@ export default defineSchema({
     generatedAt: v.number(),
     openaiModel: v.string(),
   })
-    .index("by_pair", ["userIdPair"])
-    .index("by_user1", ["user1Id"])
-    .index("by_user2", ["user2Id"]),
+    .index('by_pair', ['userIdPair'])
+    .index('by_user1', ['user1Id'])
+    .index('by_user2', ['user2Id']),
 
   config: defineTable({
     key: v.string(),
     value: v.string(),
-  }).index("by_key", ["key"]),
+  }).index('by_key', ['key']),
 });

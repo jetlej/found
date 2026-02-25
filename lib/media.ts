@@ -1,5 +1,5 @@
-import { Image, Video } from "react-native-compressor";
-import { File } from "expo-file-system";
+import { Image, Video } from 'react-native-compressor';
+import { File } from 'expo-file-system';
 
 // Size limits (in bytes)
 export const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -47,7 +47,7 @@ export async function compressVideo(
   const result = await Video.compress(
     uri,
     {
-      compressionMethod: "auto",
+      compressionMethod: 'auto',
       maxSize: 1080, // Max 1080p
       minimumFileSizeForCompress: 0, // Always compress
     },
@@ -65,10 +65,10 @@ export async function compressVideo(
  */
 export async function validateMediaSize(
   uri: string,
-  type: "image" | "video"
+  type: 'image' | 'video'
 ): Promise<{ valid: boolean; error?: string; size?: number }> {
   const size = await getFileSize(uri);
-  const maxSize = type === "image" ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
+  const maxSize = type === 'image' ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
   const maxSizeMB = maxSize / (1024 * 1024);
 
   if (size > maxSize) {
@@ -89,12 +89,12 @@ export async function validateMediaSize(
  */
 export async function processMediaItem(
   uri: string,
-  type: "image" | "video",
+  type: 'image' | 'video',
   onProgress?: (progress: number) => void
 ): Promise<string> {
   let processedUri: string;
 
-  if (type === "image") {
+  if (type === 'image') {
     processedUri = await compressImage(uri);
   } else {
     processedUri = await compressVideo(uri, onProgress);
@@ -108,4 +108,3 @@ export async function processMediaItem(
 
   return processedUri;
 }
-

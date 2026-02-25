@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { api } from "./_generated/api";
-import { setupTest } from "./test.setup";
+import { describe, it, expect } from 'vitest';
+import { api } from './_generated/api';
+import { setupTest } from './test.setup';
 
-const identity = { subject: "clerk_voice_user", name: "Voice User" };
+const identity = { subject: 'clerk_voice_user', name: 'Voice User' };
 
 async function createUserWithStorage(t: ReturnType<typeof setupTest>) {
   const as = t.withIdentity(identity);
@@ -11,11 +11,11 @@ async function createUserWithStorage(t: ReturnType<typeof setupTest>) {
 }
 
 async function storeBlob(t: ReturnType<typeof setupTest>) {
-  return await t.run(async (ctx) => ctx.storage.store(new Blob(["audio"])));
+  return await t.run(async (ctx) => ctx.storage.store(new Blob(['audio'])));
 }
 
-describe("saveRecording", () => {
-  it("saves new recording", async () => {
+describe('saveRecording', () => {
+  it('saves new recording', async () => {
     const t = setupTest();
     const { as, userId } = await createUserWithStorage(t);
     const storageId = await storeBlob(t);
@@ -27,7 +27,7 @@ describe("saveRecording", () => {
     expect(id).toBeTruthy();
   });
 
-  it("replaces existing recording for same question index", async () => {
+  it('replaces existing recording for same question index', async () => {
     const t = setupTest();
     const { as, userId } = await createUserWithStorage(t);
     const storageId1 = await storeBlob(t);
@@ -45,15 +45,16 @@ describe("saveRecording", () => {
     });
 
     const recordings = await t.run(async (ctx) =>
-      ctx.db.query("voiceRecordings")
-        .withIndex("by_user_question", (q) => q.eq("userId", userId).eq("questionIndex", 0))
+      ctx.db
+        .query('voiceRecordings')
+        .withIndex('by_user_question', (q) => q.eq('userId', userId).eq('questionIndex', 0))
         .collect()
     );
     expect(recordings).toHaveLength(1);
     expect(recordings[0].durationSeconds).toBe(45);
   });
 
-  it("8th recording schedules parseVoiceProfile", async () => {
+  it('8th recording schedules parseVoiceProfile', async () => {
     const t = setupTest();
     const { as } = await createUserWithStorage(t);
 
@@ -67,15 +68,15 @@ describe("saveRecording", () => {
     }
 
     const scheduled = await t.run(async (ctx) =>
-      ctx.db.system.query("_scheduled_functions").collect()
+      ctx.db.system.query('_scheduled_functions').collect()
     );
     // Should have scheduled transcription for each + parseVoiceProfile at the end
     expect(scheduled.length).toBeGreaterThanOrEqual(9);
   });
 });
 
-describe("deleteRecording", () => {
-  it("removes recording, returns true", async () => {
+describe('deleteRecording', () => {
+  it('removes recording, returns true', async () => {
     const t = setupTest();
     const { as } = await createUserWithStorage(t);
     const storageId = await storeBlob(t);
@@ -90,7 +91,7 @@ describe("deleteRecording", () => {
     expect(result).toBe(true);
   });
 
-  it("non-existent returns false", async () => {
+  it('non-existent returns false', async () => {
     const t = setupTest();
     const { as } = await createUserWithStorage(t);
     const result = await as.mutation(api.voiceRecordings.deleteRecording, {
@@ -100,8 +101,8 @@ describe("deleteRecording", () => {
   });
 });
 
-describe("getRecordingsForUser", () => {
-  it("returns all recordings for user", async () => {
+describe('getRecordingsForUser', () => {
+  it('returns all recordings for user', async () => {
     const t = setupTest();
     const { as, userId } = await createUserWithStorage(t);
 
@@ -121,8 +122,8 @@ describe("getRecordingsForUser", () => {
   });
 });
 
-describe("getCompletedCount", () => {
-  it("returns correct count after saves", async () => {
+describe('getCompletedCount', () => {
+  it('returns correct count after saves', async () => {
     const t = setupTest();
     const { as, userId } = await createUserWithStorage(t);
 
@@ -139,7 +140,7 @@ describe("getCompletedCount", () => {
     expect(count).toBe(4);
   });
 
-  it("returns 0 for fresh user", async () => {
+  it('returns 0 for fresh user', async () => {
     const t = setupTest();
     const { as, userId } = await createUserWithStorage(t);
     const count = await as.query(api.voiceRecordings.getCompletedCount, { userId });

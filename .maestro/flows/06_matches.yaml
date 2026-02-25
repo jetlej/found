@@ -6,8 +6,8 @@ appId: com.jetlej.found
 #   bunx convex run actions/seedVoiceTestUsers:seedCelebProfiles
 #   bunx convex run actions/seedTestPhotos:seedCelebPhotos
 
-- tapOn: "Matches"
+- tapOn: 'Matches'
 # Wait for matches to load (may take a moment for queries)
 - extendedWaitUntil:
-    visible: "Tap for details"
+    visible: 'Tap for details'
     timeout: 15000

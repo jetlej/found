@@ -1,20 +1,26 @@
-import { ONBOARDING_FLOW, ONBOARDING_VISIBLE_STEPS, OnboardingStep, getPrevStep, getProgress } from "@/lib/onboarding-flow";
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import { IconChevronLeft } from "@tabler/icons-react-native";
-import { Stack, useGlobalSearchParams, usePathname, useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  ONBOARDING_FLOW,
+  ONBOARDING_VISIBLE_STEPS,
+  OnboardingStep,
+  getPrevStep,
+  getProgress,
+} from '@/lib/onboarding-flow';
+import { colors, fontSizes, spacing } from '@/lib/theme';
+import { IconChevronLeft } from '@tabler/icons-react-native';
+import { Stack, useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OnboardingLayout() {
   const pathname = usePathname();
   const router = useRouter();
   const { editing } = useGlobalSearchParams<{ editing?: string }>();
-  const isEditing = editing === "true";
+  const isEditing = editing === 'true';
 
-  const screenName = pathname.split("/").pop() as OnboardingStep;
+  const screenName = pathname.split('/').pop() as OnboardingStep;
   const isInFlow = ONBOARDING_FLOW.includes(screenName);
   const isVisible = ONBOARDING_VISIBLE_STEPS.includes(screenName);
-  const showBack = isInFlow && screenName !== "referral";
+  const showBack = isInFlow && screenName !== 'referral';
   const stepIndex = ONBOARDING_VISIBLE_STEPS.indexOf(screenName);
   const totalSteps = ONBOARDING_VISIBLE_STEPS.length;
 
@@ -26,7 +32,7 @@ export default function OnboardingLayout() {
       if (prevStep) {
         router.replace({
           pathname: `/(onboarding)/${prevStep}`,
-          params: { direction: "back" },
+          params: { direction: 'back' },
         });
       }
     }
@@ -48,7 +54,9 @@ export default function OnboardingLayout() {
               <View style={[styles.progressFill, { flex: getProgress(screenName) }]} />
               <View style={{ flex: 1 - getProgress(screenName) }} />
             </View>
-            <Text style={styles.stepText}>{stepIndex + 1} of {totalSteps}</Text>
+            <Text style={styles.stepText}>
+              {stepIndex + 1} of {totalSteps}
+            </Text>
           </View>
           <View style={styles.iconButton} />
         </View>
@@ -58,9 +66,7 @@ export default function OnboardingLayout() {
           headerShown: false,
           gestureEnabled: true,
           animation:
-            (route.params as any)?.direction === "back"
-              ? "slide_from_left"
-              : "slide_from_right",
+            (route.params as any)?.direction === 'back' ? 'slide_from_left' : 'slide_from_right',
           contentStyle: { backgroundColor: colors.background },
         })}
       >
@@ -88,19 +94,19 @@ export default function OnboardingLayout() {
         <Stack.Screen name="marijuana" />
         <Stack.Screen name="drugs" />
         <Stack.Screen name="tattoos" />
-        <Stack.Screen name="basics-summary" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="basics-summary" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen
           name="questions"
           options={{
-            presentation: "modal",
-            animation: "slide_from_right",
+            presentation: 'modal',
+            animation: 'slide_from_right',
           }}
         />
         <Stack.Screen
           name="voice-questions"
           options={{
-            presentation: "modal",
-            animation: "slide_from_right",
+            presentation: 'modal',
+            animation: 'slide_from_right',
           }}
         />
       </Stack>
@@ -110,40 +116,40 @@ export default function OnboardingLayout() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: colors.background,
+    flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingBottom: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
   },
   iconButton: {
-    width: 40,
     height: 28,
-    justifyContent: "center",
-  },
-  progressWrapper: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  progressTrack: {
-    width: 120,
-    height: 3,
-    backgroundColor: colors.border,
-    borderRadius: 1.5,
-    flexDirection: "row",
+    justifyContent: 'center',
+    width: 40,
   },
   progressFill: {
-    height: 3,
     backgroundColor: colors.text,
     borderRadius: 1.5,
+    height: 3,
+  },
+  progressTrack: {
+    backgroundColor: colors.border,
+    borderRadius: 1.5,
+    flexDirection: 'row',
+    height: 3,
+    width: 120,
+  },
+  progressWrapper: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 4,
   },
   stepText: {
-    fontSize: fontSizes.xs,
     color: colors.textMuted,
+    fontSize: fontSizes.xs,
   },
 });

@@ -1,0 +1,7 @@
+node_modules
+dist
+.expo
+ios
+android
+convex/_generated
+questions.json

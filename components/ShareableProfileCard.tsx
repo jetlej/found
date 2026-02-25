@@ -1,5 +1,5 @@
-import { Doc } from "@/convex/_generated/dataModel";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
+import { Doc } from '@/convex/_generated/dataModel';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import {
   IconBabyCarriage,
   IconBuildingChurch,
@@ -9,9 +9,9 @@ import {
   IconHome,
   IconPaw,
   IconRuler,
-} from "@tabler/icons-react-native";
-import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+} from '@tabler/icons-react-native';
+import React from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 // Format height from inches to ft'in"
 function formatHeight(inches: number): string {
@@ -25,33 +25,36 @@ type BasicItem = {
   label: string;
 };
 
-function getBasicsRows(user: Doc<"users">) {
+function getBasicsRows(user: Doc<'users'>) {
   const topRow: BasicItem[] = [];
-  if (user.heightInches)
-    topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches) });
+  if (user.heightInches) topRow.push({ icon: IconRuler, label: formatHeight(user.heightInches) });
   if (user.hometown) topRow.push({ icon: IconHome, label: user.hometown });
   if (user.wantsChildren) {
     const labels: Record<string, string> = {
-      yes: "Wants children",
+      yes: 'Wants children',
       no: "Doesn't want children",
-      open: "Open to children",
-      not_sure: "Not sure about children",
+      open: 'Open to children',
+      not_sure: 'Not sure about children',
     };
-    topRow.push({ icon: IconBabyCarriage, label: labels[user.wantsChildren] || user.wantsChildren });
+    topRow.push({
+      icon: IconBabyCarriage,
+      label: labels[user.wantsChildren] || user.wantsChildren,
+    });
   }
   if (user.pets) topRow.push({ icon: IconPaw, label: user.pets });
 
   const detailRow: BasicItem[] = [];
   if (user.ethnicity) detailRow.push({ icon: IconFlag, label: user.ethnicity });
   if (user.religion) detailRow.push({ icon: IconBuildingChurch, label: user.religion });
-  if (user.politicalLeaning) detailRow.push({ icon: IconBuildingCommunity, label: user.politicalLeaning });
+  if (user.politicalLeaning)
+    detailRow.push({ icon: IconBuildingCommunity, label: user.politicalLeaning });
   const goalParts: string[] = [];
   if (user.relationshipGoal) {
-    const g = user.relationshipGoal.replace(/_/g, " ");
+    const g = user.relationshipGoal.replace(/_/g, ' ');
     goalParts.push(g.charAt(0).toUpperCase() + g.slice(1));
   }
   if (user.relationshipType) goalParts.push(user.relationshipType);
-  if (goalParts.length > 0) detailRow.push({ icon: IconHeart, label: goalParts.join(" / ") });
+  if (goalParts.length > 0) detailRow.push({ icon: IconHeart, label: goalParts.join(' / ') });
 
   return { topRow, detailRow };
 }
@@ -63,7 +66,9 @@ function BasicsWrap({ items }: { items: BasicItem[] }) {
   items.forEach((item, i) => {
     if (i > 0) {
       elements.push(
-        <Text key={`sep-${i}`} style={basicsStyles.separator}>·</Text>
+        <Text key={`sep-${i}`} style={basicsStyles.separator}>
+          ·
+        </Text>
       );
     }
     elements.push(
@@ -78,7 +83,7 @@ function BasicsWrap({ items }: { items: BasicItem[] }) {
 
 // Prefer raw (non-canonical) values — they're more unique/interesting
 // canonicalValues are generic ("honesty", "loyalty"), rawValues are specific
-function getInterestingValues(profile: Doc<"userProfiles">): string[] {
+function getInterestingValues(profile: Doc<'userProfiles'>): string[] {
   const canonical = new Set(profile.canonicalValues ?? []);
   const raw = (profile.values ?? []).filter((v) => !canonical.has(v));
   // If we have enough raw values, prefer those; otherwise mix in canonical
@@ -88,23 +93,21 @@ function getInterestingValues(profile: Doc<"userProfiles">): string[] {
 }
 
 interface ShareableProfileCardProps {
-  user: Doc<"users">;
-  profile: Doc<"userProfiles">;
+  user: Doc<'users'>;
+  profile: Doc<'userProfiles'>;
   photoUrl: string | null;
-  variant?: "card" | "fullPage";
+  variant?: 'card' | 'fullPage';
   capturing?: boolean;
   onClose?: () => void;
 }
 
 export const ShareableProfileCard = React.forwardRef<View, ShareableProfileCardProps>(
-  ({ user, profile, photoUrl, variant = "card", capturing, onClose }, ref) => {
-    const isFullPage = variant === "fullPage";
+  ({ user, profile, photoUrl, variant = 'card', capturing, onClose }, ref) => {
+    const isFullPage = variant === 'fullPage';
     const age = user.birthdate
-      ? Math.floor(
-          (Date.now() - new Date(user.birthdate).getTime()) / 31557600000,
-        )
+      ? Math.floor((Date.now() - new Date(user.birthdate).getTime()) / 31557600000)
       : null;
-    const firstName = user.name?.split(" ")[0] || "You";
+    const firstName = user.name?.split(' ')[0] || 'You';
 
     const values = getInterestingValues(profile);
     const passions = (profile.bioElements?.passions ?? []).slice(0, 3);
@@ -116,7 +119,14 @@ export const ShareableProfileCard = React.forwardRef<View, ShareableProfileCardP
     const hasBasics = allBasics.length > 0;
 
     return (
-      <View ref={ref} style={[isFullPage ? styles.fullPage : styles.card, capturing && { backgroundColor: colors.surface }]} collapsable={false}>
+      <View
+        ref={ref}
+        style={[
+          isFullPage ? styles.fullPage : styles.card,
+          capturing && { backgroundColor: colors.surface },
+        ]}
+        collapsable={false}
+      >
         {/* Logo row — centered, close button absolutely positioned left */}
         <View style={styles.logoRow}>
           {isFullPage && onClose && !capturing && (
@@ -134,19 +144,15 @@ export const ShareableProfileCard = React.forwardRef<View, ShareableProfileCardP
             <Image source={{ uri: photoUrl }} style={styles.photo} />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Text style={styles.photoInitial}>
-                {firstName.charAt(0).toUpperCase()}
-              </Text>
+              <Text style={styles.photoInitial}>{firstName.charAt(0).toUpperCase()}</Text>
             </View>
           )}
           <View style={styles.nameInfo}>
             <Text style={styles.name}>
               {firstName}
-              {age ? `, ${age}` : ""}
+              {age ? `, ${age}` : ''}
             </Text>
-            {user.location && (
-              <Text style={styles.location}>{user.location}</Text>
-            )}
+            {user.location && <Text style={styles.location}>{user.location}</Text>}
           </View>
         </View>
 
@@ -212,185 +218,185 @@ export const ShareableProfileCard = React.forwardRef<View, ShareableProfileCardP
         {!isFullPage && <Text style={styles.watermark}>found.app</Text>}
       </View>
     );
-  },
+  }
 );
 
 const styles = StyleSheet.create({
+  bioText: {
+    color: colors.text,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 16,
+    elevation: 3,
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
-  },
-  fullPage: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    marginBottom: spacing.lg,
-  },
-  logo: {
-    fontFamily: fonts.logo,
-    fontSize: fontSizes.xl,
-    color: colors.text,
-  },
-  tagline: {
-    fontSize: fontSizes.lg,
-    color: colors.textMuted,
-    marginLeft: spacing.sm,
   },
   closeButton: {
-    position: "absolute",
-    left: 0,
-    top: 0,
+    alignItems: 'center',
     bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    top: 0,
     width: 40,
-    justifyContent: "center",
-    alignItems: "center",
   },
   closeIcon: {
-    fontSize: 20,
     color: colors.textMuted,
+    fontSize: 20,
+  },
+  fullPage: {
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  location: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    marginTop: 1,
+  },
+  logo: {
+    color: colors.text,
+    fontFamily: fonts.logo,
+    fontSize: fontSizes.xl,
+  },
+  logoRow: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  name: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['2xl'],
+  },
+  nameInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
     marginBottom: spacing.md,
   },
   photo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     backgroundColor: colors.border,
-  },
-  photoPlaceholder: {
-    width: 48,
-    height: 48,
     borderRadius: 24,
-    backgroundColor: colors.surfaceSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
+    height: 48,
+    width: 48,
   },
   photoInitial: {
+    color: colors.textSecondary,
     fontSize: fontSizes.lg,
-    fontWeight: "600",
-    color: colors.textSecondary,
+    fontWeight: '600',
   },
-  nameInfo: {
-    marginLeft: spacing.md,
-    flex: 1,
+  photoPlaceholder: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
   },
-  name: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["2xl"],
-    color: colors.text,
+  pill: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
   },
-  location: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginTop: 1,
+  pillDealbreaker: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
   },
-  shortBio: {
-    fontFamily: fonts.serifItalic,
-    fontSize: fontSizes.base,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginBottom: spacing.md,
-    lineHeight: 22,
-    fontStyle: "italic",
+  pillDealbreakerText: {
+    color: '#991b1b',
+    fontSize: fontSizes.xs,
+  },
+  pillMustHave: {
+    backgroundColor: '#dcfce7',
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  pillMustHaveText: {
+    color: '#166534',
+    fontSize: fontSizes.xs,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  pillText: {
+    color: '#1e40af',
+    fontSize: fontSizes.xs,
   },
   section: {
     marginTop: spacing.md,
   },
   sectionLabel: {
-    fontSize: fontSizes.xs,
-    fontWeight: "600",
     color: colors.textMuted,
-    textTransform: "uppercase",
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
     letterSpacing: 1,
     marginBottom: spacing.sm,
+    textTransform: 'uppercase',
   },
-  bioText: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    lineHeight: 20,
+  shortBio: {
+    color: colors.textSecondary,
+    fontFamily: fonts.serifItalic,
+    fontSize: fontSizes.base,
+    fontStyle: 'italic',
+    lineHeight: 22,
+    marginBottom: spacing.md,
+    textAlign: 'center',
   },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  pill: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: "#dbeafe",
-    borderRadius: 12,
-  },
-  pillText: {
-    fontSize: fontSizes.xs,
-    color: "#1e40af",
-  },
-  pillMustHave: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: "#dcfce7",
-    borderRadius: 12,
-  },
-  pillMustHaveText: {
-    fontSize: fontSizes.xs,
-    color: "#166534",
-  },
-  pillDealbreaker: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: "#fee2e2",
-    borderRadius: 12,
-  },
-  pillDealbreakerText: {
-    fontSize: fontSizes.xs,
-    color: "#991b1b",
+  tagline: {
+    color: colors.textMuted,
+    fontSize: fontSizes.lg,
+    marginLeft: spacing.sm,
   },
   watermark: {
-    fontSize: fontSizes.xs,
     color: colors.textMuted,
-    textAlign: "right",
+    fontSize: fontSizes.xs,
     marginTop: spacing.lg,
+    textAlign: 'right',
   },
 });
 
 const basicsStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    rowGap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
   item: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: spacing.xs,
   },
-  separator: {
-    fontSize: fontSizes.base,
-    color: colors.textMuted,
-    marginHorizontal: spacing.sm,
-  },
   label: {
-    fontSize: fontSizes.xs,
     color: colors.text,
     fontFamily: fonts.serif,
+    fontSize: fontSizes.xs,
+  },
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingVertical: spacing.sm,
+    rowGap: spacing.xs,
+  },
+  separator: {
+    color: colors.textMuted,
+    fontSize: fontSizes.base,
+    marginHorizontal: spacing.sm,
   },
 });

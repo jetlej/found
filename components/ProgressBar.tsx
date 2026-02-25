@@ -1,5 +1,5 @@
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { StyleSheet, Text, View } from "react-native";
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface ProgressBarProps {
   current: number; // Current question number (1-100)
@@ -26,11 +26,16 @@ export function ProgressBar({
           <View style={styles.categoryRow}>
             <Text style={styles.category}>{category}</Text>
             {categoryPosition && categoryTotal && (
-              <Text style={styles.categoryCount}> ({categoryPosition}/{categoryTotal})</Text>
+              <Text style={styles.categoryCount}>
+                {' '}
+                ({categoryPosition}/{categoryTotal})
+              </Text>
             )}
           </View>
         )}
-        <Text style={styles.overallCount}>{current} of {total}</Text>
+        <Text style={styles.overallCount}>
+          {current} of {total}
+        </Text>
       </View>
       <View style={styles.barContainer}>
         <View style={[styles.barFill, { width: `${progress * 100}%` }]} />
@@ -40,40 +45,40 @@ export function ProgressBar({
 }
 
 const styles = StyleSheet.create({
+  barContainer: {
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    height: 4,
+    overflow: 'hidden',
+  },
+  barFill: {
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    height: '100%',
+  },
+  category: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes.base,
+  },
+  categoryCount: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+  },
+  categoryRow: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+  },
   container: {
     gap: spacing.sm,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  categoryRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  category: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes.base,
-    color: colors.text,
-  },
-  categoryCount: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   overallCount: {
-    fontSize: fontSizes.sm,
     color: colors.textSecondary,
-  },
-  barContainer: {
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+    fontSize: fontSizes.sm,
   },
 });

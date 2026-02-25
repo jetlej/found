@@ -1,17 +1,10 @@
-import { api } from "@/convex/_generated/api";
-import { colors, fontSizes, spacing } from "@/lib/theme";
-import { useOfflineStore } from "@/stores/offline";
-import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { api } from '@/convex/_generated/api';
+import { colors, fontSizes, spacing } from '@/lib/theme';
+import { useOfflineStore } from '@/stores/offline';
+import { useMutation, useQuery } from 'convex/react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 interface DevAdminPanelProps {
   onClose?: () => void;
@@ -19,7 +12,7 @@ interface DevAdminPanelProps {
 
 export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
   const { devClerkId, setDevClerkId } = useOfflineStore();
@@ -27,7 +20,7 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
   // Search users
   const users = useQuery(
     api.users.searchUsers,
-    searchQuery.length > 0 ? { query: searchQuery } : "skip",
+    searchQuery.length > 0 ? { query: searchQuery } : 'skip'
   );
 
   const createDevTestUser = useMutation(api.users.createDevTestUser);
@@ -39,7 +32,7 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
       setDevClerkId(clerkId);
       onClose?.();
       // Navigate to start of onboarding
-      router.replace("/(onboarding)/referral");
+      router.replace('/(onboarding)/referral');
     } finally {
       setIsCreating(false);
     }
@@ -47,16 +40,16 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
 
   const handleSelectUser = (clerkId: string) => {
     setDevClerkId(clerkId);
-    setSearchQuery("");
+    setSearchQuery('');
     onClose?.();
     // Navigate based on user's onboarding status - the AuthGate will handle routing
-    router.replace("/");
+    router.replace('/');
   };
 
   const handleReturnToReal = () => {
     setDevClerkId(null);
     onClose?.();
-    router.replace("/");
+    router.replace('/');
   };
 
   return (
@@ -64,9 +57,7 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
       {/* Impersonation status */}
       {devClerkId && (
         <View style={styles.impersonatingBanner}>
-          <Text style={styles.impersonatingText}>
-            Impersonating: {devClerkId}
-          </Text>
+          <Text style={styles.impersonatingText}>Impersonating: {devClerkId}</Text>
           <Pressable style={styles.returnButton} onPress={handleReturnToReal}>
             <Text style={styles.returnButtonText}>Return to Real Account</Text>
           </Pressable>
@@ -74,11 +65,7 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
       )}
 
       {/* Create fresh user */}
-      <Pressable
-        style={styles.createButton}
-        onPress={handleCreateFresh}
-        disabled={isCreating}
-      >
+      <Pressable style={styles.createButton} onPress={handleCreateFresh} disabled={isCreating}>
         {isCreating ? (
           <ActivityIndicator size="small" color={colors.primaryText} />
         ) : (
@@ -107,19 +94,13 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
               onPress={() => handleSelectUser(user.clerkId)}
             >
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>
-                  {user.name || "Unnamed User"}
-                </Text>
+                <Text style={styles.userName}>{user.name || 'Unnamed User'}</Text>
                 <Text style={styles.userMeta}>
-                  {user.phone} ·{" "}
-                  {user.onboardingComplete
-                    ? `Lvl ${user.level ?? 1}`
-                    : "Not started"}
+                  {user.phone} ·{' '}
+                  {user.onboardingComplete ? `Lvl ${user.level ?? 1}` : 'Not started'}
                 </Text>
               </View>
-              {user.clerkId === devClerkId && (
-                <Text style={styles.activeIndicator}>Active</Text>
-              )}
+              {user.clerkId === devClerkId && <Text style={styles.activeIndicator}>Active</Text>}
             </Pressable>
           ))}
         </View>
@@ -133,98 +114,98 @@ export function DevAdminPanel({ onClose }: DevAdminPanelProps) {
 }
 
 const styles = StyleSheet.create({
+  activeIndicator: {
+    color: colors.success,
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+  },
   container: {
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  impersonatingBanner: {
-    backgroundColor: colors.warning + "20",
-    borderWidth: 1,
-    borderColor: colors.warning,
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  impersonatingText: {
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  returnButton: {
-    backgroundColor: colors.warning,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 6,
-    alignSelf: "flex-start",
-  },
-  returnButtonText: {
-    fontSize: fontSizes.sm,
-    fontWeight: "600",
-    color: "#000",
   },
   createButton: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
     borderRadius: 8,
-    alignItems: "center",
     marginBottom: spacing.md,
+    paddingVertical: spacing.md,
   },
   createButtonText: {
-    fontSize: fontSizes.base,
-    fontWeight: "600",
     color: colors.primaryText,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  impersonatingBanner: {
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  impersonatingText: {
+    color: colors.text,
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+  },
+  noResults: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+    paddingVertical: spacing.md,
+    textAlign: 'center',
+  },
+  returnButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.warning,
+    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  returnButtonText: {
+    color: '#000',
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
   },
   searchInput: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
+    borderWidth: 1,
+    color: colors.text,
+    fontSize: fontSizes.base,
+    marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    fontSize: fontSizes.base,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  userList: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-  },
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   userInfo: {
     flex: 1,
   },
-  userName: {
-    fontSize: fontSizes.base,
-    fontWeight: "500",
-    color: colors.text,
+  userList: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   userMeta: {
-    fontSize: fontSizes.xs,
     color: colors.textMuted,
+    fontSize: fontSizes.xs,
     marginTop: 2,
   },
-  activeIndicator: {
-    fontSize: fontSizes.xs,
-    fontWeight: "600",
-    color: colors.success,
+  userName: {
+    color: colors.text,
+    fontSize: fontSizes.base,
+    fontWeight: '500',
   },
-  noResults: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-    textAlign: "center",
+  userRow: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
 });

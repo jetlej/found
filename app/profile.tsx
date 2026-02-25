@@ -1,19 +1,19 @@
-import { PhotoGrid } from "@/components/PhotoGrid";
-import { api } from "@/convex/_generated/api";
+import { PhotoGrid } from '@/components/PhotoGrid';
+import { api } from '@/convex/_generated/api';
 import {
   cancelDailyReminder,
   hasNotificationPermission,
   promptForNotifications,
   scheduleDailyReminder,
-} from "@/hooks/usePushNotifications";
-import { colors, fonts, fontSizes, spacing, textStyles } from "@/lib/theme";
-import { useOfflineStore } from "@/stores/offline";
-import { useAuth, useUser } from "@clerk/clerk-expo";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { IconChevronRight, IconPencil } from "@tabler/icons-react-native";
-import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+} from '@/hooks/usePushNotifications';
+import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
+import { useOfflineStore } from '@/stores/offline';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { IconChevronRight, IconPencil } from '@tabler/icons-react-native';
+import { useMutation, useQuery } from 'convex/react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,8 +28,8 @@ import {
   Text,
   TextInput,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const { signOut, userId: clerkUserId } = useAuth();
@@ -41,16 +41,13 @@ export default function ProfileScreen() {
   const userId = __DEV__ && devClerkId ? devClerkId : clerkUserId;
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState("");
+  const [editedName, setEditedName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
 
-  const currentUser = useQuery(
-    api.users.current,
-    userId ? {} : "skip",
-  );
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
 
   const updateProfile = useMutation(api.users.updateProfile);
   const updateNotifications = useMutation(api.users.updateNotificationSettings);
@@ -58,12 +55,11 @@ export default function ProfileScreen() {
   // Get user's photos
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   // Get first photo URL (sorted by order)
-  const firstPhotoUrl =
-    userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
+  const firstPhotoUrl = userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   const notificationsEnabled = currentUser?.notificationsEnabled ?? false;
   const reminderHour = currentUser?.reminderHour ?? 12;
@@ -85,7 +81,7 @@ export default function ProfileScreen() {
   }, [userId, currentUser?.notificationsEnabled]);
 
   const handleEditName = () => {
-    setEditedName(currentUser?.name ?? "");
+    setEditedName(currentUser?.name ?? '');
     setIsEditingName(true);
   };
 
@@ -102,7 +98,7 @@ export default function ProfileScreen() {
 
   const handleCancelEdit = () => {
     setIsEditingName(false);
-    setEditedName("");
+    setEditedName('');
   };
 
   const handleToggleNotifications = async (enabled: boolean) => {
@@ -129,15 +125,15 @@ export default function ProfileScreen() {
             });
           } else {
             Alert.alert(
-              "Notifications Disabled",
-              "To enable daily reminders, please allow notifications in your device settings.",
+              'Notifications Disabled',
+              'To enable daily reminders, please allow notifications in your device settings.',
               [
-                { text: "Not Now", style: "cancel" },
+                { text: 'Not Now', style: 'cancel' },
                 {
-                  text: "Open Settings",
+                  text: 'Open Settings',
                   onPress: () => Linking.openSettings(),
                 },
-              ],
+              ]
             );
           }
         }
@@ -153,11 +149,11 @@ export default function ProfileScreen() {
   };
 
   const handleTimeChange = async (event: any, selectedDate?: Date) => {
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       setShowTimePicker(false);
     }
 
-    if (event.type === "dismissed") {
+    if (event.type === 'dismissed') {
       setShowTimePicker(false);
       return;
     }
@@ -186,13 +182,13 @@ export default function ProfileScreen() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace("/");
+    router.replace('/');
   };
 
   const formatTime = (hour: number, minute: number) => {
-    const period = hour >= 12 ? "PM" : "AM";
+    const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 || 12;
-    const displayMinute = minute.toString().padStart(2, "0");
+    const displayMinute = minute.toString().padStart(2, '0');
     return `${displayHour}:${displayMinute} ${period}`;
   };
 
@@ -200,7 +196,7 @@ export default function ProfileScreen() {
   reminderDate.setHours(reminderHour, reminderMinute, 0, 0);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.navBar}>
         <Pressable onPress={() => router.back()} style={styles.closeButton}>
           <Text style={styles.closeIcon}>✕</Text>
@@ -211,16 +207,13 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Pressable
-            style={styles.avatarContainer}
-            onPress={() => setShowPhotoEditor(true)}
-          >
+          <Pressable style={styles.avatarContainer} onPress={() => setShowPhotoEditor(true)}>
             {firstPhotoUrl ? (
               <Image source={{ uri: firstPhotoUrl }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>
-                  {currentUser?.name?.charAt(0)?.toUpperCase() || "?"}
+                  {currentUser?.name?.charAt(0)?.toUpperCase() || '?'}
                 </Text>
               </View>
             )}
@@ -244,10 +237,7 @@ export default function ProfileScreen() {
                   <ActivityIndicator color={colors.success} size="small" />
                 ) : (
                   <>
-                    <Pressable
-                      onPress={handleCancelEdit}
-                      style={styles.editActionButton}
-                    >
+                    <Pressable onPress={handleCancelEdit} style={styles.editActionButton}>
                       <Text style={styles.cancelText}>Cancel</Text>
                     </Pressable>
                     <Pressable
@@ -256,10 +246,7 @@ export default function ProfileScreen() {
                       disabled={!editedName.trim()}
                     >
                       <Text
-                        style={[
-                          styles.saveText,
-                          !editedName.trim() && styles.saveTextDisabled,
-                        ]}
+                        style={[styles.saveText, !editedName.trim() && styles.saveTextDisabled]}
                       >
                         Save
                       </Text>
@@ -270,17 +257,11 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <Pressable onPress={handleEditName} style={styles.nameRow}>
-              <Text style={styles.name}>{currentUser?.name ?? "User"}</Text>
-              <IconPencil
-                size={16}
-                color={colors.textMuted}
-                style={styles.pencilIcon}
-              />
+              <Text style={styles.name}>{currentUser?.name ?? 'User'}</Text>
+              <IconPencil size={16} color={colors.textMuted} style={styles.pencilIcon} />
             </Pressable>
           )}
-          <Text style={styles.phone}>
-            {user?.phoneNumbers?.[0]?.phoneNumber}
-          </Text>
+          <Text style={styles.phone}>{user?.phoneNumbers?.[0]?.phoneNumber}</Text>
         </View>
 
         <View style={styles.section}>
@@ -289,9 +270,7 @@ export default function ProfileScreen() {
           <View style={styles.notificationRow}>
             <View style={styles.notificationInfo}>
               <Text style={styles.menuText}>Daily Reminders</Text>
-              <Text style={styles.notificationHint}>
-                Get reminded daily at a set time
-              </Text>
+              <Text style={styles.notificationHint}>Get reminded daily at a set time</Text>
             </View>
             {isSavingNotifications ? (
               <ActivityIndicator color={colors.success} size="small" />
@@ -306,20 +285,13 @@ export default function ProfileScreen() {
           </View>
 
           {notificationsEnabled && (
-            <Pressable
-              style={styles.notificationRow}
-              onPress={() => setShowTimePicker(true)}
-            >
+            <Pressable style={styles.notificationRow} onPress={() => setShowTimePicker(true)}>
               <View style={styles.notificationInfo}>
                 <Text style={styles.menuText}>Reminder Time</Text>
-                <Text style={styles.notificationHint}>
-                  When to send daily reminder
-                </Text>
+                <Text style={styles.notificationHint}>When to send daily reminder</Text>
               </View>
               <View style={styles.timeDisplay}>
-                <Text style={styles.timeText}>
-                  {formatTime(reminderHour, reminderMinute)}
-                </Text>
+                <Text style={styles.timeText}>{formatTime(reminderHour, reminderMinute)}</Text>
                 <IconChevronRight size={18} color={colors.textMuted} />
               </View>
             </Pressable>
@@ -357,7 +329,7 @@ export default function ProfileScreen() {
             <DateTimePicker
               value={reminderDate}
               mode="time"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleTimeChange}
               textColor={colors.text}
               themeVariant="light"
@@ -377,17 +349,13 @@ export default function ProfileScreen() {
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderSpacer} />
             <Text style={styles.modalTitle}>Edit Photos</Text>
-            <Pressable
-              onPress={() => setShowPhotoEditor(false)}
-              style={styles.modalDoneButton}
-            >
+            <Pressable onPress={() => setShowPhotoEditor(false)} style={styles.modalDoneButton}>
               <Text style={styles.modalDoneText}>Done</Text>
             </Pressable>
           </View>
           <ScrollView style={styles.modalContent}>
             <Text style={styles.modalSubtitle}>
-              Hold and drag photos to reorder. Your first photo is your main
-              profile picture.
+              Hold and drag photos to reorder. Your first photo is your main profile picture.
             </Text>
             {currentUser?._id && (
               <PhotoGrid
@@ -404,208 +372,228 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  avatar: {
+    backgroundColor: colors.border,
+    borderRadius: 40,
+    height: 80,
+    width: 80,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarInitial: {
+    color: colors.text,
+    fontSize: fontSizes['2xl'],
+    fontWeight: '600',
+  },
+  avatarPlaceholder: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderColor: colors.border,
+    borderRadius: 40,
+    borderWidth: 1,
+    height: 80,
+    justifyContent: 'center',
+    width: 80,
+  },
+  cancelText: {
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
+  },
+  closeButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  closeIcon: {
+    color: colors.textMuted,
+    fontSize: 20,
+  },
   container: {
-    flex: 1,
     backgroundColor: colors.background,
-  },
-  scrollView: {
     flex: 1,
   },
-  navBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  editActionButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  editBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderColor: colors.background,
+    borderRadius: 14,
+    borderWidth: 2,
+    bottom: 0,
+    height: 28,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
+    width: 28,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    gap: spacing.md,
+    paddingVertical: spacing['2xl'],
+  },
+  menuArrow: {
+    color: colors.textMuted,
+    fontSize: fontSizes.base,
+  },
+  menuItem: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+  },
+  menuText: {
+    color: colors.text,
+    fontSize: fontSizes.base,
+  },
+  modalContainer: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
+  modalContent: {
+    flex: 1,
+    paddingTop: spacing.lg,
+  },
+  modalDoneButton: {
+    alignItems: 'flex-end',
+    width: 60,
+  },
+  modalDoneText: {
+    color: colors.primary,
+    fontSize: fontSizes.base,
+    fontWeight: '600',
+  },
+  modalHeader: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  closeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
+  modalHeaderSpacer: {
+    width: 60,
   },
-  closeIcon: {
-    fontSize: 20,
-    color: colors.textMuted,
+  modalSubtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    textAlign: 'center',
   },
-  navTitle: { ...textStyles.pageTitle },
-  header: {
-    alignItems: "center",
-    paddingVertical: spacing["2xl"],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
-  },
-  avatarContainer: {
-    position: "relative",
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.border,
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.surfaceSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatarInitial: {
-    fontSize: fontSizes["2xl"],
-    fontWeight: "600",
+  modalTitle: { ...textStyles.pageTitle },
+  name: {
     color: colors.text,
+    fontSize: fontSizes.xl,
+    fontWeight: '600',
   },
-  editBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: colors.background,
+  nameEditActions: {
+    flexDirection: 'row',
+    gap: spacing.lg,
   },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  nameEditContainer: {
+    alignItems: 'center',
     gap: spacing.sm,
   },
-  name: {
-    fontSize: fontSizes.xl,
-    fontWeight: "600",
+  nameInput: {
+    borderBottomColor: colors.success,
+    borderBottomWidth: 1,
     color: colors.text,
+    fontSize: fontSizes.xl,
+    fontWeight: '600',
+    minWidth: 150,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    textAlign: 'center',
+  },
+  nameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  navBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  navTitle: { ...textStyles.pageTitle },
+  notificationHint: {
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
+    marginTop: 2,
+  },
+  notificationInfo: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  notificationRow: {
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
   },
   pencilIcon: {
     marginTop: 2,
   },
-  nameEditContainer: {
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  nameInput: {
-    fontSize: fontSizes.xl,
-    fontWeight: "600",
-    color: colors.text,
-    textAlign: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.success,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    minWidth: 150,
-  },
-  nameEditActions: {
-    flexDirection: "row",
-    gap: spacing.lg,
-  },
-  editActionButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  cancelText: {
-    fontSize: fontSizes.sm,
+  phone: {
     color: colors.textMuted,
+    fontSize: fontSizes.sm,
   },
   saveText: {
-    fontSize: fontSizes.sm,
     color: colors.success,
-    fontWeight: "600",
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
   },
   saveTextDisabled: {
     opacity: 0.5,
   },
-  phone: {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
+  scrollView: {
+    flex: 1,
   },
   section: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
   },
   sectionTitle: {
-    fontSize: fontSizes.xs,
-    fontWeight: "600",
     color: colors.textMuted,
-    textTransform: "uppercase",
-    marginBottom: spacing.md,
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
     letterSpacing: 1,
-  },
-  menuItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  menuText: {
-    fontSize: fontSizes.base,
-    color: colors.text,
-  },
-  menuArrow: {
-    fontSize: fontSizes.base,
-    color: colors.textMuted,
-  },
-  notificationRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  notificationInfo: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  notificationHint: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  timeDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  timeText: {
-    fontSize: fontSizes.base,
-    color: colors.success,
+    marginBottom: spacing.md,
+    textTransform: 'uppercase',
   },
   signOutButton: {
-    marginHorizontal: spacing.xl,
-    marginTop: spacing["3xl"],
-    paddingVertical: spacing.md,
-    alignItems: "center",
+    alignItems: 'center',
+    borderColor: colors.error,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.error,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing['3xl'],
+    paddingVertical: spacing.md,
   },
   signOutText: {
-    fontSize: fontSizes.base,
-    fontWeight: "500",
     color: colors.error,
+    fontSize: fontSizes.base,
+    fontWeight: '500',
   },
-  version: {
-    textAlign: "center",
-    marginTop: spacing.xl,
-    marginBottom: spacing["3xl"],
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-  },
-  timePickerOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.overlay,
+  timeDisplay: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   timePickerContainer: {
     backgroundColor: colors.surface,
@@ -613,62 +601,41 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingBottom: 20,
   },
+  timePickerDone: {
+    color: colors.success,
+    fontSize: fontSizes.lg,
+    fontWeight: '600',
+  },
   timePickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: 'center',
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  },
+  timePickerOverlay: {
+    backgroundColor: colors.overlay,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
   },
   timePickerTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: "600",
     color: colors.text,
-  },
-  timePickerDone: {
     fontSize: fontSizes.lg,
-    fontWeight: "600",
+    fontWeight: '600',
+  },
+  timeText: {
     color: colors.success,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalHeaderSpacer: {
-    width: 60,
-  },
-  modalTitle: { ...textStyles.pageTitle,
-  },
-  modalDoneButton: {
-    width: 60,
-    alignItems: "flex-end",
-  },
-  modalDoneText: {
     fontSize: fontSizes.base,
-    fontWeight: "600",
-    color: colors.primary,
   },
-  modalContent: {
-    flex: 1,
-    paddingTop: spacing.lg,
-  },
-  modalSubtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    textAlign: "center",
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-    lineHeight: 20,
+  version: {
+    color: colors.textMuted,
+    fontSize: fontSizes.xs,
+    marginBottom: spacing['3xl'],
+    marginTop: spacing.xl,
+    textAlign: 'center',
   },
 });

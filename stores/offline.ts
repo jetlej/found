@@ -1,12 +1,12 @@
-import { create } from "zustand";
-import { createJSONStorage, persist, StateStorage } from "zustand/middleware";
+import { create } from 'zustand';
+import { createJSONStorage, persist, StateStorage } from 'zustand/middleware';
 
 // Try to use MMKV, fall back to in-memory storage for Expo Go
 let mmkvStorage: StateStorage;
 
 try {
-  const { MMKV } = require("react-native-mmkv");
-  const storage = new MMKV({ id: "app-offline" });
+  const { MMKV } = require('react-native-mmkv');
+  const storage = new MMKV({ id: 'app-offline' });
 
   mmkvStorage = {
     getItem: (name: string) => {
@@ -20,7 +20,7 @@ try {
       storage.delete(name);
     },
   };
-  console.log("[Storage] Using MMKV");
+  console.log('[Storage] Using MMKV');
 } catch {
   // Fallback for Expo Go - in-memory storage (no persistence)
   const memoryStorage: Record<string, string> = {};
@@ -33,9 +33,7 @@ try {
       delete memoryStorage[name];
     },
   };
-  console.warn(
-    "[Storage] MMKV not available, using in-memory storage (no persistence)",
-  );
+  console.warn('[Storage] MMKV not available, using in-memory storage (no persistence)');
 }
 
 export type CachedUser = {
@@ -87,8 +85,8 @@ export const useOfflineStore = create<OfflineState>()(
         }),
     }),
     {
-      name: "app-offline",
+      name: 'app-offline',
       storage: createJSONStorage(() => mmkvStorage),
-    },
-  ),
+    }
+  )
 );

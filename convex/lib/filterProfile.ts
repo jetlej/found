@@ -5,15 +5,12 @@
 
 type AnyProfile = Record<string, any>;
 
-export function filterProfile<T extends AnyProfile>(
-  profile: T,
-  hiddenFields?: string[],
-): T {
+export function filterProfile<T extends AnyProfile>(profile: T, hiddenFields?: string[]): T {
   if (!hiddenFields?.length) return profile;
 
   const grouped = new Map<string, string[]>();
   for (const path of hiddenFields) {
-    const dotIdx = path.indexOf(".");
+    const dotIdx = path.indexOf('.');
     if (dotIdx === -1) {
       grouped.set(path, []);
     } else {
@@ -41,7 +38,7 @@ export function filterProfile<T extends AnyProfile>(
       continue;
     }
 
-    if (val && typeof val === "object") {
+    if (val && typeof val === 'object') {
       result[key as keyof T] = filterNestedObject(val, subPaths) as any;
     }
   }
@@ -52,7 +49,7 @@ export function filterProfile<T extends AnyProfile>(
 function filterNestedObject(obj: Record<string, any>, subPaths: string[]): Record<string, any> {
   const grouped = new Map<string, string[]>();
   for (const path of subPaths) {
-    const dotIdx = path.indexOf(".");
+    const dotIdx = path.indexOf('.');
     if (dotIdx === -1) {
       grouped.set(path, []);
     } else {

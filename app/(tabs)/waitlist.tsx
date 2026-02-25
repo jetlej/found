@@ -1,13 +1,13 @@
-import { AppHeader } from "@/components/AppHeader";
-import { OfflineBanner } from "@/components/OfflineBanner";
-import { ShareableProfileCard } from "@/components/ShareableProfileCard";
-import { api } from "@/convex/_generated/api";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { useOfflineStore } from "@/stores/offline";
-import { useQuery } from "convex/react";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useRef, useState } from "react";
+import { AppHeader } from '@/components/AppHeader';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { ShareableProfileCard } from '@/components/ShareableProfileCard';
+import { api } from '@/convex/_generated/api';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { useOfflineStore } from '@/stores/offline';
+import { useQuery } from 'convex/react';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -17,14 +17,10 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { captureRef } from "react-native-view-shot";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { captureRef } from 'react-native-view-shot';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
@@ -41,20 +37,19 @@ export default function HomeScreen() {
 
   const { isOnline, setOnline, setCachedUser } = useOfflineStore();
 
-  const currentUser = useQuery(api.users.current, userId ? {} : "skip");
+  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
 
   const myProfile = useQuery(
     api.userProfiles.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
   const userPhotos = useQuery(
     api.photos.getByUser,
-    currentUser?._id ? { userId: currentUser._id } : "skip",
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
-  const firstPhotoUrl =
-    userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
+  const firstPhotoUrl = userPhotos?.sort((a, b) => a.order - b.order)[0]?.url || null;
 
   useEffect(() => {
     if (currentUser && currentUser._id) {
@@ -89,34 +84,32 @@ export default function HomeScreen() {
 
   const handleShareReferral = async () => {
     try {
-      const code = currentUser?.referralCode ?? "FOUND";
+      const code = currentUser?.referralCode ?? 'FOUND';
       await Share.share({
         message: `Join me on Found - the dating app that actually works. Use my code ${code} when you sign up! Download: https://found.app`,
       });
     } catch (err) {
-      console.error("Share error:", err);
+      console.error('Share error:', err);
     }
   };
 
   const handleShareProfile = async () => {
     try {
       const uri = await captureRef(cardRef, {
-        format: "png",
+        format: 'png',
         quality: 1,
-        result: "tmpfile",
+        result: 'tmpfile',
       });
-      await Share.share(
-        Platform.OS === "ios" ? { url: uri } : { message: uri },
-      );
+      await Share.share(Platform.OS === 'ios' ? { url: uri } : { message: uri });
     } catch (err) {
-      console.error("Share profile error:", err);
+      console.error('Share profile error:', err);
     }
   };
 
   const hasProfile = currentUser && myProfile?.generatedBio;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.View style={[{ flex: 1 }, fadeStyle]}>
         <OfflineBanner />
         <AppHeader />
@@ -142,9 +135,7 @@ export default function HomeScreen() {
           ) : currentUser ? (
             <View style={styles.loadingCard}>
               <ActivityIndicator size="small" color={colors.text} />
-              <Text style={styles.loadingText}>
-                Building your profile...
-              </Text>
+              <Text style={styles.loadingText}>Building your profile...</Text>
             </View>
           ) : null}
 
@@ -160,30 +151,28 @@ export default function HomeScreen() {
               <Text style={styles.countdownSeparator}>:</Text>
               <View style={styles.countdownItem}>
                 <Text style={styles.countdownNumber}>
-                  {countdown.hours.toString().padStart(2, "0")}
+                  {countdown.hours.toString().padStart(2, '0')}
                 </Text>
                 <Text style={styles.countdownUnit}>hours</Text>
               </View>
               <Text style={styles.countdownSeparator}>:</Text>
               <View style={styles.countdownItem}>
                 <Text style={styles.countdownNumber}>
-                  {countdown.minutes.toString().padStart(2, "0")}
+                  {countdown.minutes.toString().padStart(2, '0')}
                 </Text>
                 <Text style={styles.countdownUnit}>min</Text>
               </View>
               <Text style={styles.countdownSeparator}>:</Text>
               <View style={styles.countdownItem}>
                 <Text style={styles.countdownNumber}>
-                  {countdown.seconds.toString().padStart(2, "0")}
+                  {countdown.seconds.toString().padStart(2, '0')}
                 </Text>
                 <Text style={styles.countdownUnit}>sec</Text>
               </View>
             </View>
 
             <Pressable onPress={handleShareReferral}>
-              <Text style={styles.referralLink}>
-                Skip the wait — share your referral code
-              </Text>
+              <Text style={styles.referralLink}>Skip the wait — share your referral code</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -194,76 +183,76 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollView: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing["3xl"],
+  countdownItem: {
+    alignItems: 'center',
+    minWidth: 44,
   },
+  countdownNumber: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: fontSizes.xl,
+  },
+  countdownRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  countdownSeparator: {
+    color: colors.textSecondary,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes.lg,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.xs,
+  },
+  countdownUnit: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.xs,
+    marginTop: -4,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    gap: spacing.md,
+    padding: spacing['3xl'],
+  },
+  loadingText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+  },
+  referralLink: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.sm,
+    marginTop: spacing.lg,
+    textDecorationLine: 'underline',
+  },
+  scrollContent: {
+    paddingBottom: spacing['3xl'],
+    paddingHorizontal: spacing.lg,
+  },
+  scrollView: { flex: 1 },
   shareButton: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 12,
-    paddingVertical: spacing.md,
-    alignItems: "center",
     marginTop: spacing.lg,
+    paddingVertical: spacing.md,
   },
   shareButtonText: {
     color: colors.primaryText,
     fontSize: fontSizes.base,
-    fontWeight: "600",
-  },
-  loadingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing["3xl"],
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  loadingText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontWeight: '600',
   },
   waitlistSection: {
-    alignItems: "center",
-    marginTop: spacing["2xl"],
-    paddingTop: spacing["2xl"],
-    borderTopWidth: 1,
+    alignItems: 'center',
     borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: spacing['2xl'],
+    paddingTop: spacing['2xl'],
   },
   waitlistTitle: {
+    color: colors.text,
     fontFamily: fonts.serifBold,
     fontSize: fontSizes.lg,
-    color: colors.text,
     marginBottom: spacing.lg,
-  },
-  countdownRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  countdownItem: {
-    alignItems: "center",
-    minWidth: 44,
-  },
-  countdownNumber: {
-    fontFamily: fonts.serif,
-    fontSize: fontSizes.xl,
-    color: colors.text,
-  },
-  countdownUnit: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-    marginTop: -4,
-  },
-  countdownSeparator: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
-    marginHorizontal: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  referralLink: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    textDecorationLine: "underline",
-    marginTop: spacing.lg,
   },
 });

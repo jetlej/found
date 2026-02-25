@@ -1,13 +1,9 @@
-import { colors, fonts, fontSizes, spacing } from "@/lib/theme";
-import { IconMessageCircle } from "@tabler/icons-react-native";
-import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
+import { IconMessageCircle } from '@tabler/icons-react-native';
+import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChatsScreen() {
   const opacity = useSharedValue(0);
@@ -17,7 +13,7 @@ export default function ChatsScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.View style={[styles.content, fadeStyle]}>
         <IconMessageCircle size={48} color={colors.textMuted} />
         <Text style={styles.title}>Chats</Text>
@@ -30,19 +26,19 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
+    alignItems: 'center',
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
     gap: spacing.sm,
-  },
-  title: {
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes["2xl"],
-    color: colors.text,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
   },
   subtitle: {
-    fontSize: fontSizes.base,
     color: colors.textMuted,
+    fontSize: fontSizes.base,
+  },
+  title: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['2xl'],
   },
 });

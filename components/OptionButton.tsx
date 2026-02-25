@@ -1,7 +1,7 @@
-import { colors, fontSizes, shadows, spacing } from "@/lib/theme";
-import { Pressable, StyleSheet, Text, type ViewStyle } from "react-native";
+import { colors, fontSizes, shadows, spacing } from '@/lib/theme';
+import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
 
-type Variant = "default" | "compact" | "pill" | "chip" | "row";
+type Variant = 'default' | 'compact' | 'pill' | 'chip' | 'row';
 
 interface OptionButtonProps {
   label: string;
@@ -10,25 +10,16 @@ interface OptionButtonProps {
   variant?: Variant;
 }
 
-export function OptionButton({
-  label,
-  selected,
-  onPress,
-  variant = "default",
-}: OptionButtonProps) {
+export function OptionButton({ label, selected, onPress, variant = 'default' }: OptionButtonProps) {
   return (
     <Pressable
-      style={[
-        styles.base,
-        variantStyles[variant],
-        selected && styles.selected,
-      ]}
+      style={[styles.base, variantStyles[variant], selected && styles.selected]}
       onPress={onPress}
     >
       <Text
         style={[
           styles.text,
-          (variant === "compact" || variant === "chip") && styles.textCompact,
+          (variant === 'compact' || variant === 'chip') && styles.textCompact,
           selected && styles.textSelected,
         ]}
       >
@@ -40,24 +31,24 @@ export function OptionButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
     backgroundColor: colors.surface,
+    borderRadius: 12,
     ...shadows.sm,
   },
   selected: {
     backgroundColor: colors.primary,
   },
   text: {
-    fontSize: fontSizes.lg,
     color: colors.text,
-    textAlign: "center",
+    fontSize: fontSizes.lg,
+    textAlign: 'center',
   },
   textCompact: {
     fontSize: fontSizes.base,
   },
   textSelected: {
     color: colors.primaryText,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });
 
@@ -67,7 +58,7 @@ const variantStyles: Record<Variant, ViewStyle> = {
     paddingHorizontal: spacing.xl,
   },
   compact: {
-    width: "48%" as unknown as number,
+    width: '48%' as unknown as number,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
   },

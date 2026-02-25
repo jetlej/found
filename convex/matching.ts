@@ -1,14 +1,14 @@
-import { v } from "convex/values";
-import { query, QueryCtx } from "./_generated/server";
-import { isGenderCompatible, isAgeCompatible } from "./lib/compatibility";
+import { v } from 'convex/values';
+import { query, QueryCtx } from './_generated/server';
+import { isGenderCompatible, isAgeCompatible } from './lib/compatibility';
 
 /** Get the authenticated user from ctx.auth, or return null. */
 async function getAuthUserOptional(ctx: QueryCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   return await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .query('users')
+    .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
     .first();
 }
 
@@ -28,16 +28,14 @@ export const getMatchesForCurrentUser = query({
 
     // Get AI analyses for this user
     const asUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", currentUser._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', currentUser._id))
       .take(perSideScanLimit);
     const asUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", currentUser._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', currentUser._id))
       .take(perSideScanLimit);
-    const analyses = [...asUser1, ...asUser2].sort(
-      (a, b) => b.overallScore - a.overallScore,
-    );
+    const analyses = [...asUser1, ...asUser2].sort((a, b) => b.overallScore - a.overallScore);
 
     if (analyses.length === 0) return [];
 
@@ -45,7 +43,7 @@ export const getMatchesForCurrentUser = query({
 
     // Collect the other user IDs from analyses
     const otherUserIds = limitedAnalyses.map((a) =>
-      a.user1Id === currentUser._id ? a.user2Id : a.user1Id,
+      a.user1Id === currentUser._id ? a.user2Id : a.user1Id
     );
 
     // Fetch users, profiles, photos for matched users only
@@ -57,14 +55,14 @@ export const getMatchesForCurrentUser = query({
         if (!isAgeCompatible(currentUser, user)) return null;
 
         const profile = await ctx.db
-          .query("userProfiles")
-          .withIndex("by_user", (q) => q.eq("userId", uid))
+          .query('userProfiles')
+          .withIndex('by_user', (q) => q.eq('userId', uid))
           .first();
         if (!profile) return null;
 
         const photos = await ctx.db
-          .query("photos")
-          .withIndex("by_user", (q) => q.eq("userId", uid))
+          .query('photos')
+          .withIndex('by_user', (q) => q.eq('userId', uid))
           .collect();
 
         const sortedPhotos = photos.sort((a, b) => a.order - b.order);
@@ -90,7 +88,7 @@ export const getMatchesForCurrentUser = query({
     // Filter nulls, sort by AI score descending
     return results
       .filter(Boolean)
-      .sort((a, b) => (b!.analysis.overallScore) - (a!.analysis.overallScore));
+      .sort((a, b) => b!.analysis.overallScore - a!.analysis.overallScore);
   },
 });
 
@@ -102,34 +100,34 @@ export const getMatchGenerationStatusForCurrentUser = query({
     if (!currentUser) return null;
 
     const profile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+      .query('userProfiles')
+      .withIndex('by_user', (q) => q.eq('userId', currentUser._id))
       .first();
 
     const auditCompleted = !!currentUser.profileAuditCompletedAt;
     const hasProfile = !!profile;
 
     const asUser1 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user1", (q) => q.eq("user1Id", currentUser._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user1', (q) => q.eq('user1Id', currentUser._id))
       .take(1);
     const asUser2 = await ctx.db
-      .query("compatibilityAnalyses")
-      .withIndex("by_user2", (q) => q.eq("user2Id", currentUser._id))
+      .query('compatibilityAnalyses')
+      .withIndex('by_user2', (q) => q.eq('user2Id', currentUser._id))
       .take(1);
     const hasAnyAnalyses = asUser1.length > 0 || asUser2.length > 0;
 
     let hasEligibleCandidates = false;
     if (auditCompleted && hasProfile && !hasAnyAnalyses) {
-      const users = await ctx.db.query("users").collect();
+      const users = await ctx.db.query('users').collect();
       for (const user of users) {
         if (user._id === currentUser._id) continue;
         if (!isGenderCompatible(currentUser, user)) continue;
         if (!isAgeCompatible(currentUser, user)) continue;
 
         const userProfile = await ctx.db
-          .query("userProfiles")
-          .withIndex("by_user", (q) => q.eq("userId", user._id))
+          .query('userProfiles')
+          .withIndex('by_user', (q) => q.eq('userId', user._id))
           .first();
         if (!userProfile) continue;
 

@@ -43,6 +43,7 @@ export type CachedUser = {
   avatarUrl?: string;
   onboardingComplete?: boolean;
   voiceQuestionsComplete?: boolean;
+  profileAuditCompletedAt?: number;
 };
 
 type OfflineState = {

@@ -16,6 +16,7 @@ interface CachedUser {
   avatarUrl?: string;
   onboardingComplete?: boolean;
   voiceQuestionsComplete?: boolean;
+  profileAuditCompletedAt?: number;
 }
 
 export async function getCachedAuth(): Promise<CachedAuth | null> {

@@ -74,12 +74,7 @@ function deriveRouteState(p: {
     if (!p.cachedUser.onboardingComplete) {
       return { status: 'onboarding', route: '/(onboarding)/referral' };
     }
-    if (!p.cachedUser.voiceQuestionsComplete) {
-      return { status: 'voice_questions' };
-    }
-    if (!p.cachedUser.profileAuditCompletedAt) {
-      return { status: 'profile_audit' };
-    }
+    // Past onboarding — stay on current screen; voice/audit require network anyway
     return { status: 'ready' };
   }
 
@@ -309,7 +304,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (!navigationState?.key) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === '(onboarding)';
     const onLandingPage =
       segments[0] === undefined || segments[0] === 'index' || segments.length === 0;
 
@@ -319,7 +313,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         break;
       case 'onboarding':
         if (inAuthGroup || onLandingPage) router.replace(routeState.route);
-        else if (!inOnboarding) router.replace(routeState.route);
         break;
       case 'voice_questions':
         if (inAuthGroup || onLandingPage) router.replace('/(tabs)/questions');

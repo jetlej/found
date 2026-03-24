@@ -471,7 +471,8 @@ function useUpdateChecker() {
   // Check TestFlight build number
   const minBuild = useQuery(api.config.getMinBuildNumber);
   const currentBuild = parseInt(Application.nativeBuildVersion ?? '0', 10);
-  const needsTestFlight = minBuild !== null && minBuild !== undefined && currentBuild < minBuild;
+  const needsTestFlight =
+    !__DEV__ && minBuild !== null && minBuild !== undefined && currentBuild < minBuild;
 
   return { otaReady, applyOta, needsTestFlight };
 }

@@ -1,3 +1,4 @@
+import { AppHeader } from '@/components/AppHeader';
 import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import { IconMessageCircle } from '@tabler/icons-react-native';
 import { useEffect } from 'react';
@@ -14,9 +15,12 @@ export default function ChatsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <AppHeader />
       <Animated.View style={[styles.content, fadeStyle]}>
-        <IconMessageCircle size={48} color={colors.textMuted} />
-        <Text style={styles.title}>Chats</Text>
+        <View style={styles.iconContainer}>
+          <IconMessageCircle size={80} color={colors.textMuted} />
+        </View>
+        <Text style={styles.title}>No chats yet</Text>
         <Text style={styles.subtitle}>Coming soon</Text>
       </Animated.View>
     </SafeAreaView>
@@ -28,17 +32,22 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     flex: 1,
-    gap: spacing.sm,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  iconContainer: {
+    marginBottom: spacing.lg,
+  },
   subtitle: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontSize: fontSizes.base,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   title: {
     color: colors.text,
     fontFamily: fonts.serifBold,
-    fontSize: fontSizes['2xl'],
+    fontSize: fontSizes.xl,
+    marginBottom: spacing.sm,
   },
 });

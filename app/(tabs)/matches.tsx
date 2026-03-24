@@ -36,16 +36,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  FlatList,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  ViewToken,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
@@ -1292,6 +1298,117 @@ function FullProfileView({
   );
 }
 
+type MatchEntry = {
+  user: any;
+  profile: any;
+  photos: any;
+  analysis: any;
+};
+
+const DISMISS_MS = 600;
+const REVEAL_MS = 400;
+const REVEAL_DELAY_MS = 100;
+
+function OutgoingCard({
+  match,
+  direction,
+  onComplete,
+  renderCard,
+}: {
+  match: MatchEntry;
+  direction: 'left' | 'right';
+  onComplete: () => void;
+  renderCard: (m: MatchEntry, lightweight?: boolean) => React.ReactNode;
+}) {
+  const started = useRef(false);
+  const x = useSharedValue(0);
+  const opacity = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }],
+    opacity: opacity.value,
+  }));
+
+  if (!started.current) {
+    started.current = true;
+    const target = direction === 'left' ? -SCREEN_WIDTH : SCREEN_WIDTH;
+    const easeOut = { duration: DISMISS_MS, easing: Easing.out(Easing.cubic) };
+    x.value = withTiming(target, easeOut, (finished) => {
+      if (finished) runOnJS(onComplete)();
+    });
+    opacity.value = withTiming(0, easeOut);
+  }
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
+      {renderCard(match)}
+    </Animated.View>
+  );
+}
+
+function IncomingCard({
+  match,
+  renderCard,
+}: {
+  match: MatchEntry;
+  renderCard: (m: MatchEntry, lightweight?: boolean) => React.ReactNode;
+}) {
+  const started = useRef(false);
+  const [animating, setAnimating] = useState(true);
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(30);
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  if (!started.current) {
+    started.current = true;
+    opacity.value = withDelay(
+      REVEAL_DELAY_MS,
+      withTiming(1, { duration: REVEAL_MS, easing: Easing.out(Easing.cubic) })
+    );
+    translateY.value = withDelay(
+      REVEAL_DELAY_MS,
+      withSpring(0, { damping: 18, stiffness: 140, mass: 0.8 }, (finished) => {
+        if (finished) runOnJS(setAnimating)(false);
+      })
+    );
+  }
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, style]}>
+      {renderCard(match, animating)}
+    </Animated.View>
+  );
+}
+
+function EmptyHeartIcon() {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withDelay(200, withSpring(1, { damping: 12, stiffness: 120 }));
+    opacity.value = withDelay(200, withTiming(1, { duration: 300 }));
+  }, []);
+
+  const checkStyle = useAnimatedStyle(() => ({
+    position: 'absolute' as const,
+    top: 25,
+    left: 27,
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <View style={{ width: 80, height: 80 }}>
+      <IconHeart size={80} color="#ef4444" />
+      <Animated.View style={checkStyle}>
+        <IconCheck size={26} color="#1A1A1A" strokeWidth={3} />
+      </Animated.View>
+    </View>
+  );
+}
+
 export default function MatchesScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
@@ -1300,25 +1417,16 @@ export default function MatchesScreen() {
   const hasFaded = useRef(false);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fadeOpacity.value }));
 
-  const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, Set<string>>>({});
   const [fullscreenPhotos, setFullscreenPhotos] = useState<{
     urls: string[];
     startIndex: number;
   } | null>(null);
-  // Track which tab is active per user: "compatibility" (default) or "profile"
   const [activeTab, setActiveTab] = useState<Record<string, 'compatibility' | 'profile'>>({});
-  const [currentPage, setCurrentPage] = useState(0);
-
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        setCurrentPage(viewableItems[0].index);
-      }
-    },
-    []
-  );
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [outgoingIndex, setOutgoingIndex] = useState<number | null>(null);
+  const directionRef = useRef<'left' | 'right'>('left');
+  const localDecisionsRef = useRef<Record<string, 'like' | 'reject'>>({});
 
   // Get current user
   const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
@@ -1340,18 +1448,243 @@ export default function MatchesScreen() {
       }))
     : null;
 
+  const allMatches = testUserMatches ?? [];
+  const currentMatch = allMatches[currentIndex] ?? null;
+  const outgoingMatch = outgoingIndex !== null ? (allMatches[outgoingIndex] ?? null) : null;
+
+  const recordDecision = useCallback((matchId: string, decision: 'like' | 'reject') => {
+    localDecisionsRef.current[matchId] = decision;
+  }, []);
+
+  const startDismiss = useCallback(
+    (direction: 'left' | 'right', matchId: string) => {
+      if (outgoingIndex !== null) return;
+      recordDecision(matchId, direction === 'left' ? 'reject' : 'like');
+      directionRef.current = direction;
+      setOutgoingIndex(currentIndex);
+      setCurrentIndex((i) => i + 1);
+    },
+    [currentIndex, outgoingIndex, recordDecision]
+  );
+
   const isLoading = !currentUser || matchesData === undefined;
-  const isEmpty = testUserMatches && testUserMatches.length === 0;
-  const isAnalyzingFirstMatch = !!isEmpty && matchGenerationStatus?.isAnalyzing === true;
+  const isEmpty = allMatches.length === 0 || currentIndex >= allMatches.length;
+  const isAnalyzingFirstMatch = isEmpty && matchGenerationStatus?.isAnalyzing === true;
   const isReady = !isLoading && !isEmpty;
 
-  // Trigger fade once data is ready (or empty state)
   useEffect(() => {
     if (!isLoading && !hasFaded.current) {
       hasFaded.current = true;
       fadeOpacity.value = withTiming(1, { duration: 150 });
     }
   }, [isLoading]);
+
+  const renderMatchCard = (
+    match: NonNullable<typeof testUserMatches>[number],
+    lightweight?: boolean
+  ) => (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.pageContent}>
+      <View style={styles.matchCard}>
+        <View style={styles.matchCardInner}>
+          <View style={styles.matchHeader}>
+            <View style={styles.matchInfo}>
+              <Text style={styles.matchName}>{match.user.name?.split(' ')[0] || 'Unknown'}</Text>
+              <Text style={styles.matchLocation}>
+                {match.user.birthdate
+                  ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
+                  : ''}
+                {match.user.location || 'Unknown location'}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.scoreBadge,
+                { backgroundColor: getScoreColor(match.analysis.overallScore) },
+              ]}
+            >
+              <Text style={styles.scoreText}>{match.analysis.overallScore}</Text>
+            </View>
+          </View>
+
+          <PhotoStrip
+            photos={match.photos}
+            onPhotoPress={(i) => {
+              if (match.photos.length > 0)
+                setFullscreenPhotos({ urls: match.photos, startIndex: i });
+            }}
+          />
+        </View>
+
+        <BasicsAtAGlance user={match.user} />
+
+        <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+          {match.profile.generatedBio && (
+            <Text style={styles.shortBio}>{match.profile.generatedBio}</Text>
+          )}
+
+          {lightweight ? null : (
+            <View style={styles.breakdown}>
+              <View style={styles.toggleContainer}>
+                <View style={styles.toggleTrack}>
+                  <Pressable
+                    style={[
+                      styles.toggleOption,
+                      (activeTab[match.user._id] || 'compatibility') === 'compatibility' &&
+                        styles.toggleOptionActive,
+                    ]}
+                    onPress={() =>
+                      setActiveTab({ ...activeTab, [match.user._id]: 'compatibility' })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        (activeTab[match.user._id] || 'compatibility') === 'compatibility' &&
+                          styles.toggleTextActive,
+                      ]}
+                    >
+                      Compatibility
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.toggleOption,
+                      activeTab[match.user._id] === 'profile' && styles.toggleOptionActive,
+                    ]}
+                    onPress={() => setActiveTab({ ...activeTab, [match.user._id]: 'profile' })}
+                  >
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        activeTab[match.user._id] === 'profile' && styles.toggleTextActive,
+                      ]}
+                    >
+                      Full Profile
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {(activeTab[match.user._id] || 'compatibility') === 'compatibility' && (
+                <View>
+                  <Text style={styles.aiSummary}>{match.analysis.summary}</Text>
+
+                  {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
+                    const score = match.analysis.categoryScores[key] * 10;
+                    const scoreColor = getScoreColor(score);
+                    const isFull = score === 100;
+                    const summaryText = match.analysis.categorySummaries?.[key];
+                    const isCatExpanded = expandedCategories[match.user._id]?.has(key);
+                    return (
+                      <View key={key}>
+                        <Pressable
+                          style={styles.categoryRow}
+                          onPress={() => {
+                            if (!summaryText) return;
+                            setExpandedCategories((prev) => {
+                              const set = new Set(prev[match.user._id]);
+                              if (set.has(key)) set.delete(key);
+                              else set.add(key);
+                              return { ...prev, [match.user._id]: set };
+                            });
+                          }}
+                        >
+                          <View style={styles.categoryBar}>
+                            <View
+                              style={[
+                                styles.categoryBarFill,
+                                {
+                                  width: `${score}%`,
+                                  borderTopRightRadius: isFull ? 10 : 0,
+                                  borderBottomRightRadius: isFull ? 10 : 0,
+                                },
+                              ]}
+                            >
+                              <LinearGradient
+                                colors={[`${scoreColor}4D`, `${scoreColor}99`]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.categoryBarGradient}
+                              />
+                              {!isFull && (
+                                <View
+                                  style={[styles.categoryBarEdge, { backgroundColor: scoreColor }]}
+                                />
+                              )}
+                            </View>
+                            <View style={styles.categoryBarContent}>
+                              <CatIcon size={20} color={colors.text} />
+                              <Text style={styles.categoryBarLabel}>{label}</Text>
+                            </View>
+                          </View>
+                          <Text style={[styles.categoryBarScore, { color: scoreColor }]}>
+                            {match.analysis.categoryScores[key]}/10
+                          </Text>
+                        </Pressable>
+                        {isCatExpanded && summaryText && (
+                          <Text style={styles.categorySummaryText}>{summaryText}</Text>
+                        )}
+                      </View>
+                    );
+                  })}
+
+                  {match.analysis.greenFlags.length > 0 && (
+                    <View style={styles.flagSection}>
+                      <Text style={styles.flagTitle}>Green Flags</Text>
+                      <View style={styles.tagsRow}>
+                        {match.analysis.greenFlags.map((flag, i) => (
+                          <View key={i} style={styles.tagGreenFlag}>
+                            <IconCheck size={12} color="#166534" />
+                            <Text style={styles.tagGreenFlagText}>{flag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {match.analysis.yellowFlags.length > 0 && (
+                    <View style={styles.flagSection}>
+                      <Text style={styles.flagTitle}>Yellow Flags</Text>
+                      <View style={styles.tagsRow}>
+                        {match.analysis.yellowFlags.map((flag, i) => (
+                          <View key={i} style={styles.tagYellowFlag}>
+                            <IconAlertTriangle size={12} color="#92400e" />
+                            <Text style={styles.tagYellowFlagText}>{flag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {match.analysis.redFlags.length > 0 && (
+                    <View style={styles.flagSection}>
+                      <Text style={styles.flagTitle}>Red Flags</Text>
+                      <View style={styles.tagsRow}>
+                        {match.analysis.redFlags.map((flag, i) => (
+                          <View key={i} style={styles.tagRedFlag}>
+                            <IconX size={12} color="#991b1b" />
+                            <Text style={styles.tagRedFlagText}>{flag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {activeTab[match.user._id] === 'profile' && (
+                <FullProfileView
+                  profile={match.profile}
+                  user={match.user}
+                  userName={match.user.name || 'User'}
+                />
+              )}
+            </View>
+          )}
+        </View>
+      </View>
+    </ScrollView>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -1372,296 +1705,65 @@ export default function MatchesScreen() {
           <>
             <AppHeader />
             <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🧪</Text>
-              <Text style={styles.emptyTitle}>No Test Users</Text>
-              <Text style={styles.emptyText}>
-                Run the seed command to create test profiles:{'\n\n'}
-                <Text style={styles.codeText}>bunx convex run seedTestUsers:seedTestUsers</Text>
-              </Text>
+              <View style={styles.emptyIconContainer}>
+                <EmptyHeartIcon />
+              </View>
+              <Text style={styles.emptyTitle}>You're all caught up!</Text>
+              <Text style={styles.emptyText}>Check back tomorrow for more matches</Text>
+              <Pressable
+                style={styles.restoreButton}
+                onPress={() => {
+                  localDecisionsRef.current = {};
+                  setCurrentIndex(0);
+                }}
+              >
+                <Text style={styles.restoreButtonText}>Restore matches</Text>
+              </Pressable>
             </View>
           </>
         ) : (
           <>
             <AppHeader />
 
-            <FlatList
-              data={testUserMatches.filter(Boolean)}
-              keyExtractor={(match) => match.user._id}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              renderItem={({ item: match }) => {
-                const isExpanded = expandedUser === match.user._id;
+            <View style={{ flex: 1 }}>
+              {currentMatch && (
+                <IncomingCard
+                  key={currentIndex}
+                  match={currentMatch}
+                  renderCard={renderMatchCard}
+                />
+              )}
 
-                return (
-                  <ScrollView
-                    style={styles.pageContainer}
-                    contentContainerStyle={styles.pageContent}
-                  >
-                    <View style={styles.matchCard}>
-                      <Pressable
-                        style={styles.matchCardInner}
-                        onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
-                      >
-                        <View style={styles.matchHeader}>
-                          <View style={styles.matchInfo}>
-                            <Text style={styles.matchName}>
-                              {match.user.name?.split(' ')[0] || 'Unknown'}
-                            </Text>
-                            <Text style={styles.matchLocation}>
-                              {match.user.birthdate
-                                ? `${Math.floor((Date.now() - new Date(match.user.birthdate).getTime()) / 31557600000)}, `
-                                : ''}
-                              {match.user.location || 'Unknown location'}
-                            </Text>
-                          </View>
-                          <View
-                            style={[
-                              styles.scoreBadge,
-                              {
-                                backgroundColor: getScoreColor(match.analysis.overallScore),
-                              },
-                            ]}
-                          >
-                            <Text style={styles.scoreText}>{match.analysis.overallScore}</Text>
-                          </View>
-                        </View>
+              {outgoingIndex !== null && outgoingMatch && (
+                <OutgoingCard
+                  key={outgoingIndex}
+                  match={outgoingMatch}
+                  direction={directionRef.current}
+                  onComplete={() => setOutgoingIndex(null)}
+                  renderCard={renderMatchCard}
+                />
+              )}
 
-                        <PhotoStrip
-                          photos={match.photos}
-                          onPhotoPress={(i) => {
-                            if (match.photos.length > 0)
-                              setFullscreenPhotos({
-                                urls: match.photos,
-                                startIndex: i,
-                              });
-                          }}
-                        />
-                      </Pressable>
-
-                      <BasicsAtAGlance user={match.user} />
-
-                      <Pressable
-                        style={{
-                          paddingHorizontal: spacing.md,
-                          paddingBottom: spacing.md,
-                        }}
-                        onPress={() => setExpandedUser(isExpanded ? null : match.user._id)}
-                      >
-                        {match.profile.generatedBio && (
-                          <Text style={styles.shortBio}>
-                            {!isExpanded && match.profile.generatedBio.length > 375
-                              ? match.profile.generatedBio.slice(0, 375).replace(/\s+\S*$/, '') +
-                                '...'
-                              : match.profile.generatedBio}
-                          </Text>
-                        )}
-
-                        {isExpanded && (
-                          <View style={styles.breakdown}>
-                            <View style={styles.toggleContainer}>
-                              <View style={styles.toggleTrack}>
-                                <Pressable
-                                  style={[
-                                    styles.toggleOption,
-                                    (activeTab[match.user._id] || 'compatibility') ===
-                                      'compatibility' && styles.toggleOptionActive,
-                                  ]}
-                                  onPress={() =>
-                                    setActiveTab({
-                                      ...activeTab,
-                                      [match.user._id]: 'compatibility',
-                                    })
-                                  }
-                                >
-                                  <Text
-                                    style={[
-                                      styles.toggleText,
-                                      (activeTab[match.user._id] || 'compatibility') ===
-                                        'compatibility' && styles.toggleTextActive,
-                                    ]}
-                                  >
-                                    Compatibility
-                                  </Text>
-                                </Pressable>
-                                <Pressable
-                                  style={[
-                                    styles.toggleOption,
-                                    activeTab[match.user._id] === 'profile' &&
-                                      styles.toggleOptionActive,
-                                  ]}
-                                  onPress={() =>
-                                    setActiveTab({
-                                      ...activeTab,
-                                      [match.user._id]: 'profile',
-                                    })
-                                  }
-                                >
-                                  <Text
-                                    style={[
-                                      styles.toggleText,
-                                      activeTab[match.user._id] === 'profile' &&
-                                        styles.toggleTextActive,
-                                    ]}
-                                  >
-                                    Full Profile
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            </View>
-
-                            {(activeTab[match.user._id] || 'compatibility') === 'compatibility' && (
-                              <View>
-                                <Text style={styles.aiSummary}>{match.analysis.summary}</Text>
-
-                                {AI_CATEGORIES.map(({ key, label, icon: CatIcon }) => {
-                                  const score = match.analysis.categoryScores[key] * 10;
-                                  const scoreColor = getScoreColor(score);
-                                  const isFull = score === 100;
-                                  const summaryText = match.analysis.categorySummaries?.[key];
-                                  const isCatExpanded =
-                                    expandedCategories[match.user._id]?.has(key);
-                                  return (
-                                    <View key={key}>
-                                      <Pressable
-                                        style={styles.categoryRow}
-                                        onPress={() => {
-                                          if (!summaryText) return;
-                                          setExpandedCategories((prev) => {
-                                            const set = new Set(prev[match.user._id]);
-                                            if (set.has(key)) set.delete(key);
-                                            else set.add(key);
-                                            return { ...prev, [match.user._id]: set };
-                                          });
-                                        }}
-                                      >
-                                        <View style={styles.categoryBar}>
-                                          <View
-                                            style={[
-                                              styles.categoryBarFill,
-                                              {
-                                                width: `${score}%`,
-                                                borderTopRightRadius: isFull ? 10 : 0,
-                                                borderBottomRightRadius: isFull ? 10 : 0,
-                                              },
-                                            ]}
-                                          >
-                                            <LinearGradient
-                                              colors={[`${scoreColor}4D`, `${scoreColor}99`]}
-                                              start={{ x: 0, y: 0 }}
-                                              end={{ x: 1, y: 0 }}
-                                              style={styles.categoryBarGradient}
-                                            />
-                                            {!isFull && (
-                                              <View
-                                                style={[
-                                                  styles.categoryBarEdge,
-                                                  {
-                                                    backgroundColor: scoreColor,
-                                                  },
-                                                ]}
-                                              />
-                                            )}
-                                          </View>
-                                          <View style={styles.categoryBarContent}>
-                                            <CatIcon size={20} color={colors.text} />
-                                            <Text style={styles.categoryBarLabel}>{label}</Text>
-                                          </View>
-                                        </View>
-                                        <Text
-                                          style={[styles.categoryBarScore, { color: scoreColor }]}
-                                        >
-                                          {match.analysis.categoryScores[key]}
-                                          /10
-                                        </Text>
-                                      </Pressable>
-                                      {isCatExpanded && summaryText && (
-                                        <Text style={styles.categorySummaryText}>
-                                          {summaryText}
-                                        </Text>
-                                      )}
-                                    </View>
-                                  );
-                                })}
-
-                                {match.analysis.greenFlags.length > 0 && (
-                                  <View style={styles.flagSection}>
-                                    <Text style={styles.flagTitle}>Green Flags</Text>
-                                    <View style={styles.tagsRow}>
-                                      {match.analysis.greenFlags.map((flag, i) => (
-                                        <View key={i} style={styles.tagGreenFlag}>
-                                          <IconCheck size={12} color="#166534" />
-                                          <Text style={styles.tagGreenFlagText}>{flag}</Text>
-                                        </View>
-                                      ))}
-                                    </View>
-                                  </View>
-                                )}
-
-                                {match.analysis.yellowFlags.length > 0 && (
-                                  <View style={styles.flagSection}>
-                                    <Text style={styles.flagTitle}>Yellow Flags</Text>
-                                    <View style={styles.tagsRow}>
-                                      {match.analysis.yellowFlags.map((flag, i) => (
-                                        <View key={i} style={styles.tagYellowFlag}>
-                                          <IconAlertTriangle size={12} color="#92400e" />
-                                          <Text style={styles.tagYellowFlagText}>{flag}</Text>
-                                        </View>
-                                      ))}
-                                    </View>
-                                  </View>
-                                )}
-
-                                {match.analysis.redFlags.length > 0 && (
-                                  <View style={styles.flagSection}>
-                                    <Text style={styles.flagTitle}>Red Flags</Text>
-                                    <View style={styles.tagsRow}>
-                                      {match.analysis.redFlags.map((flag, i) => (
-                                        <View key={i} style={styles.tagRedFlag}>
-                                          <IconX size={12} color="#991b1b" />
-                                          <Text style={styles.tagRedFlagText}>{flag}</Text>
-                                        </View>
-                                      ))}
-                                    </View>
-                                  </View>
-                                )}
-                              </View>
-                            )}
-
-                            {activeTab[match.user._id] === 'profile' && (
-                              <FullProfileView
-                                profile={match.profile}
-                                user={match.user}
-                                userName={match.user.name || 'User'}
-                              />
-                            )}
-                          </View>
-                        )}
-
-                        <Text style={styles.expandHint}>
-                          {isExpanded ? 'Tap to collapse' : 'Tap for details'}
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    <View style={styles.bottomPadding} />
-                  </ScrollView>
-                );
-              }}
-            />
-
-            {testUserMatches.filter(Boolean).length > 1 && !expandedUser && (
-              <View style={styles.paginationContainer}>
-                {testUserMatches.filter(Boolean).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[styles.paginationDot, i === currentPage && styles.paginationDotActive]}
-                  />
-                ))}
+              <LinearGradient
+                colors={['#FAFAFA00', '#FAFAFAFF']}
+                style={styles.bottomGradient}
+                pointerEvents="none"
+              />
+              <View style={styles.actionButtons}>
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={() => currentMatch && startDismiss('left', currentMatch.user._id)}
+                >
+                  <IconX size={28} color={colors.text} />
+                </Pressable>
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={() => currentMatch && startDismiss('right', currentMatch.user._id)}
+                >
+                  <IconHeart size={28} color="#ef4444" />
+                </Pressable>
               </View>
-            )}
+            </View>
 
             {fullscreenPhotos && (
               <FullscreenPhotoViewer
@@ -1708,11 +1810,11 @@ const styles = StyleSheet.create({
   },
   pageContent: {
     paddingTop: spacing.sm,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: 90,
   },
   paginationContainer: {
     alignItems: 'center',
-    bottom: 24,
+    bottom: 100,
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
@@ -1732,15 +1834,40 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
+  bottomGradient: {
+    bottom: 0,
+    height: 100,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
+  actionButtons: {
+    bottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 0,
+    paddingHorizontal: spacing.xl,
+    position: 'absolute',
+    right: 0,
+  },
+  actionButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 28,
+    elevation: 8,
+    height: 56,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    width: 56,
+  },
   emptyState: {
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: spacing.lg,
   },
   emptyIconContainer: {
     marginBottom: spacing.lg,
@@ -1780,9 +1907,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
   },
-  codeText: {
-    backgroundColor: colors.surface,
-    fontFamily: 'monospace',
+  restoreButton: {
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  restoreButtonText: {
+    color: colors.textSecondary,
     fontSize: fontSizes.sm,
   },
   matchCard: {
@@ -1879,12 +2013,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSizes.xs,
     marginLeft: spacing.xs,
-  },
-  expandHint: {
-    color: colors.textMuted,
-    fontSize: fontSizes.xs,
-    marginTop: spacing.md,
-    textAlign: 'center',
   },
   breakdown: {
     borderTopColor: colors.border,
@@ -2092,9 +2220,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSizes.sm,
     lineHeight: 20,
-  },
-  bottomPadding: {
-    height: spacing['3xl'],
   },
   // Full profile styles
   fullProfileContainer: {

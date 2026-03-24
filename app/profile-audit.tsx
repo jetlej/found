@@ -112,7 +112,6 @@ function getTraitLabel(trait: string) {
     independenceNeed: { name: 'Independence', low: 'Together', high: 'Space needed' },
     romanticStyle: { name: 'Romance Style', low: 'Practical', high: 'Deeply romantic' },
     socialEnergy: { name: 'Social Energy', low: 'Homebody', high: 'Social butterfly' },
-    communicationStyle: { name: 'Communication', low: 'Reserved', high: 'Expressive' },
     attachmentStyle: { name: 'Attachment', low: 'Avoidant', high: 'Anxious' },
     planningStyle: { name: 'Planning', low: 'Structured', high: 'Spontaneous', inverted: true },
   };
@@ -688,25 +687,23 @@ export default function ProfileAuditScreen() {
             {/* Relationship Style */}
             <ProfileSection title="Relationship Style">
               <View style={s.infoGrid}>
-                <View style={s.infoItem}>
-                  <Text style={s.infoLabel}>Love Language</Text>
-                  <Text style={s.infoValue}>
-                    {formatLabel(profile.relationshipStyle.loveLanguage)}
-                  </Text>
-                </View>
-                <View style={s.infoItem}>
-                  <Text style={s.infoLabel}>Conflict Style</Text>
-                  <Text style={s.infoValue}>
-                    {formatLabel(profile.relationshipStyle.conflictStyle)}
-                  </Text>
-                </View>
+                {profile.relationshipStyle.loveLanguage && (
+                  <View style={s.infoItem}>
+                    <Text style={s.infoLabel}>Love Language</Text>
+                    <Text style={s.infoValue}>
+                      {formatLabel(profile.relationshipStyle.loveLanguage)}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <TraitBar
-                name="Alone Time Need"
-                value={profile.relationshipStyle.aloneTimeNeed}
-                lowLabel="Together always"
-                highLabel="Lots of space"
-              />
+              {profile.relationshipStyle.aloneTimeNeed != null && (
+                <TraitBar
+                  name="Alone Time Need"
+                  value={profile.relationshipStyle.aloneTimeNeed}
+                  lowLabel="Together always"
+                  highLabel="Lots of space"
+                />
+              )}
             </ProfileSection>
 
             {/* Family & Future */}
@@ -719,12 +716,14 @@ export default function ProfileAuditScreen() {
                   </View>
                 </View>
               )}
-              <TraitBar
-                name="Family Closeness"
-                value={profile.familyPlans.familyCloseness}
-                lowLabel="Independent"
-                highLabel="Very close"
-              />
+              {profile.familyPlans.familyCloseness != null && (
+                <TraitBar
+                  name="Family Closeness"
+                  value={profile.familyPlans.familyCloseness}
+                  lowLabel="Independent"
+                  highLabel="Very close"
+                />
+              )}
             </ProfileSection>
           </View>
         </View>

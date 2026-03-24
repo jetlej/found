@@ -399,33 +399,33 @@ const KEYWORD_MAPPINGS: Record<string, (profile: UserProfile) => boolean> = {
   "doesn't want kids": (p) => p.familyPlans.wantsKids === 'no',
   'has kids': (p) => p.demographics?.hasKids === true,
   'no kids': (p) => p.demographics?.hasKids !== true,
-  'family-oriented': (p) => p.familyPlans.familyCloseness >= 7,
+  'family-oriented': (p) => (p.familyPlans.familyCloseness ?? 0) >= 7,
 
   // Personality traits
-  ambitious: (p) => p.traits.ambition >= 7,
-  driven: (p) => p.traits.ambition >= 7,
-  adventurous: (p) => p.traits.adventurousness >= 7,
+  ambitious: (p) => (p.traits.ambition ?? 0) >= 7,
+  driven: (p) => (p.traits.ambition ?? 0) >= 7,
+  adventurous: (p) => (p.traits.adventurousness ?? 0) >= 7,
   spontaneous: (p) => (p.traits.planningStyle ?? 5) <= 4,
-  'emotionally available': (p) => p.traits.emotionalOpenness >= 6,
-  'emotionally open': (p) => p.traits.emotionalOpenness >= 6,
-  independent: (p) => p.traits.independenceNeed >= 7,
-  traditional: (p) => p.traits.traditionalValues >= 7,
-  progressive: (p) => p.traits.traditionalValues <= 4,
-  romantic: (p) => (p.traits.romanticStyle ?? 5) >= 7,
-  introverted: (p) => p.traits.introversion >= 7,
-  extroverted: (p) => p.traits.introversion <= 4,
-  social: (p) => (p.traits.socialEnergy ?? 5) >= 6,
-  homebody: (p) => (p.traits.socialEnergy ?? 5) <= 4,
+  'emotionally available': (p) => (p.traits.emotionalOpenness ?? 0) >= 6,
+  'emotionally open': (p) => (p.traits.emotionalOpenness ?? 0) >= 6,
+  independent: (p) => (p.traits.independenceNeed ?? 0) >= 7,
+  traditional: (p) => (p.traits.traditionalValues ?? 0) >= 7,
+  progressive: (p) => (p.traits.traditionalValues ?? 10) <= 4,
+  romantic: (p) => (p.traits.romanticStyle ?? 0) >= 7,
+  introverted: (p) => (p.traits.introversion ?? 0) >= 7,
+  extroverted: (p) => (p.traits.introversion ?? 10) <= 4,
+  social: (p) => (p.traits.socialEnergy ?? 0) >= 6,
+  homebody: (p) => (p.traits.socialEnergy ?? 10) <= 4,
   'secure attachment': (p) =>
     (p.traits.attachmentStyle ?? 5) >= 4 && (p.traits.attachmentStyle ?? 5) <= 6,
 
   // Lifestyle
   active: (p) =>
-    p.lifestyle.exerciseLevel.toLowerCase().includes('daily') ||
-    p.lifestyle.exerciseLevel.toLowerCase().includes('5+'),
+    p.lifestyle.exerciseLevel?.toLowerCase().includes('daily') ||
+    p.lifestyle.exerciseLevel?.toLowerCase().includes('5+'),
   fit: (p) =>
-    p.lifestyle.exerciseLevel.toLowerCase().includes('daily') ||
-    p.lifestyle.exerciseLevel.toLowerCase().includes('5+'),
+    p.lifestyle.exerciseLevel?.toLowerCase().includes('daily') ||
+    p.lifestyle.exerciseLevel?.toLowerCase().includes('5+'),
   healthy: (p) => (p.health?.physicalHealthRating ?? 5) >= 7,
   'non-smoker': (p) =>
     p.health?.smokingStatus?.toLowerCase() === 'never' ||
@@ -433,26 +433,26 @@ const KEYWORD_MAPPINGS: Record<string, (profile: UserProfile) => boolean> = {
   "doesn't smoke": (p) =>
     p.health?.smokingStatus?.toLowerCase() === 'never' ||
     p.health?.smokingStatus?.toLowerCase() === 'no',
-  "doesn't drink": (p) => p.lifestyle.alcoholUse.toLowerCase() === 'never',
+  "doesn't drink": (p) => p.lifestyle.alcoholUse?.toLowerCase() === 'never',
   'drinks socially': (p) =>
-    p.lifestyle.alcoholUse.toLowerCase().includes('social') ||
-    p.lifestyle.alcoholUse.toLowerCase().includes('occasionally'),
-  'no drugs': (p) => p.lifestyle.drugUse.toLowerCase() === 'never',
-  'early bird': (p) => p.lifestyle.sleepSchedule.toLowerCase().includes('early'),
+    p.lifestyle.alcoholUse?.toLowerCase().includes('social') ||
+    p.lifestyle.alcoholUse?.toLowerCase().includes('occasionally'),
+  'no drugs': (p) => p.lifestyle.drugUse?.toLowerCase() === 'never',
+  'early bird': (p) => p.lifestyle.sleepSchedule?.toLowerCase().includes('early'),
   'night owl': (p) =>
-    p.lifestyle.sleepSchedule.toLowerCase().includes('late') ||
-    p.lifestyle.sleepSchedule.toLowerCase().includes('night'),
-  'dog person': (p) => p.lifestyle.petPreference.toLowerCase().includes('dog'),
-  'cat person': (p) => p.lifestyle.petPreference.toLowerCase().includes('cat'),
-  'pet-friendly': (p) => !p.lifestyle.petPreference.toLowerCase().includes('no pet'),
+    p.lifestyle.sleepSchedule?.toLowerCase().includes('late') ||
+    p.lifestyle.sleepSchedule?.toLowerCase().includes('night'),
+  'dog person': (p) => p.lifestyle.petPreference?.toLowerCase().includes('dog'),
+  'cat person': (p) => p.lifestyle.petPreference?.toLowerCase().includes('cat'),
+  'pet-friendly': (p) =>
+    p.lifestyle.petPreference && !p.lifestyle.petPreference.toLowerCase().includes('no pet'),
 
   // Relationship style
-  'good communicator': (p) => (p.traits.communicationStyle ?? 5) >= 6,
-  'quality time': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('quality time'),
-  'physical touch': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('physical'),
-  'words of affirmation': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('words'),
-  'acts of service': (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('acts'),
-  gifts: (p) => p.relationshipStyle.loveLanguage.toLowerCase().includes('gift'),
+  'quality time': (p) => p.relationshipStyle.loveLanguage?.toLowerCase().includes('quality time'),
+  'physical touch': (p) => p.relationshipStyle.loveLanguage?.toLowerCase().includes('physical'),
+  'words of affirmation': (p) => p.relationshipStyle.loveLanguage?.toLowerCase().includes('words'),
+  'acts of service': (p) => p.relationshipStyle.loveLanguage?.toLowerCase().includes('acts'),
+  gifts: (p) => p.relationshipStyle.loveLanguage?.toLowerCase().includes('gift'),
 
   // Demographics
   religious: (p) => (p.demographics?.religiosity ?? 0) >= 6,
@@ -544,7 +544,8 @@ const DEALBREAKER_CHECKS: Record<
     return { triggered: true, severity: 'triggered', reason: 'They smoke' };
   },
   drugs: (p) => {
-    const usage = p.lifestyle.drugUse.toLowerCase();
+    const usage = p.lifestyle.drugUse?.toLowerCase() ?? '';
+    if (!usage) return { triggered: false, severity: 'clear', reason: 'Unknown' };
     if (usage === 'never') return { triggered: false, severity: 'clear', reason: 'No drug use' };
     if (usage.includes('rarely') || usage.includes('occasionally'))
       return {
@@ -555,7 +556,8 @@ const DEALBREAKER_CHECKS: Record<
     return { triggered: true, severity: 'triggered', reason: 'Uses drugs' };
   },
   'heavy drinking': (p) => {
-    const usage = p.lifestyle.alcoholUse.toLowerCase();
+    const usage = p.lifestyle.alcoholUse?.toLowerCase() ?? '';
+    if (!usage) return { triggered: false, severity: 'clear', reason: 'Unknown' };
     if (usage === 'never' || usage.includes('rarely') || usage.includes('social'))
       return {
         triggered: false,
@@ -571,8 +573,9 @@ const DEALBREAKER_CHECKS: Record<
     return { triggered: true, severity: 'triggered', reason: 'Heavy drinker' };
   },
   alcohol: (p) => {
-    const usage = p.lifestyle.alcoholUse.toLowerCase();
-    if (usage === 'never') return { triggered: false, severity: 'clear', reason: "Doesn't drink" };
+    const usage = p.lifestyle.alcoholUse?.toLowerCase() ?? '';
+    if (!usage || usage === 'never')
+      return { triggered: false, severity: 'clear', reason: "Doesn't drink" };
     return { triggered: true, severity: 'triggered', reason: 'Drinks alcohol' };
   },
 
@@ -760,11 +763,6 @@ function getTraitLabel(trait: string): {
       name: 'Social Energy',
       low: 'Homebody',
       high: 'Social butterfly',
-    },
-    communicationStyle: {
-      name: 'Communication',
-      low: 'Reserved',
-      high: 'Expressive',
     },
     attachmentStyle: { name: 'Attachment', low: 'Avoidant', high: 'Anxious' },
     // Inverted: DB has 1=spontaneous, 10=structured, but we want structured on LEFT
@@ -1256,25 +1254,23 @@ function FullProfileView({
       {/* Relationship Style */}
       <ProfileSection title="Relationship Style">
         <View style={styles.infoGrid}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Love Language</Text>
-            <Text style={styles.infoValue}>
-              {formatLabel(profile.relationshipStyle.loveLanguage)}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Conflict Style</Text>
-            <Text style={styles.infoValue}>
-              {formatLabel(profile.relationshipStyle.conflictStyle)}
-            </Text>
-          </View>
+          {profile.relationshipStyle.loveLanguage && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Love Language</Text>
+              <Text style={styles.infoValue}>
+                {formatLabel(profile.relationshipStyle.loveLanguage)}
+              </Text>
+            </View>
+          )}
         </View>
-        <TraitBar
-          name="Alone Time Need"
-          value={profile.relationshipStyle.aloneTimeNeed}
-          lowLabel="Together always"
-          highLabel="Lots of space"
-        />
+        {profile.relationshipStyle.aloneTimeNeed != null && (
+          <TraitBar
+            name="Alone Time Need"
+            value={profile.relationshipStyle.aloneTimeNeed}
+            lowLabel="Together always"
+            highLabel="Lots of space"
+          />
+        )}
       </ProfileSection>
 
       {/* Family & Future */}
@@ -1287,12 +1283,14 @@ function FullProfileView({
             </View>
           </View>
         )}
-        <TraitBar
-          name="Family Closeness"
-          value={profile.familyPlans.familyCloseness}
-          lowLabel="Independent"
-          highLabel="Very close"
-        />
+        {profile.familyPlans.familyCloseness != null && (
+          <TraitBar
+            name="Family Closeness"
+            value={profile.familyPlans.familyCloseness}
+            lowLabel="Independent"
+            highLabel="Very close"
+          />
+        )}
       </ProfileSection>
     </View>
   );

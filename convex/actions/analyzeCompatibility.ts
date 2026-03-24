@@ -46,8 +46,7 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
   lines.push(`**Wants Children:** ${user.wantsChildren || 'not specified'}`);
   lines.push(`**Relationship Type:** ${user.relationshipType || 'not specified'}`);
 
-  // Personality traits
-  lines.push(`\n**Personality Traits (1-10):**`);
+  // Personality traits — only include traits that have values
   const traitLabels: Record<string, string> = {
     introversion: 'Introversion (1=extrovert, 10=introvert)',
     adventurousness: 'Adventurousness',
@@ -57,13 +56,17 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
     independenceNeed: 'Independence Need',
     romanticStyle: 'Romantic Style (1=practical, 10=romantic)',
     socialEnergy: 'Social Energy (1=homebody, 10=social butterfly)',
-    communicationStyle: 'Communication (1=reserved, 10=expressive)',
     attachmentStyle: 'Attachment (1=avoidant, 10=anxious)',
     planningStyle: 'Planning (1=spontaneous, 10=structured)',
   };
+  const traitLines: string[] = [];
   for (const [key, label] of Object.entries(traitLabels)) {
-    const val = profile.traits[key];
-    if (val !== undefined) lines.push(`- ${label}: ${val}`);
+    const val = profile.traits?.[key];
+    if (val != null) traitLines.push(`- ${label}: ${val}`);
+  }
+  if (traitLines.length) {
+    lines.push(`\n**Personality Traits (1-10):**`);
+    lines.push(...traitLines);
   }
 
   // Values & interests
@@ -74,21 +77,34 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
   if (profile.dealbreakers?.length)
     lines.push(`**Dealbreakers:** ${profile.dealbreakers.join(', ')}`);
 
-  // Relationship style
+  // Relationship style — only include fields that have values
   const rs = profile.relationshipStyle;
-  lines.push(`\n**Relationship Style:**`);
-  lines.push(`- Love Language: ${rs.loveLanguage}`);
-  lines.push(`- Conflict Style: ${rs.conflictStyle}`);
-  lines.push(`- Communication Frequency: ${rs.communicationFrequency}`);
-  lines.push(`- Financial Approach: ${rs.financialApproach}`);
-  lines.push(`- Alone Time Need: ${rs.aloneTimeNeed}/10`);
+  if (rs) {
+    const rsLines: string[] = [];
+    if (rs.loveLanguage) rsLines.push(`- Love Language: ${rs.loveLanguage}`);
+    if (rs.financialApproach) rsLines.push(`- Financial Approach: ${rs.financialApproach}`);
+    if (rs.aloneTimeNeed != null) rsLines.push(`- Alone Time Need: ${rs.aloneTimeNeed}/10`);
+    if (rsLines.length) {
+      lines.push(`\n**Relationship Style:**`);
+      lines.push(...rsLines);
+    }
+  }
 
-  // Lifestyle
+  // Lifestyle — only include fields that have values
   const ls = profile.lifestyle;
-  lines.push(`\n**Lifestyle:**`);
-  lines.push(`- Sleep: ${ls.sleepSchedule}, Exercise: ${ls.exerciseLevel}`);
-  lines.push(`- Alcohol: ${ls.alcoholUse}, Drugs: ${ls.drugUse}`);
-  lines.push(`- Location: ${ls.locationPreference}, Pets: ${ls.petPreference}`);
+  if (ls) {
+    const lsLines: string[] = [];
+    if (ls.sleepSchedule) lsLines.push(`- Sleep: ${ls.sleepSchedule}`);
+    if (ls.exerciseLevel) lsLines.push(`- Exercise: ${ls.exerciseLevel}`);
+    if (ls.alcoholUse) lsLines.push(`- Alcohol: ${ls.alcoholUse}`);
+    if (ls.drugUse) lsLines.push(`- Drugs: ${ls.drugUse}`);
+    if (ls.locationPreference) lsLines.push(`- Location: ${ls.locationPreference}`);
+    if (ls.petPreference) lsLines.push(`- Pets: ${ls.petPreference}`);
+    if (lsLines.length) {
+      lines.push(`\n**Lifestyle:**`);
+      lines.push(...lsLines);
+    }
+  }
 
   // Family
   const fp = profile.familyPlans;
@@ -96,7 +112,7 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
   lines.push(
     `- Wants Kids: ${fp.wantsKids}${fp.kidsTimeline ? `, Timeline: ${fp.kidsTimeline}` : ''}`
   );
-  lines.push(`- Family Closeness: ${fp.familyCloseness}/10`);
+  if (fp.familyCloseness != null) lines.push(`- Family Closeness: ${fp.familyCloseness}/10`);
 
   // Partner preferences
   if (profile.partnerPreferences) {
@@ -111,12 +127,13 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
 
   // Life story
   if (profile.lifeStory) {
-    const ls = profile.lifeStory;
+    const story = profile.lifeStory;
     lines.push(`\n**Life Story:**`);
-    if (ls.proudestAchievement) lines.push(`- Proudest Achievement: ${ls.proudestAchievement}`);
-    if (ls.definingHardship) lines.push(`- Defining Challenge: ${ls.definingHardship}`);
-    if (ls.dreams?.length) lines.push(`- Dreams: ${ls.dreams.join(', ')}`);
-    if (ls.fears?.length) lines.push(`- Fears: ${ls.fears.join(', ')}`);
+    if (story.proudestAchievement)
+      lines.push(`- Proudest Achievement: ${story.proudestAchievement}`);
+    if (story.definingHardship) lines.push(`- Defining Challenge: ${story.definingHardship}`);
+    if (story.dreams?.length) lines.push(`- Dreams: ${story.dreams.join(', ')}`);
+    if (story.fears?.length) lines.push(`- Fears: ${story.fears.join(', ')}`);
   }
 
   // Love philosophy
@@ -124,26 +141,35 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
     const lp = profile.lovePhilosophy;
     lines.push(`\n**Love Philosophy:**`);
     if (lp.loveDefinition) lines.push(`- Love Definition: ${lp.loveDefinition}`);
-    lines.push(`- Believes in Soulmates: ${lp.believesInSoulmates}`);
     if (lp.healthyRelationshipVision)
       lines.push(`- Healthy Relationship: ${lp.healthyRelationshipVision}`);
   }
 
-  // Intimacy
+  // Intimacy — only include fields that have values
   if (profile.intimacyProfile) {
     const ip = profile.intimacyProfile;
-    lines.push(`\n**Intimacy:**`);
-    lines.push(`- Physical Intimacy Importance: ${ip.physicalIntimacyImportance}/10`);
-    lines.push(`- PDA Comfort: ${ip.pdaComfort}`);
+    const ipLines: string[] = [];
+    if (ip.physicalIntimacyImportance != null)
+      ipLines.push(`- Physical Intimacy Importance: ${ip.physicalIntimacyImportance}/10`);
+    if (ip.pdaComfort) ipLines.push(`- PDA Comfort: ${ip.pdaComfort}`);
     if (ip.connectionTriggers?.length)
-      lines.push(`- Connection Triggers: ${ip.connectionTriggers.join(', ')}`);
+      ipLines.push(`- Connection Triggers: ${ip.connectionTriggers.join(', ')}`);
+    if (ipLines.length) {
+      lines.push(`\n**Intimacy:**`);
+      lines.push(...ipLines);
+    }
   }
 
-  // Social
+  // Social — only include fields that have values
   if (profile.socialProfile) {
     const sp = profile.socialProfile;
-    lines.push(`\n**Social:**`);
-    lines.push(`- Style: ${sp.socialStyle}, Go Out: ${sp.goOutFrequency}/10`);
+    const spLines: string[] = [];
+    if (sp.socialStyle) spLines.push(`- Style: ${sp.socialStyle}`);
+    if (sp.goOutFrequency != null) spLines.push(`- Go Out: ${sp.goOutFrequency}/10`);
+    if (spLines.length) {
+      lines.push(`\n**Social:**`);
+      lines.push(...spLines);
+    }
   }
 
   // Bio
@@ -177,7 +203,9 @@ Scoring guidelines per category:
 - 4-5: Notable misalignment, would require real compromise
 - 1-3: Fundamental incompatibility or contradictory values
 
-IMPORTANT: Compatibility does NOT mean identical. Two people who are clearly compatible on paper should score near 100. 10/10 in a category means "these two are compatible here" — not "they are clones." Overlapping worlds, complementary energy, and shared direction all count. Do NOT apply an artificial curve or hold back high scores. If the profiles align, score high. The overall score is the sum of all 10 category scores.`;
+IMPORTANT: Compatibility does NOT mean identical. Two people who are clearly compatible on paper should score near 100. 10/10 in a category means "these two are compatible here" — not "they are clones." Overlapping worlds, complementary energy, and shared direction all count. Do NOT apply an artificial curve or hold back high scores. If the profiles align, score high. The overall score is the sum of all 10 category scores.
+
+IMPORTANT: These profiles were extracted from open-ended voice interviews, not structured questionnaires. Some fields may be sparse or missing — this is expected. Only base your analysis on the data that is actually present. Do not penalize profiles for missing fields, and do not speculate about fields that aren't provided.`;
 
 // Raw shape from AI — each category has score + summary bundled together
 interface RawAnalysisResult {
@@ -573,5 +601,24 @@ export const rerunAllAnalyses = action({
       avgTokensPerRun: n > 0 ? Math.round(totalTokens / n) : 0,
       avgCostPerRun: n > 0 ? totalCost / n : 0,
     };
+  },
+});
+
+// Schedule analyzeAllForUser for every user that has a parsed profile
+export const regenerateAllCompatibility = action({
+  args: { adminSecret: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+    const allProfiles = await ctx.runQuery(internal.userProfiles.listAllUserIds);
+    console.log(`Scheduling compatibility for ${allProfiles.length} users`);
+    for (let i = 0; i < allProfiles.length; i++) {
+      await ctx.scheduler.runAfter(
+        i * 2000,
+        internal.actions.analyzeCompatibility.analyzeAllForUser,
+        { userId: allProfiles[i] }
+      );
+      console.log(`Scheduled ${allProfiles[i]} (delay: ${i * 2}s)`);
+    }
+    return { scheduled: allProfiles.length };
   },
 });

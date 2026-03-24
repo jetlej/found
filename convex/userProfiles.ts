@@ -56,39 +56,39 @@ export const upsertProfile = internalMutation({
       interests: v.array(v.string()),
       dealbreakers: v.array(v.string()),
       traits: v.object({
-        introversion: v.number(),
-        adventurousness: v.number(),
-        ambition: v.number(),
-        emotionalOpenness: v.number(),
-        traditionalValues: v.number(),
-        independenceNeed: v.number(),
-        romanticStyle: v.number(),
-        socialEnergy: v.number(),
-        communicationStyle: v.number(),
-        attachmentStyle: v.number(),
-        planningStyle: v.number(),
+        introversion: v.optional(v.number()),
+        adventurousness: v.optional(v.number()),
+        ambition: v.optional(v.number()),
+        emotionalOpenness: v.optional(v.number()),
+        traditionalValues: v.optional(v.number()),
+        independenceNeed: v.optional(v.number()),
+        romanticStyle: v.optional(v.number()),
+        socialEnergy: v.optional(v.number()),
+        communicationStyle: v.optional(v.number()),
+        attachmentStyle: v.optional(v.number()),
+        planningStyle: v.optional(v.number()),
       }),
       relationshipStyle: v.object({
-        loveLanguage: v.string(),
-        conflictStyle: v.string(),
-        communicationFrequency: v.string(),
-        financialApproach: v.string(),
-        aloneTimeNeed: v.number(),
+        loveLanguage: v.optional(v.string()),
+        conflictStyle: v.optional(v.string()),
+        communicationFrequency: v.optional(v.string()),
+        financialApproach: v.optional(v.string()),
+        aloneTimeNeed: v.optional(v.number()),
       }),
       familyPlans: v.object({
         wantsKids: v.string(),
         kidsTimeline: v.optional(v.string()),
-        familyCloseness: v.number(),
+        familyCloseness: v.optional(v.number()),
         parentingStyle: v.optional(v.string()),
       }),
       lifestyle: v.object({
-        sleepSchedule: v.string(),
-        exerciseLevel: v.string(),
+        sleepSchedule: v.optional(v.string()),
+        exerciseLevel: v.optional(v.string()),
         dietType: v.optional(v.string()),
-        alcoholUse: v.string(),
-        drugUse: v.string(),
-        petPreference: v.string(),
-        locationPreference: v.string(),
+        alcoholUse: v.optional(v.string()),
+        drugUse: v.optional(v.string()),
+        petPreference: v.optional(v.string()),
+        locationPreference: v.optional(v.string()),
       }),
       // New fields (Phases 2-10)
       lifeStory: v.optional(
@@ -104,19 +104,19 @@ export const upsertProfile = internalMutation({
       ),
       socialProfile: v.optional(
         v.object({
-          socialStyle: v.string(),
+          socialStyle: v.optional(v.string()),
           weekendStyle: v.optional(v.string()),
           idealFridayNight: v.optional(v.string()),
-          goOutFrequency: v.number(),
-          friendApprovalImportance: v.number(),
+          goOutFrequency: v.optional(v.number()),
+          friendApprovalImportance: v.optional(v.number()),
           socialCircleVision: v.optional(v.string()),
         })
       ),
       intimacyProfile: v.optional(
         v.object({
-          physicalIntimacyImportance: v.number(),
-          physicalAttractionImportance: v.number(),
-          pdaComfort: v.string(),
+          physicalIntimacyImportance: v.optional(v.number()),
+          physicalAttractionImportance: v.optional(v.number()),
+          pdaComfort: v.optional(v.string()),
           emotionalIntimacyApproach: v.optional(v.string()),
           connectionTriggers: v.array(v.string()),
           healthyIntimacyVision: v.optional(v.string()),
@@ -336,6 +336,14 @@ export const updateBios = internalMutation({
 });
 
 // Internal mutation to patch any fields on a profile
+export const listAllUserIds = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query('userProfiles').collect();
+    return profiles.map((p) => p.userId);
+  },
+});
+
 export const patchProfile = internalMutation({
   args: {
     userId: v.id('users'),

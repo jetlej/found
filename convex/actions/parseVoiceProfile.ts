@@ -51,24 +51,21 @@ Respond with JSON in this exact format:
   "interests": ["interest1", "interest2", ...],
   "dealbreakers": ["dealbreaker1", ...],
   "traits": {
-    "introversion": <1-10>,
-    "adventurousness": <1-10>,
-    "ambition": <1-10>,
-    "emotionalOpenness": <1-10>,
-    "traditionalValues": <1-10>,
-    "independenceNeed": <1-10>,
-    "romanticStyle": <1-10>,
-    "socialEnergy": <1-10>,
-    "communicationStyle": <1-10>,
-    "attachmentStyle": <1-10>,
-    "planningStyle": <1-10>
+    "introversion": <1-10 or null>,
+    "adventurousness": <1-10 or null>,
+    "ambition": <1-10 or null>,
+    "emotionalOpenness": <1-10 or null>,
+    "traditionalValues": <1-10 or null>,
+    "independenceNeed": <1-10 or null>,
+    "romanticStyle": <1-10 or null>,
+    "socialEnergy": <1-10 or null>,
+    "attachmentStyle": <1-10 or null>,
+    "planningStyle": <1-10 or null>
   },
   "relationshipStyle": {
-    "loveLanguage": "<words_of_affirmation|quality_time|physical_touch|acts_of_service|receiving_gifts|unknown>",
-    "conflictStyle": "<address_immediately|cool_off_first|write_thoughts|let_go|avoid|unknown>",
-    "communicationFrequency": "<constant|regular|few_daily|minimal|calls|unknown>",
-    "financialApproach": "<fully_shared|mostly_shared|split_50_50|mostly_separate|depends|unknown>",
-    "aloneTimeNeed": <1-10>
+    "loveLanguage": "<words_of_affirmation|quality_time|physical_touch|acts_of_service|receiving_gifts|null>",
+    "financialApproach": "<fully_shared|mostly_shared|split_50_50|mostly_separate|depends|null>",
+    "aloneTimeNeed": <1-10 or null>
   },
   "familyPlans": {
     "wantsKids": "<yes|no|maybe|already_has|open|unknown>",
@@ -77,13 +74,13 @@ Respond with JSON in this exact format:
     "parentingStyle": "<string or null>"
   },
   "lifestyle": {
-    "sleepSchedule": "<early_bird|morning|flexible|night|night_owl|unknown>",
-    "exerciseLevel": "<never|monthly|weekly|several_weekly|daily|unknown>",
+    "sleepSchedule": "<early_bird|morning|flexible|night|night_owl|null>",
+    "exerciseLevel": "<never|monthly|weekly|several_weekly|daily|null>",
     "dietType": "<string or null>",
-    "alcoholUse": "<never|rarely|socially|regularly|daily|unknown>",
-    "drugUse": "<never|rarely|occasionally|regularly|unknown>",
-    "petPreference": "<string>",
-    "locationPreference": "<city|suburb|rural|small_town|flexible|unknown>"
+    "alcoholUse": "<never|rarely|socially|regularly|daily|null>",
+    "drugUse": "<never|rarely|occasionally|regularly|null>",
+    "petPreference": "<string or null>",
+    "locationPreference": "<city|suburb|rural|small_town|flexible|null>"
   },
   "lifeStory": {
     "proudestAchievement": "<string or null>",
@@ -94,19 +91,18 @@ Respond with JSON in this exact format:
     "formativeExperiences": ["experience1", ...]
   },
   "socialProfile": {
-    "socialStyle": "<very_active|balanced|introverted|unknown>",
+    "socialStyle": "<very_active|balanced|introverted|null>",
     "weekendStyle": "<string or null>",
-    "goOutFrequency": <1-10>,
-    "friendApprovalImportance": <1-10>
+    "goOutFrequency": <1-10 or null>,
+    "friendApprovalImportance": <1-10 or null>
   },
   "intimacyProfile": {
-    "physicalIntimacyImportance": <1-10>,
-    "physicalAttractionImportance": <1-10>,
-    "pdaComfort": "<love_it|fine|moderate|private|unknown>",
+    "physicalIntimacyImportance": <1-10 or null>,
+    "physicalAttractionImportance": <1-10 or null>,
+    "pdaComfort": "<love_it|fine|moderate|private|null>",
     "connectionTriggers": ["trigger1", ...]
   },
   "lovePhilosophy": {
-    "believesInSoulmates": <true|false|null>,
     "loveDefinition": "<string or null>",
     "healthyRelationshipVision": "<string or null>"
   },
@@ -137,11 +133,10 @@ Trait scales explanation:
 - independenceNeed: 1=togetherness, 10=needs space
 - romanticStyle: 1=practical, 10=deeply romantic
 - socialEnergy: 1=homebody, 10=social butterfly
-- communicationStyle: 1=reserved, 10=expressive
 - attachmentStyle: 1=avoidant, 10=anxious
 - planningStyle: 1=spontaneous, 10=structured
 
-Use 5 as default when information is insufficient.`;
+Return null for any field where the person did not clearly share enough information. Do NOT fabricate or guess — only fill fields you have real evidence for from the transcripts.`;
 
 function enforceGeneratedBioName(
   generatedBio: string | undefined,
@@ -370,28 +365,50 @@ export const parseVoiceProfile = internalAction({
       values: [...(extractedProfile.canonicalValues || []), ...(extractedProfile.rawValues || [])],
       interests: extractedProfile.interests || [],
       dealbreakers: extractedProfile.dealbreakers || [],
-      // Personality traits
+      // Personality traits — only store values the AI had evidence for
       traits: {
-        introversion: extractedProfile.traits?.introversion ?? 5,
-        adventurousness: extractedProfile.traits?.adventurousness ?? 5,
-        ambition: extractedProfile.traits?.ambition ?? 5,
-        emotionalOpenness: extractedProfile.traits?.emotionalOpenness ?? 5,
-        traditionalValues: extractedProfile.traits?.traditionalValues ?? 5,
-        independenceNeed: extractedProfile.traits?.independenceNeed ?? 5,
-        romanticStyle: extractedProfile.traits?.romanticStyle ?? 5,
-        socialEnergy: extractedProfile.traits?.socialEnergy ?? 5,
-        communicationStyle: extractedProfile.traits?.communicationStyle ?? 5,
-        attachmentStyle: extractedProfile.traits?.attachmentStyle ?? 5,
-        planningStyle: extractedProfile.traits?.planningStyle ?? 5,
+        ...(extractedProfile.traits?.introversion != null && {
+          introversion: extractedProfile.traits.introversion,
+        }),
+        ...(extractedProfile.traits?.adventurousness != null && {
+          adventurousness: extractedProfile.traits.adventurousness,
+        }),
+        ...(extractedProfile.traits?.ambition != null && {
+          ambition: extractedProfile.traits.ambition,
+        }),
+        ...(extractedProfile.traits?.emotionalOpenness != null && {
+          emotionalOpenness: extractedProfile.traits.emotionalOpenness,
+        }),
+        ...(extractedProfile.traits?.traditionalValues != null && {
+          traditionalValues: extractedProfile.traits.traditionalValues,
+        }),
+        ...(extractedProfile.traits?.independenceNeed != null && {
+          independenceNeed: extractedProfile.traits.independenceNeed,
+        }),
+        ...(extractedProfile.traits?.romanticStyle != null && {
+          romanticStyle: extractedProfile.traits.romanticStyle,
+        }),
+        ...(extractedProfile.traits?.socialEnergy != null && {
+          socialEnergy: extractedProfile.traits.socialEnergy,
+        }),
+        ...(extractedProfile.traits?.attachmentStyle != null && {
+          attachmentStyle: extractedProfile.traits.attachmentStyle,
+        }),
+        ...(extractedProfile.traits?.planningStyle != null && {
+          planningStyle: extractedProfile.traits.planningStyle,
+        }),
       },
-      // Relationship style
+      // Relationship style — only store values the AI had evidence for
       relationshipStyle: {
-        loveLanguage: extractedProfile.relationshipStyle?.loveLanguage || 'unknown',
-        conflictStyle: extractedProfile.relationshipStyle?.conflictStyle || 'unknown',
-        communicationFrequency:
-          extractedProfile.relationshipStyle?.communicationFrequency || 'unknown',
-        financialApproach: extractedProfile.relationshipStyle?.financialApproach || 'unknown',
-        aloneTimeNeed: extractedProfile.relationshipStyle?.aloneTimeNeed ?? 5,
+        ...(extractedProfile.relationshipStyle?.loveLanguage && {
+          loveLanguage: extractedProfile.relationshipStyle.loveLanguage,
+        }),
+        ...(extractedProfile.relationshipStyle?.financialApproach && {
+          financialApproach: extractedProfile.relationshipStyle.financialApproach,
+        }),
+        ...(extractedProfile.relationshipStyle?.aloneTimeNeed != null && {
+          aloneTimeNeed: extractedProfile.relationshipStyle.aloneTimeNeed,
+        }),
       },
       // Family plans - prefer structured onboarding answer over AI extraction
       familyPlans: {
@@ -403,15 +420,27 @@ export const parseVoiceProfile = internalAction({
         familyCloseness: extractedProfile.familyPlans?.familyCloseness ?? 5,
         parentingStyle: extractedProfile.familyPlans?.parentingStyle ?? undefined,
       },
-      // Lifestyle
+      // Lifestyle — only store values the AI had evidence for
       lifestyle: {
-        sleepSchedule: extractedProfile.lifestyle?.sleepSchedule || 'unknown',
-        exerciseLevel: extractedProfile.lifestyle?.exerciseLevel || 'unknown',
-        dietType: extractedProfile.lifestyle?.dietType ?? undefined,
-        alcoholUse: extractedProfile.lifestyle?.alcoholUse || 'unknown',
-        drugUse: extractedProfile.lifestyle?.drugUse || 'unknown',
-        petPreference: extractedProfile.lifestyle?.petPreference || 'neutral',
-        locationPreference: extractedProfile.lifestyle?.locationPreference || 'flexible',
+        ...(extractedProfile.lifestyle?.sleepSchedule && {
+          sleepSchedule: extractedProfile.lifestyle.sleepSchedule,
+        }),
+        ...(extractedProfile.lifestyle?.exerciseLevel && {
+          exerciseLevel: extractedProfile.lifestyle.exerciseLevel,
+        }),
+        ...(extractedProfile.lifestyle?.dietType && {
+          dietType: extractedProfile.lifestyle.dietType,
+        }),
+        ...(extractedProfile.lifestyle?.alcoholUse && {
+          alcoholUse: extractedProfile.lifestyle.alcoholUse,
+        }),
+        ...(extractedProfile.lifestyle?.drugUse && { drugUse: extractedProfile.lifestyle.drugUse }),
+        ...(extractedProfile.lifestyle?.petPreference && {
+          petPreference: extractedProfile.lifestyle.petPreference,
+        }),
+        ...(extractedProfile.lifestyle?.locationPreference && {
+          locationPreference: extractedProfile.lifestyle.locationPreference,
+        }),
       },
       // Life story
       lifeStory: extractedProfile.lifeStory
@@ -428,22 +457,34 @@ export const parseVoiceProfile = internalAction({
       // Social profile
       socialProfile: extractedProfile.socialProfile
         ? {
-            socialStyle: extractedProfile.socialProfile.socialStyle || 'balanced',
+            ...(extractedProfile.socialProfile.socialStyle && {
+              socialStyle: extractedProfile.socialProfile.socialStyle,
+            }),
             weekendStyle: extractedProfile.socialProfile.weekendStyle ?? undefined,
             idealFridayNight: undefined,
-            goOutFrequency: extractedProfile.socialProfile.goOutFrequency ?? 5,
-            friendApprovalImportance: extractedProfile.socialProfile.friendApprovalImportance ?? 5,
+            ...(extractedProfile.socialProfile.goOutFrequency != null && {
+              goOutFrequency: extractedProfile.socialProfile.goOutFrequency,
+            }),
+            ...(extractedProfile.socialProfile.friendApprovalImportance != null && {
+              friendApprovalImportance: extractedProfile.socialProfile.friendApprovalImportance,
+            }),
             socialCircleVision: undefined,
           }
         : undefined,
       // Intimacy profile
       intimacyProfile: extractedProfile.intimacyProfile
         ? {
-            physicalIntimacyImportance:
-              extractedProfile.intimacyProfile.physicalIntimacyImportance ?? 5,
-            physicalAttractionImportance:
-              extractedProfile.intimacyProfile.physicalAttractionImportance ?? 5,
-            pdaComfort: extractedProfile.intimacyProfile.pdaComfort || 'moderate',
+            ...(extractedProfile.intimacyProfile.physicalIntimacyImportance != null && {
+              physicalIntimacyImportance:
+                extractedProfile.intimacyProfile.physicalIntimacyImportance,
+            }),
+            ...(extractedProfile.intimacyProfile.physicalAttractionImportance != null && {
+              physicalAttractionImportance:
+                extractedProfile.intimacyProfile.physicalAttractionImportance,
+            }),
+            ...(extractedProfile.intimacyProfile.pdaComfort && {
+              pdaComfort: extractedProfile.intimacyProfile.pdaComfort,
+            }),
             emotionalIntimacyApproach: undefined,
             connectionTriggers: extractedProfile.intimacyProfile.connectionTriggers || [],
             healthyIntimacyVision: undefined,
@@ -452,7 +493,7 @@ export const parseVoiceProfile = internalAction({
       // Love philosophy
       lovePhilosophy: extractedProfile.lovePhilosophy
         ? {
-            believesInSoulmates: extractedProfile.lovePhilosophy.believesInSoulmates ?? false,
+            believesInSoulmates: false,
             loveDefinition: extractedProfile.lovePhilosophy.loveDefinition ?? undefined,
             loveRecognition: [],
             romanticGestures: [],

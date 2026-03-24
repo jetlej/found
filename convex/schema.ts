@@ -238,48 +238,47 @@ export default defineSchema({
     interests: v.array(v.string()), // Raw interests from essays (legacy)
     dealbreakers: v.array(v.string()), // ["smoking", "no kids", "long distance"]
 
-    // Personality traits (1-10 scales derived from answers) - 11 dimensions
+    // Personality traits (1-10 scales) — all optional, only stored when AI has evidence
     traits: v.object({
-      introversion: v.number(), // 1=extrovert, 10=introvert
-      adventurousness: v.number(),
-      ambition: v.number(),
-      emotionalOpenness: v.number(),
-      traditionalValues: v.number(),
-      independenceNeed: v.number(),
-      // New dimensions (Phase 1) - optional for backwards compatibility
-      romanticStyle: v.optional(v.number()), // 1=practical, 10=romantic
-      socialEnergy: v.optional(v.number()), // 1=homebody, 10=social butterfly
-      communicationStyle: v.optional(v.number()), // 1=reserved, 10=expressive
-      attachmentStyle: v.optional(v.number()), // 1=avoidant, 10=anxious
-      planningStyle: v.optional(v.number()), // 1=spontaneous, 10=structured
+      introversion: v.optional(v.number()),
+      adventurousness: v.optional(v.number()),
+      ambition: v.optional(v.number()),
+      emotionalOpenness: v.optional(v.number()),
+      traditionalValues: v.optional(v.number()),
+      independenceNeed: v.optional(v.number()),
+      romanticStyle: v.optional(v.number()),
+      socialEnergy: v.optional(v.number()),
+      communicationStyle: v.optional(v.number()), // DEPRECATED: no longer extracted or displayed
+      attachmentStyle: v.optional(v.number()),
+      planningStyle: v.optional(v.number()),
     }),
 
-    // Relationship style
+    // Relationship style — optional fields only stored when AI has evidence
     relationshipStyle: v.object({
-      loveLanguage: v.string(), // from Q49
-      conflictStyle: v.string(), // from Q46
-      communicationFrequency: v.string(), // from Q50
-      financialApproach: v.string(), // from Q56
-      aloneTimeNeed: v.number(), // from Q48
+      loveLanguage: v.optional(v.string()),
+      conflictStyle: v.optional(v.string()),
+      communicationFrequency: v.optional(v.string()), // DEPRECATED: no longer extracted or displayed
+      financialApproach: v.optional(v.string()),
+      aloneTimeNeed: v.optional(v.number()),
     }),
 
     // Family & Future
     familyPlans: v.object({
-      wantsKids: v.string(), // "yes", "no", "maybe", "already has"
+      wantsKids: v.string(),
       kidsTimeline: v.optional(v.string()),
-      familyCloseness: v.number(), // from Q72
+      familyCloseness: v.optional(v.number()),
       parentingStyle: v.optional(v.string()),
     }),
 
-    // Lifestyle compatibility factors
+    // Lifestyle — optional fields only stored when AI has evidence
     lifestyle: v.object({
-      sleepSchedule: v.string(), // from Q60
-      exerciseLevel: v.string(), // from Q61
-      dietType: v.optional(v.string()), // extracted from Q62
-      alcoholUse: v.string(), // from Q25
-      drugUse: v.string(), // from Q31
-      petPreference: v.string(), // extracted from Q65-66
-      locationPreference: v.string(), // "city", "suburb", "rural", "flexible"
+      sleepSchedule: v.optional(v.string()),
+      exerciseLevel: v.optional(v.string()),
+      dietType: v.optional(v.string()),
+      alcoholUse: v.optional(v.string()),
+      drugUse: v.optional(v.string()),
+      petPreference: v.optional(v.string()),
+      locationPreference: v.optional(v.string()),
     }),
 
     // Life story - narrative elements (Phase 2)
@@ -298,11 +297,11 @@ export default defineSchema({
     // Social profile (Phase 3)
     socialProfile: v.optional(
       v.object({
-        socialStyle: v.string(), // "very active" | "balanced" | "introverted"
+        socialStyle: v.optional(v.string()),
         weekendStyle: v.optional(v.string()),
         idealFridayNight: v.optional(v.string()),
-        goOutFrequency: v.number(), // 1-10
-        friendApprovalImportance: v.number(), // 1-10
+        goOutFrequency: v.optional(v.number()),
+        friendApprovalImportance: v.optional(v.number()),
         socialCircleVision: v.optional(v.string()),
       })
     ),
@@ -310,9 +309,9 @@ export default defineSchema({
     // Intimacy profile (Phase 4)
     intimacyProfile: v.optional(
       v.object({
-        physicalIntimacyImportance: v.number(), // 1-10
-        physicalAttractionImportance: v.number(), // 1-10
-        pdaComfort: v.string(),
+        physicalIntimacyImportance: v.optional(v.number()),
+        physicalAttractionImportance: v.optional(v.number()),
+        pdaComfort: v.optional(v.string()),
         emotionalIntimacyApproach: v.optional(v.string()),
         connectionTriggers: v.array(v.string()),
         healthyIntimacyVision: v.optional(v.string()),

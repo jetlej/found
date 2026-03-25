@@ -9,7 +9,6 @@ export type VoiceQuestionIcon =
   | 'users'
   | 'target'
   | 'star'
-  | 'seedling'
   | 'sparkles';
 
 export interface VoiceQuestion {
@@ -72,10 +71,10 @@ export const VOICE_QUESTIONS: VoiceQuestion[] = [
   },
   {
     index: 7,
-    category: 'Growth',
-    icon: 'seedling',
-    text: "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?",
-    description: 'Growth mindset, self-awareness, evolution',
+    category: 'Attraction',
+    icon: 'sparkles',
+    text: 'What are you attracted to — physically and otherwise?\n\nAnd how would you describe yourself physically?',
+    description: 'Physical attraction preferences, chemistry, physical self-description',
   },
 ];
 

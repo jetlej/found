@@ -52,7 +52,9 @@ type RouteState =
   | { status: 'unauthenticated' }
   | { status: 'onboarding'; route: string }
   | { status: 'voice_questions' }
+  | { status: 'generating_profile' }
   | { status: 'profile_audit' }
+  | { status: 'generating_matches' }
   | { status: 'ready' };
 
 function deriveRouteState(p: {
@@ -65,6 +67,7 @@ function deriveRouteState(p: {
   cachedUser: any;
   voiceRecordingCount: number | undefined;
   hasProfile: boolean | undefined;
+  matchGenStatus: { isAnalyzing: boolean; hasAnyAnalyses: boolean } | null | undefined;
 }): RouteState {
   if (!p.authReady) return { status: 'loading' };
   if (!p.effectiveIsSignedIn) return { status: 'unauthenticated' };
@@ -74,7 +77,6 @@ function deriveRouteState(p: {
     if (!p.cachedUser.onboardingComplete) {
       return { status: 'onboarding', route: '/(onboarding)/referral' };
     }
-    // Past onboarding — stay on current screen; voice/audit require network anyway
     return { status: 'ready' };
   }
 
@@ -97,8 +99,12 @@ function deriveRouteState(p: {
   if (p.voiceRecordingCount === undefined) return { status: 'loading' };
   if (p.voiceRecordingCount < TOTAL_VOICE_QUESTIONS) return { status: 'voice_questions' };
   if (p.hasProfile === undefined) return { status: 'loading' };
-  if (!p.hasProfile) return { status: 'voice_questions' };
+  if (!p.hasProfile) return { status: 'generating_profile' };
   if (!p.currentUser.profileAuditCompletedAt) return { status: 'profile_audit' };
+
+  // Audit done — check if matches are still generating
+  if (p.matchGenStatus === undefined) return { status: 'loading' };
+  if (p.matchGenStatus?.isAnalyzing) return { status: 'generating_matches' };
 
   return { status: 'ready' };
 }
@@ -179,6 +185,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const hasProfile = useQuery(
     api.userProfiles.hasProfile,
     currentUser?._id ? { userId: currentUser._id } : 'skip'
+  );
+  const matchGenStatus = useQuery(
+    api.matching.getMatchGenerationStatusForCurrentUser,
+    currentUser?.profileAuditCompletedAt ? {} : 'skip'
   );
 
   // If signed in but no Convex user doc exists, create one. This handles the
@@ -289,6 +299,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     cachedUser,
     voiceRecordingCount,
     hasProfile,
+    matchGenStatus,
   });
 
   // ── Routing effect (simple switch, setHasRouted always called) ──────────
@@ -314,12 +325,25 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       case 'onboarding':
         if (inAuthGroup || onLandingPage) router.replace(routeState.route);
         break;
-      case 'voice_questions':
-        if (inAuthGroup || onLandingPage) router.replace('/(tabs)/questions');
+      case 'voice_questions': {
+        const onQuestionsTab = segments[0] === '(tabs)' && segments[1] === 'questions';
+        const inOnboarding = segments[0] === '(onboarding)';
+        if (!onQuestionsTab && !inOnboarding) router.replace('/(tabs)/questions');
         break;
+      }
+      case 'generating_profile': {
+        const onQuestionsTab = segments[0] === '(tabs)' && segments[1] === 'questions';
+        if (!onQuestionsTab) router.replace('/(tabs)/questions');
+        break;
+      }
       case 'profile_audit':
         if (segments[0] !== 'profile-audit') {
           router.replace('/profile-audit?firstTime=true');
+        }
+        break;
+      case 'generating_matches':
+        if (segments[0] !== 'profile-audit') {
+          router.replace('/profile-audit?awaitingMatches=true');
         }
         break;
       case 'ready':

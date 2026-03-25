@@ -19,7 +19,7 @@ Users answer 8 open-ended questions by recording voice memos. AI transcribes and
 | 5   | Family & Future      | "What's your relationship with family like, and what do you envision for your own future?"                                | family closeness, kids, future plans                      |
 | 6   | What You Want        | "What are you looking for in a partner? What would make someone not right for you?"                                       | partner preferences, dealbreakers                         |
 | 7   | Passions             | "What are you passionate about? What could you talk about for hours?"                                                     | interests, hobbies, passions                              |
-| 8   | Growth               | "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?" | growth mindset, self-awareness, evolution                 |
+| 8   | Attraction           | "What are you attracted to — physically and otherwise? And how would you describe yourself physically?" | physical attraction preferences, chemistry, physical self-description |
 
 ## Technical Architecture
 

@@ -290,6 +290,93 @@ export const replaceSeedRecordings = internalMutation({
   },
 });
 
+// Delete all recordings for a specific question index (one-shot migration)
+export const deleteRecordingsForQuestionIndex = internalMutation({
+  args: { questionIndex: v.number() },
+  handler: async (ctx, args) => {
+    const all = await ctx.db.query('voiceRecordings').collect();
+    let deleted = 0;
+    for (const r of all) {
+      if (r.questionIndex === args.questionIndex) {
+        await ctx.storage.delete(r.storageId);
+        await ctx.db.delete(r._id);
+        deleted++;
+      }
+    }
+    console.log(`Deleted ${deleted} recordings for questionIndex ${args.questionIndex}`);
+    return deleted;
+  },
+});
+
+// Delete all recordings with questionIndex >= TOTAL_VOICE_QUESTIONS (stale from old question sets)
+export const deleteOutOfRangeRecordings = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query('voiceRecordings').collect();
+    let deleted = 0;
+    for (const r of all) {
+      if (r.questionIndex >= TOTAL_VOICE_QUESTIONS) {
+        await ctx.storage.delete(r.storageId);
+        await ctx.db.delete(r._id);
+        deleted++;
+      }
+    }
+    console.log(`Deleted ${deleted} out-of-range recordings (index >= ${TOTAL_VOICE_QUESTIONS})`);
+    return deleted;
+  },
+});
+
+// Reset users with incomplete recordings back to pre-profile state.
+// Clears profileAuditCompletedAt, deletes userProfiles doc, and clears compatibility analyses.
+export const resetIncompleteUsers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const allRecordings = await ctx.db.query('voiceRecordings').collect();
+    const countByUser = new Map<string, number>();
+    for (const r of allRecordings) {
+      countByUser.set(r.userId, (countByUser.get(r.userId) || 0) + 1);
+    }
+
+    const allUsers = await ctx.db.query('users').collect();
+    let reset = 0;
+    for (const user of allUsers) {
+      const count = countByUser.get(user._id) ?? 0;
+      if (count >= TOTAL_VOICE_QUESTIONS) continue;
+
+      // Clear audit gate
+      await ctx.db.patch(user._id, { profileAuditCompletedAt: undefined });
+
+      // Delete userProfiles doc
+      const profile = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', user._id))
+        .first();
+      if (profile) await ctx.db.delete(profile._id);
+
+      // Delete compatibility analyses
+      const asUser1 = await ctx.db
+        .query('compatibilityAnalyses')
+        .withIndex('by_user1', (q) => q.eq('user1Id', user._id))
+        .collect();
+      const asUser2 = await ctx.db
+        .query('compatibilityAnalyses')
+        .withIndex('by_user2', (q) => q.eq('user2Id', user._id))
+        .collect();
+      for (const a of [...asUser1, ...asUser2]) {
+        await ctx.db.delete(a._id);
+      }
+
+      console.log(
+        `Reset user ${user.name ?? user._id} (had ${count}/${TOTAL_VOICE_QUESTIONS} recordings)`
+      );
+      reset++;
+    }
+
+    console.log(`Reset ${reset} users with incomplete recordings`);
+    return reset;
+  },
+});
+
 // Get all user IDs that have complete voice recordings
 export const getUsersWithCompleteRecordings = internalQuery({
   args: {},

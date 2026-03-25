@@ -209,9 +209,10 @@ function AuditTag({
 export default function ProfileAuditScreen() {
   const userId = useEffectiveUserId();
   const router = useRouter();
-  const { firstTime, fromRegenerate } = useLocalSearchParams<{
+  const { firstTime, fromRegenerate, awaitingMatches } = useLocalSearchParams<{
     firstTime?: string;
     fromRegenerate?: string;
+    awaitingMatches?: string;
   }>();
   const isFirstTime = firstTime === 'true';
   const isFromRegenerate = fromRegenerate === 'true';
@@ -238,7 +239,11 @@ export default function ProfileAuditScreen() {
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
-  const [analyzingCompat, setAnalyzingCompat] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState(false);
+  const analyzingCompat =
+    awaitingMatches === 'true' ||
+    justSubmitted ||
+    (matchGenStatus?.isAnalyzing === true && !matchGenStatus?.hasAnyAnalyses);
 
   useEffect(() => {
     if (myProfile && !initialized) {
@@ -268,7 +273,7 @@ export default function ProfileAuditScreen() {
       if (isMandatory) {
         await completeProfileAudit({});
         setSaving(false);
-        setAnalyzingCompat(true);
+        setJustSubmitted(true);
         return;
       }
     } catch (e) {

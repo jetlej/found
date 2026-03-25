@@ -112,6 +112,14 @@ export const upsertProfile = internalMutation({
           socialCircleVision: v.optional(v.string()),
         })
       ),
+      attractionProfile: v.optional(
+        v.object({
+          physicalPreferences: v.array(v.string()),
+          nonPhysicalPreferences: v.array(v.string()),
+          attractionStyle: v.optional(v.string()),
+          physicalSelfDescription: v.optional(v.string()),
+        })
+      ),
       intimacyProfile: v.optional(
         v.object({
           physicalIntimacyImportance: v.optional(v.number()),

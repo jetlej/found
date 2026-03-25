@@ -390,50 +390,6 @@ export const backfillUserTypes = internalMutation({
 });
 
 // Delete ALL bot users and all their related data (answers, photos, recordings, profiles, analyses)
-export const deleteAllBots = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query('users').collect();
-    const toDelete = users.filter((u) => u.type === 'bot' || u.waitlistPosition === 999);
-
-    for (const user of toDelete) {
-      const answers = await ctx.db
-        .query('answers')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
-        .collect();
-      for (const a of answers) await ctx.db.delete(a._id);
-      const photos = await ctx.db
-        .query('photos')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
-        .collect();
-      for (const p of photos) await ctx.db.delete(p._id);
-      const recordings = await ctx.db
-        .query('voiceRecordings')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
-        .collect();
-      for (const r of recordings) await ctx.db.delete(r._id);
-      const profiles = await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('userId', user._id))
-        .collect();
-      for (const p of profiles) await ctx.db.delete(p._id);
-      const analyses1 = await ctx.db
-        .query('compatibilityAnalyses')
-        .withIndex('by_user1', (q) => q.eq('user1Id', user._id))
-        .collect();
-      for (const a of analyses1) await ctx.db.delete(a._id);
-      const analyses2 = await ctx.db
-        .query('compatibilityAnalyses')
-        .withIndex('by_user2', (q) => q.eq('user2Id', user._id))
-        .collect();
-      for (const a of analyses2) await ctx.db.delete(a._id);
-      await ctx.db.delete(user._id);
-    }
-
-    return { deleted: toDelete.length, names: toDelete.map((u) => u.name) };
-  },
-});
-
 // One-time: delete non-voice bot users and all their related data
 export const deleteNonVoiceBots = internalMutation({
   args: {},

@@ -42,11 +42,11 @@ export const COMPATIBILITY_CATEGORIES = [
     description: 'Compatible social energy, friend groups, and going-out habits',
   },
   {
-    key: 'growthMindset',
-    label: 'Growth Mindset',
+    key: 'physicalAttraction',
+    label: 'Physical Attraction',
     weight: 2,
     description:
-      'Shared commitment to personal growth — therapy, self-reflection, spiritual practices, learning from mistakes. Score high when both actively invest in becoming better people.',
+      'Likelihood of mutual physical attraction based on stated preferences and self-descriptions. Score high when what one person is attracted to aligns with how the other describes themselves, and vice versa. Score low only when there is a clear mismatch. When data is insufficient, default to 6.',
   },
   {
     key: 'sharedPassions',

@@ -31,7 +31,7 @@ const VOICE_QUESTION_MAPPING = [
   { index: 4, captures: 'family closeness, kids, location, future plans' },
   { index: 5, captures: 'partner preferences, dealbreakers' },
   { index: 6, captures: 'interests, hobbies, passions' },
-  { index: 7, captures: 'growth mindset, self-awareness, evolution' },
+  { index: 7, captures: 'physical attraction preferences, chemistry, physical self-description' },
 ];
 
 // Comprehensive extraction prompt for voice transcripts
@@ -101,6 +101,12 @@ Respond with JSON in this exact format:
     "physicalAttractionImportance": <1-10 or null>,
     "pdaComfort": "<love_it|fine|moderate|private|null>",
     "connectionTriggers": ["trigger1", ...]
+  },
+  "attractionProfile": {
+    "physicalPreferences": ["body type, height, features, race/ethnicity, style, or other physical traits they find attractive"],
+    "nonPhysicalPreferences": ["non-physical attraction triggers like confidence, humor, intelligence, voice, energy, etc."],
+    "attractionStyle": "<1-2 sentence summary of their overall attraction pattern, or null>",
+    "physicalSelfDescription": "<how they describe their own physical appearance, or null>"
   },
   "lovePhilosophy": {
     "loveDefinition": "<string or null>",
@@ -488,6 +494,16 @@ export const parseVoiceProfile = internalAction({
             emotionalIntimacyApproach: undefined,
             connectionTriggers: extractedProfile.intimacyProfile.connectionTriggers || [],
             healthyIntimacyVision: undefined,
+          }
+        : undefined,
+      // Attraction profile
+      attractionProfile: extractedProfile.attractionProfile
+        ? {
+            physicalPreferences: extractedProfile.attractionProfile.physicalPreferences || [],
+            nonPhysicalPreferences: extractedProfile.attractionProfile.nonPhysicalPreferences || [],
+            attractionStyle: extractedProfile.attractionProfile.attractionStyle ?? undefined,
+            physicalSelfDescription:
+              extractedProfile.attractionProfile.physicalSelfDescription ?? undefined,
           }
         : undefined,
       // Love philosophy

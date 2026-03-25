@@ -34,9 +34,15 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
 
   const lines: string[] = [];
   lines.push(`## ${name}`);
-  lines.push(
-    `**Demographics:** ${age} years old, ${user.gender || 'unknown'}, ${user.location || 'unknown location'}`
-  );
+  const demoParts = [
+    `${age} years old`,
+    user.gender || 'unknown',
+    user.location || 'unknown location',
+  ];
+  if (user.heightInches)
+    demoParts.push(`${Math.floor(user.heightInches / 12)}'${user.heightInches % 12}" tall`);
+  if (user.ethnicity) demoParts.push(user.ethnicity);
+  lines.push(`**Demographics:** ${demoParts.join(', ')}`);
   if (user.ageRangeMin && user.ageRangeMax) {
     lines.push(
       `**Preferred Partner Age Range:** ${user.ageRangeMin}-${user.ageRangeMax} (dealbreaker: ${user.ageRangeDealbreaker ? 'yes' : 'no'})`
@@ -157,6 +163,23 @@ function formatProfile(name: string, user: any, rawProfile: any): string {
     if (ipLines.length) {
       lines.push(`\n**Intimacy:**`);
       lines.push(...ipLines);
+    }
+  }
+
+  // Attraction profile
+  if (profile.attractionProfile) {
+    const ap = profile.attractionProfile;
+    const apLines: string[] = [];
+    if (ap.physicalPreferences?.length)
+      apLines.push(`- Physically attracted to: ${ap.physicalPreferences.join(', ')}`);
+    if (ap.nonPhysicalPreferences?.length)
+      apLines.push(`- Non-physical attraction: ${ap.nonPhysicalPreferences.join(', ')}`);
+    if (ap.attractionStyle) apLines.push(`- Attraction style: ${ap.attractionStyle}`);
+    if (ap.physicalSelfDescription)
+      apLines.push(`- Physical self-description: ${ap.physicalSelfDescription}`);
+    if (apLines.length) {
+      lines.push(`\n**Attraction:**`);
+      lines.push(...apLines);
     }
   }
 

@@ -3,14 +3,11 @@ import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
 import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from '@/lib/voice-questions';
 import {
-  IconEraser,
-  IconEyeOff,
   IconMicrophone,
   IconPlayerPause,
   IconTrash,
   IconX,
   IconFileText,
-  IconSparkles,
 } from '@tabler/icons-react-native';
 import { useMutation, useQuery } from 'convex/react';
 import { Audio } from 'expo-av';
@@ -18,21 +15,10 @@ import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -43,118 +29,6 @@ function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-// Confetti particle component - explosive burst from center
-const CONFETTI_COLORS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#FFA07A',
-  '#98D8C8',
-  '#F7DC6F',
-  '#BB8FCE',
-  '#85C1E9',
-  '#FF85A2',
-  '#7BED9F',
-  '#70A1FF',
-  '#FFC048',
-];
-const CONFETTI_COUNT = 240;
-
-function ConfettiParticle({ index }: { index: number }) {
-  const translateY = useSharedValue(0);
-  const translateX = useSharedValue(0);
-  const rotate = useSharedValue(0);
-  const opacity = useSharedValue(1);
-  const scale = useSharedValue(0);
-
-  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
-  // Burst in all directions from center
-  const angle = Math.random() * Math.PI * 2;
-  const velocity = 200 + Math.random() * 300;
-  const targetX = Math.cos(angle) * velocity;
-  const targetY = Math.sin(angle) * velocity - 100; // bias upward
-  const size = 5 + Math.random() * 8;
-  const isCircle = Math.random() > 0.6;
-
-  useEffect(() => {
-    const delay = Math.random() * 100; // very tight burst
-    const duration = 600 + Math.random() * 400; // fast explosion
-    const fallDuration = 1200 + Math.random() * 800; // then gravity
-
-    scale.value = withDelay(delay, withTiming(1, { duration: 80 }));
-    // Burst out fast, then fall with gravity
-    translateX.value = withDelay(
-      delay,
-      withTiming(targetX, { duration, easing: Easing.out(Easing.quad) })
-    );
-    translateY.value = withDelay(
-      delay,
-      withSequence(
-        withTiming(targetY, { duration, easing: Easing.out(Easing.quad) }),
-        withTiming(targetY + 600 + Math.random() * 300, {
-          duration: fallDuration,
-          easing: Easing.in(Easing.quad),
-        })
-      )
-    );
-    rotate.value = withDelay(
-      delay,
-      withTiming(720 * (Math.random() > 0.5 ? 1 : -1), { duration: duration + fallDuration })
-    );
-    opacity.value = withDelay(
-      delay + duration + fallDuration * 0.5,
-      withTiming(0, { duration: fallDuration * 0.5 })
-    );
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    position: 'absolute' as const,
-    top: '40%',
-    left: '50%',
-    width: size,
-    height: isCircle ? size : size * 2.5,
-    borderRadius: isCircle ? size / 2 : 2,
-    backgroundColor: color,
-    opacity: opacity.value,
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { rotate: `${rotate.value}deg` },
-      { scale: scale.value },
-    ],
-  }));
-
-  return <Animated.View style={style} />;
-}
-
-function Confetti() {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {Array.from({ length: CONFETTI_COUNT }, (_, i) => (
-        <ConfettiParticle key={i} index={i} />
-      ))}
-    </View>
-  );
-}
-
-function CelebrationText({ children }: { children: React.ReactNode }) {
-  const opacity = useSharedValue(0);
-  useEffect(() => {
-    opacity.value = withDelay(800, withTiming(1, { duration: 500 }));
-  }, []);
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return (
-    <Animated.View
-      style={[
-        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-        style,
-      ]}
-    >
-      {children}
-    </Animated.View>
-  );
 }
 
 // Sound wave visualization component using reanimated for smooth 60fps
@@ -210,18 +84,12 @@ export default function VoiceQuestionsScreen() {
   const deleteRecordingMutation = useMutation(api.voiceRecordings.deleteRecording);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
-  const hasProfile = useQuery(
-    api.userProfiles.hasProfile,
-    currentUser?._id ? { userId: currentUser._id } : 'skip'
-  );
-
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [initialized, setInitialized] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -463,8 +331,8 @@ export default function VoiceQuestionsScreen() {
     }
     setShowTranscript(false);
     if (isLastQuestion) {
-      setSubmitted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/(tabs)/questions');
     } else {
       setCurrentIndex((prev) => prev + 1);
     }
@@ -513,60 +381,6 @@ export default function VoiceQuestionsScreen() {
   const hasRecording = !!existingRecording;
   const canProceed = hasRecording;
 
-  if (submitted) {
-    const profileReady = hasProfile === true;
-    return (
-      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-        <View style={styles.celebrationContainer}>
-          <Confetti />
-          <CelebrationText>
-            {profileReady ? (
-              <IconSparkles size={48} color={colors.text} />
-            ) : (
-              <ActivityIndicator
-                size="large"
-                color={colors.text}
-                style={{ marginBottom: spacing.sm }}
-              />
-            )}
-            <Text style={styles.celebrationTitle}>
-              {profileReady ? 'Time to Review Your Profile' : 'Thanks for sharing!'}
-            </Text>
-            {profileReady ? (
-              <View style={styles.checkmarkList}>
-                <View style={styles.checkmarkRow}>
-                  <IconEyeOff size={20} color={colors.text} />
-                  <Text style={styles.checkmarkText}>Hide anything that feels inaccurate</Text>
-                </View>
-                <View style={styles.checkmarkRow}>
-                  <IconEraser size={20} color={colors.text} />
-                  <Text style={styles.checkmarkText}>Remove things you'd rather keep private</Text>
-                </View>
-              </View>
-            ) : (
-              <Text style={styles.celebrationSubtitle}>
-                We're using AI to craft your profile and compatibility scores. This usually takes
-                about a minute.
-              </Text>
-            )}
-          </CelebrationText>
-          {profileReady && (
-            <View style={styles.footer}>
-              <Pressable
-                style={styles.nextButton}
-                onPress={() =>
-                  router.push({ pathname: '/profile-audit', params: { firstTime: 'true' } })
-                }
-              >
-                <Text style={styles.nextButtonText}>Edit My Profile</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <Animated.View style={[styles.flex, fadeStyle]}>
@@ -589,7 +403,17 @@ export default function VoiceQuestionsScreen() {
         </View>
 
         <Animated.View style={[styles.content, questionFadeStyle]}>
-          <Text style={styles.questionText}>{currentQuestion.text}</Text>
+          {currentQuestion.text.includes('\n\n') ? (
+            <View style={styles.questionTextGroup}>
+              {currentQuestion.text.split('\n\n').map((part, i) => (
+                <Text key={i} style={styles.questionTextPart}>
+                  {part}
+                </Text>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.questionText}>{currentQuestion.text}</Text>
+          )}
 
           <View style={styles.recordingArea}>
             {hasRecording && !isRecording ? (
@@ -735,47 +559,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.lg,
     textAlign: 'center',
   },
-  celebrationContainer: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  celebrationContent: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing['2xl'],
-  },
-  celebrationSubtitle: {
-    color: colors.textSecondary,
-    fontSize: fontSizes.base,
-    lineHeight: 24,
-    paddingHorizontal: spacing.lg,
-    textAlign: 'center',
-  },
-  celebrationTitle: {
-    color: colors.text,
-    fontFamily: fonts.serifBold,
-    fontSize: fontSizes['4xl'],
-    marginBottom: spacing.lg,
-    marginTop: spacing.xl,
-    textAlign: 'center',
-  },
-  checkmarkList: {
-    gap: 9,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-  },
-  checkmarkRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  checkmarkText: {
-    color: colors.text,
-    flexShrink: 1,
-    fontSize: fontSizes.lg,
-    lineHeight: 26,
-  },
   closeButton: {
     alignItems: 'center',
     height: 36,
@@ -911,6 +694,16 @@ const styles = StyleSheet.create({
     fontSize: fontSizes['2xl'],
     lineHeight: 36,
     marginBottom: spacing['2xl'],
+  },
+  questionTextGroup: {
+    gap: spacing.sm,
+    marginBottom: spacing['2xl'],
+  },
+  questionTextPart: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes['2xl'],
+    lineHeight: 36,
   },
   readyState: {
     alignItems: 'center',

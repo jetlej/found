@@ -28,7 +28,15 @@ export default function TabLayout() {
     api.voiceRecordings.getCompletedCount,
     currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
-  const questionsComplete = recordingCount !== undefined && recordingCount >= TOTAL_VOICE_QUESTIONS;
+  const hasProfile = useQuery(
+    api.userProfiles.hasProfile,
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
+  );
+  const questionsComplete =
+    recordingCount !== undefined &&
+    recordingCount >= TOTAL_VOICE_QUESTIONS &&
+    hasProfile === true &&
+    !!currentUser?.profileAuditCompletedAt;
 
   // Entrance animations (run once on mount)
   const hasAnimated = useRef(false);

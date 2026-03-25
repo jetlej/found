@@ -56,6 +56,7 @@ alwaysApply: false
 - `relationshipStyle`: loveLanguage, conflictStyle, communicationFrequency, financialApproach, aloneTimeNeed
 - `familyPlans`: wantsKids, kidsTimeline, familyCloseness, parentingStyle
 - `lifestyle`: sleepSchedule, exerciseLevel, dietType, alcoholUse, drugUse, petPreference, locationPreference
+- `attractionProfile`: optional object — `physicalPreferences`: string[], `nonPhysicalPreferences`: string[], `attractionStyle`: optional string, `physicalSelfDescription`: optional string
 - Narrative sections: lifeStory, socialProfile, intimacyProfile, lovePhilosophy, partnerPreferences, bioElements, demographics, health
 - Generated: `generatedBio`, `shortBio`, `keywords`: string[], `processedAt`, `openaiModel`, `confidence`
 
@@ -63,6 +64,6 @@ alwaysApply: false
 - `userIdPair`: string — sorted "id1_id2" for dedup (index: `by_pair`)
 - `user1Id`: Id<"users"> (index: `by_user1`), `user2Id`: Id<"users"> (index: `by_user2`)
 - `summary`: string, `greenFlags`: string[], `yellowFlags`: string[], `redFlags`: string[]
-- `categoryScores`: object with 10 number fields — defined in `convex/lib/compatibilityCategories.ts` (coreValues, lifestyleAlignment, relationshipGoals, emotionalCompatibility, familyPlanning, socialLifestyle, growthMindset, sharedPassions, lifeStoryDepth, partnerFit)
+- `categoryScores`: object with 10 number fields — defined in `convex/lib/compatibilityCategories.ts` (coreValues, lifestyleAlignment, relationshipGoals, emotionalCompatibility, familyPlanning, socialLifestyle, physicalAttraction, sharedPassions, lifeStoryDepth, partnerFit)
 - `overallScore`: number (0-100, sum of categories with dealbreaker penalty)
 - `generatedAt`: number (timestamp), `openaiModel`: string

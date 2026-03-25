@@ -15,12 +15,12 @@ import {
   IconChevronLeft,
   IconListCheck,
   IconLock,
-  IconPlant,
   IconSparkles,
   IconStar,
   IconTarget,
   IconUsers,
 } from '@tabler/icons-react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -165,7 +165,6 @@ const ICONS: Record<VoiceQuestionIcon, React.ComponentType<{ size: number; color
   users: IconUsers,
   target: IconTarget,
   star: IconStar,
-  seedling: IconPlant,
   sparkles: IconSparkles,
 };
 
@@ -202,11 +201,45 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
 
+  const hasProfile = useQuery(
+    api.userProfiles.hasProfile,
+    currentUser?._id ? { userId: currentUser._id } : 'skip'
+  );
+
   const regenerateProfile = useMutation(api.users.regenerateProfile);
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateStartedAt, setRegenerateStartedAt] = useState<number | null>(null);
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [regenerateReady, setRegenerateReady] = useState(false);
+  const [genProfileTimedOut, setGenProfileTimedOut] = useState(false);
+  const [genProfileRetrying, setGenProfileRetrying] = useState(false);
+  const parentNav = useNavigation().getParent();
+
+  // Hide tab bar while any full-screen overlay is showing
+  useEffect(() => {
+    if (!parentNav) return;
+    if (regenerating || regenerateReady || generatingProfile) {
+      parentNav.setOptions({ tabBarStyle: { display: 'none' } });
+    } else {
+      parentNav.setOptions({
+        tabBarStyle: {
+          backgroundColor: '#000000',
+          borderTopColor: 'rgba(255,255,255,0.1)',
+          paddingTop: 8,
+        },
+      });
+    }
+  }, [regenerating, regenerateReady, generatingProfile, parentNav]);
+
+  // Timeout for first-time profile generation
+  useEffect(() => {
+    if (!generatingProfile) {
+      setGenProfileTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setGenProfileTimedOut(true), 90_000);
+    return () => clearTimeout(timer);
+  }, [generatingProfile, genProfileRetrying]);
 
   useEffect(() => {
     if (
@@ -222,6 +255,8 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
   }, [regenerating, regenerateStartedAt, myProfile?.processedAt]);
 
   const completedCount = recordings?.length ?? 0;
+  const generatingProfile =
+    completedCount >= TOTAL_VOICE_QUESTIONS && hasProfile === false && !myProfile;
 
   const basicsComplete = !!(
     currentUser?.ageRangeMin != null &&
@@ -493,6 +528,56 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
             ) : isCooldownActive ? (
               <Text style={styles.regenerateHelpText}>{cooldownLabel}</Text>
             ) : null}
+          </View>
+        )}
+
+        {generatingProfile && (
+          <View style={styles.celebrationOverlay}>
+            <CelebrationText>
+              {genProfileTimedOut ? (
+                <IconAlertTriangle size={48} color={colors.text} />
+              ) : (
+                <ActivityIndicator
+                  size="large"
+                  color={colors.text}
+                  style={{ marginBottom: spacing.sm }}
+                />
+              )}
+              <Text style={styles.celebrationTitle}>
+                {genProfileTimedOut ? 'Taking Longer Than Expected' : 'Thanks for sharing!'}
+              </Text>
+              <Text style={styles.celebrationSubtitle}>
+                {genProfileTimedOut
+                  ? 'Profile generation hit a snag. Tap below to try again.'
+                  : "We're using AI to craft your profile. This usually takes about a minute."}
+              </Text>
+            </CelebrationText>
+            {genProfileTimedOut && (
+              <View
+                style={[
+                  styles.stickyFooter,
+                  { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+                ]}
+              >
+                <Pressable
+                  style={[styles.regenerateButton, genProfileRetrying && styles.buttonDisabled]}
+                  disabled={genProfileRetrying}
+                  onPress={async () => {
+                    setGenProfileRetrying(true);
+                    setGenProfileTimedOut(false);
+                    try {
+                      await regenerateProfile({});
+                    } catch {
+                      setGenProfileTimedOut(true);
+                    } finally {
+                      setGenProfileRetrying(false);
+                    }
+                  }}
+                >
+                  <Text style={styles.regenerateButtonText}>Try Again</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         )}
 

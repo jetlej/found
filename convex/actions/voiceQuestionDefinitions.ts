@@ -41,7 +41,7 @@ export const VOICE_QUESTIONS = [
   },
   {
     index: 7,
-    category: 'Growth',
-    text: "How have you grown in the last few years? What are some things you used to believe that you've changed your mind about?",
+    category: 'Attraction',
+    text: 'What are you attracted to — physically and otherwise?\n\nAnd how would you describe yourself physically?',
   },
 ];

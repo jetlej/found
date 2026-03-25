@@ -306,6 +306,16 @@ export default defineSchema({
       })
     ),
 
+    // Attraction profile (from voice Q7)
+    attractionProfile: v.optional(
+      v.object({
+        physicalPreferences: v.array(v.string()),
+        nonPhysicalPreferences: v.array(v.string()),
+        attractionStyle: v.optional(v.string()),
+        physicalSelfDescription: v.optional(v.string()),
+      })
+    ),
+
     // Intimacy profile (Phase 4)
     intimacyProfile: v.optional(
       v.object({

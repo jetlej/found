@@ -51,6 +51,7 @@ type RouteState =
   | { status: 'loading' }
   | { status: 'unauthenticated' }
   | { status: 'onboarding'; route: string }
+  | { status: 'notification_prompt' }
   | { status: 'voice_questions' }
   | { status: 'generating_profile' }
   | { status: 'profile_audit' }
@@ -93,6 +94,10 @@ function deriveRouteState(p: {
       route = `/(onboarding)/${p.currentUser.onboardingStep}`;
     }
     return { status: 'onboarding', route };
+  }
+
+  if (!p.currentUser.notificationPromptedAt) {
+    return { status: 'notification_prompt' };
   }
 
   // Onboarding complete — check voice questions
@@ -284,7 +289,19 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // Initialize offline sync and push notifications
   useOfflineSync();
-  usePushNotifications();
+  usePushNotifications(({ startIndex }) => {
+    if (!effectiveIsSignedIn) return;
+
+    if (typeof startIndex === 'number') {
+      router.push({
+        pathname: '/(onboarding)/voice-questions',
+        params: { startIndex: String(startIndex) },
+      });
+      return;
+    }
+
+    router.push('/(tabs)/questions');
+  });
 
   // ── Derive route state (pure, no side effects) ──────────────────────────
   const authReady = isDevImpersonating ? true : isOnline ? isLoaded : isLoaded || offlineAuthLoaded;
@@ -314,9 +331,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (routeState.status === 'loading') return;
     if (!navigationState?.key) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const onLandingPage =
-      segments[0] === undefined || segments[0] === 'index' || segments.length === 0;
+    const segment0 = segments[0] as string | undefined;
+    const segment1 = segments[1] as string | undefined;
+    const inAuthGroup = segment0 === '(auth)';
+    const onLandingPage = segment0 === undefined || segments.length === 0;
 
     switch (routeState.status) {
       case 'unauthenticated':
@@ -325,10 +343,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       case 'onboarding':
         if (inAuthGroup || onLandingPage) router.replace(routeState.route);
         break;
+      case 'notification_prompt': {
+        const onNotificationPrompt = segment0 === '(onboarding)' && segment1 === 'notifications';
+        if (!onNotificationPrompt) router.replace('/(onboarding)/notifications' as never);
+        break;
+      }
       case 'voice_questions': {
-        const onQuestionsTab = segments[0] === '(tabs)' && segments[1] === 'questions';
-        const inOnboarding = segments[0] === '(onboarding)';
-        if (!onQuestionsTab && !inOnboarding) router.replace('/(tabs)/questions');
+        const onQuestionsTab = segment0 === '(tabs)' && segment1 === 'questions';
+        const onVoiceQuestionScreen = segment0 === '(onboarding)' && segment1 === 'voice-questions';
+        if (!onQuestionsTab && !onVoiceQuestionScreen) router.replace('/(tabs)/questions');
         break;
       }
       case 'generating_profile': {
@@ -337,12 +360,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         break;
       }
       case 'profile_audit':
-        if (segments[0] !== 'profile-audit') {
+        if (segment0 !== 'profile-audit') {
           router.replace('/profile-audit?firstTime=true');
         }
         break;
       case 'generating_matches':
-        if (segments[0] !== 'profile-audit') {
+        if (segment0 !== 'profile-audit') {
           router.replace('/profile-audit?awaitingMatches=true');
         }
         break;

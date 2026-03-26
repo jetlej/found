@@ -12,6 +12,7 @@ import type * as actions_analyzeCompatibility from "../actions/analyzeCompatibil
 import type * as actions_parseVoiceProfile from "../actions/parseVoiceProfile.js";
 import type * as actions_seedTestPhotos from "../actions/seedTestPhotos.js";
 import type * as actions_seedVoiceTestUsers from "../actions/seedVoiceTestUsers.js";
+import type * as actions_sendQuestionNotifications from "../actions/sendQuestionNotifications.js";
 import type * as actions_voiceQuestionDefinitions from "../actions/voiceQuestionDefinitions.js";
 import type * as compatibilityAnalyses from "../compatibilityAnalyses.js";
 import type * as config from "../config.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "actions/parseVoiceProfile": typeof actions_parseVoiceProfile;
   "actions/seedTestPhotos": typeof actions_seedTestPhotos;
   "actions/seedVoiceTestUsers": typeof actions_seedVoiceTestUsers;
+  "actions/sendQuestionNotifications": typeof actions_sendQuestionNotifications;
   "actions/voiceQuestionDefinitions": typeof actions_voiceQuestionDefinitions;
   compatibilityAnalyses: typeof compatibilityAnalyses;
   config: typeof config;

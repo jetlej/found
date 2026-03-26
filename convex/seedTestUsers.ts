@@ -390,14 +390,20 @@ export const backfillUserTypes = internalMutation({
 });
 
 // Delete ALL bot users and all their related data (answers, photos, recordings, profiles, analyses)
-// One-time: delete non-voice bot users and all their related data
-export const deleteNonVoiceBots = internalMutation({
+// One-time: delete bot users that have no userProfile (stale duplicates)
+export const deleteStaleBots = internalMutation({
   args: {},
   handler: async (ctx) => {
     const users = await ctx.db.query('users').collect();
-    const toDelete = users.filter(
-      (u) => u.waitlistPosition === 999 && u.onboardingType !== 'voice'
-    );
+    const bots = users.filter((u) => u.type === 'bot');
+    const toDelete = [];
+    for (const bot of bots) {
+      const profile = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', bot._id))
+        .first();
+      if (!profile) toDelete.push(bot);
+    }
 
     for (const user of toDelete) {
       // Delete answers

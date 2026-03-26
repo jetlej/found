@@ -380,6 +380,25 @@ export const updateNotificationSettings = mutation({
   },
 });
 
+export const completeNotificationOnboarding = mutation({
+  args: {
+    granted: v.boolean(),
+    pushToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) return;
+
+    await ctx.db.patch(user._id, {
+      notificationPromptedAt: Date.now(),
+      notificationsEnabled: args.granted,
+      pushToken: args.pushToken ?? user.pushToken,
+      reminderHour: args.granted ? (user.reminderHour ?? 12) : user.reminderHour,
+      reminderMinute: args.granted ? (user.reminderMinute ?? 0) : user.reminderMinute,
+    });
+  },
+});
+
 // Internal query to list all users (for server-side actions only)
 export const listAll = internalQuery({
   args: {},

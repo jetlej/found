@@ -4,6 +4,12 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 
+type NotificationNavigationPayload = {
+  startIndex?: number;
+};
+
+type NotificationNavigationHandler = (payload: NotificationNavigationPayload) => void;
+
 // Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -15,9 +21,27 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export function usePushNotifications() {
+function getNotificationPayload(
+  response: Notifications.NotificationResponse
+): NotificationNavigationPayload | null {
+  const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+  if (data.type !== 'voice_question_needed') return null;
+
+  const startIndexRaw = data.startIndex;
+  const parsedStartIndex =
+    typeof startIndexRaw === 'number'
+      ? startIndexRaw
+      : typeof startIndexRaw === 'string'
+        ? Number.parseInt(startIndexRaw, 10)
+        : undefined;
+
+  return Number.isFinite(parsedStartIndex) ? { startIndex: parsedStartIndex } : {};
+}
+
+export function usePushNotifications(onNotificationNavigate?: NotificationNavigationHandler) {
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const lastHandledIdentifier = useRef<string | null>(null);
 
   useEffect(() => {
     // Listen for notifications when app is in foreground
@@ -28,11 +52,28 @@ export function usePushNotifications() {
     );
 
     // Listen for user interacting with notification
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(
-      (_response) => {
-        // Handle user tapping on notification
-      }
-    );
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const identifier = response.notification.request.identifier;
+      if (lastHandledIdentifier.current === identifier) return;
+      lastHandledIdentifier.current = identifier;
+
+      const payload = getNotificationPayload(response);
+      if (payload) onNotificationNavigate?.(payload);
+    });
+
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        const identifier = response.notification.request.identifier;
+        if (lastHandledIdentifier.current === identifier) return;
+        lastHandledIdentifier.current = identifier;
+
+        const payload = getNotificationPayload(response);
+        if (payload) onNotificationNavigate?.(payload);
+      })
+      .catch(() => {
+        // Best effort only
+      });
 
     return () => {
       try {
@@ -42,7 +83,7 @@ export function usePushNotifications() {
         // Cleanup not supported in this version
       }
     };
-  }, []);
+  }, [onNotificationNavigate]);
 
   return {};
 }

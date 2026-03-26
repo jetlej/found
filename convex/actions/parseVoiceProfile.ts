@@ -22,7 +22,7 @@ interface ExtractionCost {
   cost: number;
 }
 
-// The 9 voice questions and what they capture
+// The 8 voice questions and what they capture
 const VOICE_QUESTION_MAPPING = [
   { index: 0, captures: 'values, identity, priorities' },
   { index: 1, captures: 'love language, relationship style, attachment' },
@@ -35,7 +35,7 @@ const VOICE_QUESTION_MAPPING = [
 ];
 
 // Comprehensive extraction prompt for voice transcripts
-const VOICE_PROFILE_EXTRACTION_PROMPT = `You are an AI assistant analyzing voice transcripts from a dating app where users answered 9 open-ended questions about themselves. The transcripts are raw speech-to-text, so expect natural speech patterns, filler words, and occasional transcription errors.
+const VOICE_PROFILE_EXTRACTION_PROMPT = `You are an AI assistant analyzing voice transcripts from a dating app where users answered 8 open-ended questions about themselves. The transcripts are raw speech-to-text, so expect natural speech patterns, filler words, and occasional transcription errors.
 
 Your job is to extract a comprehensive dating profile from these transcripts.
 
@@ -642,7 +642,7 @@ export const benchmarkOnboardingCost = action({
   },
 });
 
-// Re-parse all users who have completed 9 voice recordings
+// Re-parse all users who have completed all voice recordings
 export const reparseAllProfiles = action({
   args: { adminSecret: v.optional(v.string()) },
   handler: async (ctx, args) => {

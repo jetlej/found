@@ -120,6 +120,16 @@ export const reorder = mutation({
 });
 
 // Internal: get all photos (for server-side use only)
+export const getByUserInternal = internalQuery({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('photos')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .collect();
+  },
+});
+
 export const listAll = internalQuery({
   handler: async (ctx) => {
     return await ctx.db.query('photos').collect();

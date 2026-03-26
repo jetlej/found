@@ -9,6 +9,8 @@ import {
   MutationCtx,
 } from './_generated/server';
 import { TOTAL_VOICE_QUESTIONS } from './lib/voiceConfig';
+import { requireAdmin } from './lib/admin';
+import { Id } from './_generated/dataModel';
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -391,5 +393,67 @@ export const getUsersWithCompleteRecordings = internalQuery({
       if (count >= TOTAL_VOICE_QUESTIONS) completeUsers.push(userId);
     }
     return completeUsers;
+  },
+});
+
+// Admin tool for testing: invalidate one changed voice question across all users.
+// Deletes only the specified question's recordings, then unwinds profile/audit/matches for impacted users.
+export const invalidateQuestionAcrossUsers = mutation({
+  args: {
+    questionIndex: v.number(),
+    adminSecret: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminSecret);
+
+    const all = await ctx.db.query('voiceRecordings').collect();
+    const affectedUserIds = new Set<Id<'users'>>();
+    let deletedRecordings = 0;
+
+    for (const r of all) {
+      if (r.questionIndex !== args.questionIndex) continue;
+      affectedUserIds.add(r.userId);
+      await ctx.storage.delete(r.storageId);
+      await ctx.db.delete(r._id);
+      deletedRecordings++;
+    }
+
+    let clearedProfiles = 0;
+    let clearedAnalyses = 0;
+
+    for (const userId of affectedUserIds) {
+      await ctx.db.patch(userId, { profileAuditCompletedAt: undefined });
+
+      const profile = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', userId))
+        .first();
+      if (profile) {
+        await ctx.db.delete(profile._id);
+        clearedProfiles++;
+      }
+
+      const asUser1 = await ctx.db
+        .query('compatibilityAnalyses')
+        .withIndex('by_user1', (q) => q.eq('user1Id', userId))
+        .collect();
+      const asUser2 = await ctx.db
+        .query('compatibilityAnalyses')
+        .withIndex('by_user2', (q) => q.eq('user2Id', userId))
+        .collect();
+      const analysisIds = new Set([...asUser1, ...asUser2].map((a) => a._id));
+      for (const id of analysisIds) {
+        await ctx.db.delete(id);
+        clearedAnalyses++;
+      }
+    }
+
+    return {
+      questionIndex: args.questionIndex,
+      affectedUsers: affectedUserIds.size,
+      deletedRecordings,
+      clearedProfiles,
+      clearedAnalyses,
+    };
   },
 });

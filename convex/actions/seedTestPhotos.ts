@@ -101,7 +101,7 @@ export const seedPhotosForUser = internalAction({
     console.log(`Seeding photos for ${userId}...`);
 
     // Check existing photos — skip if already complete
-    const existing = await ctx.runQuery(internal.photos.getByUser, { userId });
+    const existing = await ctx.runQuery(internal.photos.getByUserInternal, { userId });
     if (existing.length >= args.urls.length) {
       console.log(`  Already has ${existing.length} photos, skipping`);
       return { userId: args.userId, added: 0, skipped: true };

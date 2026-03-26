@@ -12,6 +12,7 @@ export default defineSchema({
     notificationsEnabled: v.optional(v.boolean()),
     reminderHour: v.optional(v.number()),
     reminderMinute: v.optional(v.number()),
+    notificationPromptedAt: v.optional(v.number()),
     // Profile basics
     gender: v.optional(v.string()),
     location: v.optional(v.string()),
@@ -83,7 +84,7 @@ export default defineSchema({
   // Voice recordings for voice-based onboarding experiment
   voiceRecordings: defineTable({
     userId: v.id('users'),
-    questionIndex: v.number(), // 0-8 for the 9 voice questions
+    questionIndex: v.number(), // 0-7 for the 8 voice questions
     storageId: v.id('_storage'),
     durationSeconds: v.number(),
     transcription: v.optional(v.string()), // Populated after AI transcription

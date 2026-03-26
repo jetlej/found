@@ -69,6 +69,8 @@ export default defineSchema({
     lastProfileRegeneratedAt: v.optional(v.number()),
     // First-time profile audit gate completion timestamp
     profileAuditCompletedAt: v.optional(v.number()),
+    // Timestamp when "completed profile" broadcast was sent (one-time)
+    profileCompletionAnnouncedAt: v.optional(v.number()),
   })
     .index('by_clerk_id', ['clerkId'])
     .index('by_phone', ['phone'])

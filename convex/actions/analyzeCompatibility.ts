@@ -259,6 +259,84 @@ type AnalyzeArgs = {
   model?: string;
 };
 
+type ExpoPushMessage = {
+  to: string;
+  sound: 'default';
+  title: string;
+  body: string;
+  richContent?: { image: string };
+  data: Record<string, string>;
+};
+
+async function sendExpoBatch(messages: ExpoPushMessage[]) {
+  const response = await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Accept-encoding': 'gzip, deflate',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(messages),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Expo push failed (${response.status}): ${text}`);
+  }
+}
+
+async function broadcastProfileCompleted(
+  ctx: {
+    runQuery: any;
+  },
+  completedUser: {
+    _id: Id<'users'>;
+    name?: string;
+  }
+) {
+  const [allUsers, completedUserPhotos] = await Promise.all([
+    ctx.runQuery(internal.users.listAll, {}),
+    ctx.runQuery(internal.photos.getByUserInternal, { userId: completedUser._id }),
+  ]);
+
+  const firstPhotoUrl = [...completedUserPhotos].sort((a, b) => a.order - b.order)[0]?.url?.trim();
+  const displayName = completedUser.name?.trim() || 'Someone';
+
+  const messages: ExpoPushMessage[] = allUsers
+    .filter(
+      (u: any) =>
+        u.type === 'human' && !!u.pushToken && u.pushToken.startsWith('ExponentPushToken[')
+    )
+    .map((u: any) => {
+      const message: ExpoPushMessage = {
+        to: u.pushToken,
+        sound: 'default',
+        title: `${displayName} completed their profile!`,
+        body: 'Open Found to check your newest matches.',
+        data: {
+          type: 'profile_completed',
+          userId: String(completedUser._id),
+        },
+      };
+      if (firstPhotoUrl) {
+        message.richContent = { image: firstPhotoUrl };
+      }
+      return message;
+    });
+
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+    const batch = messages.slice(i, i + BATCH_SIZE);
+    try {
+      await sendExpoBatch(batch);
+    } catch (error) {
+      console.error('Failed profile-complete push batch:', error);
+    }
+  }
+
+  return { recipients: messages.length, hasImage: !!firstPhotoUrl };
+}
+
 async function runCompatibilityAnalysis(
   ctx: {
     runQuery: any;
@@ -421,6 +499,7 @@ export const analyzeAllForUser = internalAction({
       internal.compatibilityAnalyses.listForUserInternal,
       { userId: args.userId, limit: 2000 }
     );
+    const hadAnyAnalysesBeforeRun = existingAnalyses.length > 0;
     const existingOtherUserIds = new Set(
       existingAnalyses.map((a) => (a.user1Id === args.userId ? a.user2Id : a.user1Id))
     );
@@ -481,6 +560,19 @@ export const analyzeAllForUser = internalAction({
         userId: args.userId,
         cursor: cursor!,
       });
+    }
+
+    if (
+      newUser.type === 'human' &&
+      !newUser.profileCompletionAnnouncedAt &&
+      !hadAnyAnalysesBeforeRun &&
+      analyzed > 0
+    ) {
+      const broadcastResult = await broadcastProfileCompleted(ctx, newUser);
+      await ctx.runMutation(internal.users.markProfileCompletionAnnounced, { userId: args.userId });
+      console.log(
+        `profile-complete broadcast sent for ${newUser.name ?? newUser._id}: recipients=${broadcastResult.recipients}, hasImage=${broadcastResult.hasImage}`
+      );
     }
 
     console.log(

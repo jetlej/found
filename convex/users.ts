@@ -1,5 +1,12 @@
 import { v } from 'convex/values';
-import { internalQuery, mutation, query, QueryCtx, MutationCtx } from './_generated/server';
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  QueryCtx,
+  MutationCtx,
+} from './_generated/server';
 import { paginationOptsValidator } from 'convex/server';
 import { requireAdmin } from './lib/admin';
 import { internal } from './_generated/api';
@@ -647,5 +654,16 @@ export const listPaginated = internalQuery({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     return await ctx.db.query('users').paginate(args.paginationOpts);
+  },
+});
+
+export const markProfileCompletionAnnounced = internalMutation({
+  args: { userId: v.id('users') },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return false;
+    if (user.profileCompletionAnnouncedAt) return false;
+    await ctx.db.patch(args.userId, { profileCompletionAnnouncedAt: Date.now() });
+    return true;
   },
 });

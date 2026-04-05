@@ -183,7 +183,7 @@ export async function cancelDailyReminder(): Promise<void> {
 
 /**
  * Prompt for notifications - shows system dialog and returns result
- * Use this after first challenge join
+ * Returns Expo push token when available
  */
 export async function promptForNotifications(): Promise<{
   granted: boolean;
@@ -203,11 +203,6 @@ export async function promptForNotifications(): Promise<{
   }
 
   const granted = finalStatus === 'granted';
-
-  if (granted) {
-    // Schedule default reminder at noon
-    await scheduleDailyReminder(12, 0);
-  }
 
   // Try to get push token (may fail on simulator or without EAS config)
   let token: string | null = null;

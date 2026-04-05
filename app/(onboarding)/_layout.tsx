@@ -94,6 +94,7 @@ export default function OnboardingLayout() {
         <Stack.Screen name="marijuana" />
         <Stack.Screen name="drugs" />
         <Stack.Screen name="tattoos" />
+        <Stack.Screen name="fitness" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="basics-summary" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen

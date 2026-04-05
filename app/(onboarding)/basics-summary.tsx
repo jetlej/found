@@ -268,6 +268,14 @@ export default function EditBasicsScreen() {
           unanswered={!user.tattoos}
           onPress={() => navigateTo('tattoos')}
         />
+        <ProfileRow
+          label="Fitness"
+          value={
+            user.fitness ? `${user.fitness} / Partner: ${user.partnerFitness ?? 'None'}` : 'None'
+          }
+          unanswered={!user.fitness}
+          onPress={() => navigateTo('fitness')}
+        />
 
         <View style={styles.bottomPadding} />
       </ScrollView>

@@ -266,7 +266,8 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     currentUser?.politicalLeaning &&
     currentUser?.drinking &&
     currentUser?.drugs &&
-    currentUser?.tattoos
+    currentUser?.tattoos &&
+    currentUser?.fitness
   );
 
   const basicsStarted = currentUser?.completedCategories?.includes('the_basics') ?? false;
@@ -296,6 +297,8 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
       { field: 'marijuana', step: 'marijuana' },
       { field: 'drugs', step: 'drugs' },
       { field: 'tattoos', step: 'tattoos' },
+      { field: 'fitness', step: 'fitness' },
+      { field: 'partnerFitness', step: 'fitness' },
     ];
     for (const { field, step } of steps) {
       if (!(currentUser as any)[field]) return step;

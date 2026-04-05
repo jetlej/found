@@ -549,15 +549,6 @@ function RootLayoutNav() {
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
               <Stack.Screen
-                name="profile"
-                options={{
-                  headerShown: false,
-                  presentation: 'modal',
-                  animation: 'slide_from_bottom',
-                  gestureEnabled: true,
-                }}
-              />
-              <Stack.Screen
                 name="my-profile"
                 options={{
                   headerShown: false,

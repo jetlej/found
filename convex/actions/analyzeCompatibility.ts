@@ -305,7 +305,10 @@ async function broadcastProfileCompleted(
   const messages: ExpoPushMessage[] = allUsers
     .filter(
       (u: any) =>
-        u.type === 'human' && !!u.pushToken && u.pushToken.startsWith('ExponentPushToken[')
+        u._id !== completedUser._id &&
+        u.type === 'human' &&
+        !!u.pushToken &&
+        u.pushToken.startsWith('ExponentPushToken[')
     )
     .map((u: any) => {
       const message: ExpoPushMessage = {

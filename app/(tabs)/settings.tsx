@@ -1,6 +1,7 @@
 import { AppHeader } from '@/components/AppHeader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { api } from '@/convex/_generated/api';
+import { hasNotificationPermission, promptForNotifications } from '@/hooks/usePushNotifications';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
 import { TOTAL_VOICE_QUESTIONS } from '@/lib/voice-questions';
 import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
@@ -18,6 +19,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -29,6 +31,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const userId = useEffectiveUserId();
   const deleteCurrentUserAccount = useMutation(api.users.deleteCurrentUserAccount);
+  const updateNotifications = useMutation(api.users.updateNotificationSettings);
 
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const versionTapCountRef = useRef(0);
@@ -61,6 +64,46 @@ export default function SettingsScreen() {
     currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const questionsComplete = recordingCount !== undefined && recordingCount >= TOTAL_VOICE_QUESTIONS;
+  const notificationsEnabled = currentUser?.notificationsEnabled ?? false;
+  const [optimisticNotificationsEnabled, setOptimisticNotificationsEnabled] =
+    useState(notificationsEnabled);
+
+  useEffect(() => {
+    setOptimisticNotificationsEnabled(notificationsEnabled);
+  }, [notificationsEnabled]);
+
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (!userId) return;
+    setOptimisticNotificationsEnabled(enabled);
+    try {
+      if (enabled) {
+        const hasPermission = await hasNotificationPermission();
+        if (!hasPermission) {
+          const { granted, token } = await promptForNotifications();
+          if (!granted) {
+            setOptimisticNotificationsEnabled(false);
+            Alert.alert(
+              'Notifications Disabled',
+              'To enable notifications later, allow them in your device settings.'
+            );
+            return;
+          }
+          await updateNotifications({
+            notificationsEnabled: true,
+            pushToken: token ?? undefined,
+          });
+          return;
+        }
+
+        await updateNotifications({ notificationsEnabled: true });
+      } else {
+        await updateNotifications({ notificationsEnabled: false });
+      }
+    } catch (error) {
+      setOptimisticNotificationsEnabled(notificationsEnabled);
+      console.error('Failed to update notification settings:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -173,6 +216,19 @@ export default function SettingsScreen() {
               </Pressable>
             </View>
           )}
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <View style={styles.menuItem}>
+              <Text style={styles.menuText}>Notifications</Text>
+              <Switch
+                value={optimisticNotificationsEnabled}
+                onValueChange={handleToggleNotifications}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.surface}
+              />
+            </View>
+          </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>

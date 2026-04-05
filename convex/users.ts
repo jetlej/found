@@ -152,6 +152,8 @@ export const updateBasics = mutation({
     relationshipType: v.optional(v.string()),
     pets: v.optional(v.string()),
     tattoos: v.optional(v.string()),
+    fitness: v.optional(v.string()),
+    partnerFitness: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);

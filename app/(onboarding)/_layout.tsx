@@ -98,13 +98,6 @@ export default function OnboardingLayout() {
         <Stack.Screen name="notifications" />
         <Stack.Screen name="basics-summary" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen
-          name="questions"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
           name="voice-questions"
           options={{
             presentation: 'modal',

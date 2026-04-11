@@ -3,6 +3,7 @@ import { PhotoGrid } from '@/components/PhotoGrid';
 import { api } from '@/convex/_generated/api';
 import { hasNotificationPermission, promptForNotifications } from '@/hooks/usePushNotifications';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useOfflineStore } from '@/stores/offline';
 import { TOTAL_VOICE_QUESTIONS } from '@/lib/voice-questions';
 import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
 import { useAuth } from '@clerk/clerk-expo';
@@ -30,6 +31,8 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const router = useRouter();
   const userId = useEffectiveUserId();
+  const { devClerkId, setDevClerkId } = useOfflineStore();
+  const isDevImpersonating = __DEV__ && !!devClerkId;
   const deleteCurrentUserAccount = useMutation(api.users.deleteCurrentUserAccount);
   const updateNotifications = useMutation(api.users.updateNotificationSettings);
 
@@ -37,7 +40,10 @@ export default function SettingsScreen() {
   const versionTapCountRef = useRef(0);
   const versionTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? (isDevImpersonating ? { impersonateClerkId: devClerkId! } : {}) : 'skip'
+  );
 
   // Fade in once data is ready
   const fadeOpacity = useSharedValue(0);
@@ -230,6 +236,28 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {(currentUser?.role === 'admin' || isDevImpersonating) && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Admin</Text>
+              {isDevImpersonating ? (
+                <Pressable
+                  style={styles.stopImpersonatingButton}
+                  onPress={() => {
+                    setDevClerkId(null);
+                    router.replace('/(tabs)/settings');
+                  }}
+                >
+                  <Text style={styles.stopImpersonatingText}>Stop Impersonating</Text>
+                </Pressable>
+              ) : (
+                <Pressable style={styles.menuItem} onPress={() => router.push('/admin')}>
+                  <Text style={styles.menuText}>Admin Dashboard</Text>
+                  <Text style={styles.menuArrow}>→</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
             <Pressable style={styles.menuItem}>
@@ -374,6 +402,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   signOutText: { color: colors.error, fontSize: fontSizes.base, fontWeight: '500' },
+  stopImpersonatingButton: {
+    alignItems: 'center',
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+  },
+  stopImpersonatingText: { color: colors.text, fontSize: fontSizes.base, fontWeight: '600' },
   version: {
     color: colors.textMuted,
     fontSize: fontSizes.xs,

@@ -1,5 +1,6 @@
 import { api } from '@/convex/_generated/api';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useOfflineStore } from '@/stores/offline';
 import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from '@/lib/voice-questions';
 import {
@@ -7,6 +8,7 @@ import {
   IconMicrophone,
   IconPencil,
   IconPlayerPause,
+  IconPlayerPlay,
   IconTrash,
   IconX,
 } from '@tabler/icons-react-native';
@@ -73,11 +75,16 @@ function SoundWave({ isRecording }: { isRecording: boolean }) {
 
 export default function VoiceQuestionsScreen() {
   const userId = useEffectiveUserId();
+  const { devClerkId } = useOfflineStore();
+  const isDevImpersonating = __DEV__ && !!devClerkId;
   const router = useRouter();
   const params = useLocalSearchParams<{ startIndex?: string }>();
   const startIndex = parseInt(params.startIndex || '0', 10);
 
-  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? (isDevImpersonating ? { impersonateClerkId: devClerkId! } : {}) : 'skip'
+  );
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,
     currentUser?._id ? { userId: currentUser._id } : 'skip'
@@ -98,6 +105,11 @@ export default function VoiceQuestionsScreen() {
   const [isAppending, setIsAppending] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState('');
   const [transcriptDirty, setTranscriptDirty] = useState(false);
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackPositionSec, setPlaybackPositionSec] = useState(0);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const playbackPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,6 +144,58 @@ export default function VoiceQuestionsScreen() {
   const currentQuestion = VOICE_QUESTIONS[currentIndex];
   const existingRecording = recordingMap.get(currentIndex);
   const isLastQuestion = currentIndex === TOTAL_VOICE_QUESTIONS - 1;
+
+  // Admin playback: get URL for current recording (only when impersonating another user)
+  const recordingUrl = useQuery(
+    api.voiceRecordings.getRecordingUrl,
+    isDevImpersonating && existingRecording ? { storageId: existingRecording.storageId } : 'skip'
+  );
+
+  const stopPlayback = useCallback(async () => {
+    if (playbackPollRef.current) {
+      clearInterval(playbackPollRef.current);
+      playbackPollRef.current = null;
+    }
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+    setIsPlaying(false);
+    setPlaybackPositionSec(0);
+  }, []);
+
+  // Stop playback when question changes or component unmounts
+  useEffect(() => {
+    return () => {
+      stopPlayback();
+    };
+  }, [currentIndex, stopPlayback]);
+
+  const handlePlayToggle = useCallback(async () => {
+    if (!recordingUrl) return;
+    if (isPlaying) {
+      await stopPlayback();
+      return;
+    }
+    const { sound } = await Audio.Sound.createAsync({ uri: recordingUrl });
+    soundRef.current = sound;
+    await sound.playAsync();
+    setIsPlaying(true);
+    playbackPollRef.current = setInterval(async () => {
+      try {
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.didJustFinish) {
+            await stopPlayback();
+          } else {
+            setPlaybackPositionSec((status.positionMillis ?? 0) / 1000);
+          }
+        }
+      } catch {
+        await stopPlayback();
+      }
+    }, 250);
+  }, [recordingUrl, isPlaying, stopPlayback]);
 
   // Initialize starting index
   useEffect(() => {
@@ -460,12 +524,26 @@ export default function VoiceQuestionsScreen() {
           <View style={styles.recordingArea}>
             {hasRecording && !isRecording ? (
               <View style={styles.recordedState}>
-                <View style={styles.recordedBadge}>
-                  <IconCheck size={24} color={colors.success} />
+                <Pressable
+                  style={styles.recordedBadge}
+                  onPress={isDevImpersonating && recordingUrl ? handlePlayToggle : undefined}
+                  disabled={!isDevImpersonating || !recordingUrl}
+                >
+                  {isDevImpersonating && recordingUrl ? (
+                    isPlaying ? (
+                      <IconPlayerPause size={24} color={colors.success} />
+                    ) : (
+                      <IconPlayerPlay size={24} color={colors.success} />
+                    )
+                  ) : (
+                    <IconCheck size={24} color={colors.success} />
+                  )}
                   <Text style={styles.recordedDuration}>
-                    {formatDuration(existingRecording.durationSeconds)}
+                    {isPlaying
+                      ? formatDuration(playbackPositionSec)
+                      : formatDuration(existingRecording.durationSeconds)}
                   </Text>
-                </View>
+                </Pressable>
                 <Pressable style={styles.editLink} onPress={() => setShowEditMenu(true)}>
                   <IconPencil size={14} color={colors.textSecondary} />
                   <Text style={styles.editLinkText}>Edit</Text>

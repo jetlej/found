@@ -8,7 +8,7 @@ import {
   MutationCtx,
 } from './_generated/server';
 import { paginationOptsValidator } from 'convex/server';
-import { requireAdmin } from './lib/admin';
+import { requireAdmin, requireAdminRole } from './lib/admin';
 import { internal } from './_generated/api';
 import { TOTAL_VOICE_QUESTIONS } from './lib/voiceConfig';
 
@@ -61,14 +61,21 @@ export const getOrCreate = mutation({
 });
 
 export const current = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { impersonateClerkId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    return await ctx.db
+    const realUser = await ctx.db
       .query('users')
       .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
       .first();
+    if (args.impersonateClerkId && realUser?.role === 'admin') {
+      return await ctx.db
+        .query('users')
+        .withIndex('by_clerk_id', (q) => q.eq('clerkId', args.impersonateClerkId))
+        .first();
+    }
+    return realUser;
   },
 });
 
@@ -108,9 +115,11 @@ export const updateProfile = mutation({
 
     if (Object.keys(updates).length === 0) return;
 
+    const now = Date.now();
     await ctx.db.patch(user._id, {
       ...updates,
-      lastProfileEditedAt: Date.now(),
+      lastProfileEditedAt: now,
+      lastActiveAt: now,
     });
 
     // Keep compatibility analyses fresh after profile edits.
@@ -166,9 +175,11 @@ export const updateBasics = mutation({
 
     if (Object.keys(updates).length === 0) return;
 
+    const now = Date.now();
     await ctx.db.patch(user._id, {
       ...updates,
-      lastProfileEditedAt: Date.now(),
+      lastProfileEditedAt: now,
+      lastActiveAt: now,
     });
 
     // Keep compatibility analyses fresh after profile edits.
@@ -287,8 +298,11 @@ export const completeProfileAudit = mutation({
       .first();
     if (!profile) throw new Error('Profile not ready');
 
+    const now = Date.now();
     if (!user.profileAuditCompletedAt) {
-      await ctx.db.patch(user._id, { profileAuditCompletedAt: Date.now() });
+      await ctx.db.patch(user._id, { profileAuditCompletedAt: now, lastActiveAt: now });
+    } else {
+      await ctx.db.patch(user._id, { lastActiveAt: now });
     }
 
     // Clear existing analyses so they get regenerated fresh
@@ -490,6 +504,60 @@ export const completeCategory = mutation({
     }
 
     return { level: newLevel, completedCategories: newCompletedCategories };
+  },
+});
+
+// ============ Admin Dashboard ============
+
+export const adminListUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminRole(ctx);
+
+    const allUsers = await ctx.db.query('users').collect();
+    const humans = allUsers
+      .filter((u) => u.type === 'human')
+      .sort((a, b) => b._creationTime - a._creationTime);
+
+    const results = await Promise.all(
+      humans.map(async (u) => {
+        const recordings = await ctx.db
+          .query('voiceRecordings')
+          .withIndex('by_user', (q) => q.eq('userId', u._id))
+          .collect();
+        const hasProfile = !!(await ctx.db
+          .query('userProfiles')
+          .withIndex('by_user', (q) => q.eq('userId', u._id))
+          .first());
+        const photos = await ctx.db
+          .query('photos')
+          .withIndex('by_user', (q) => q.eq('userId', u._id))
+          .collect();
+        const photoCount = photos.length;
+        const firstPhoto = photos.sort((a, b) => a.order - b.order)[0];
+
+        return {
+          _id: u._id,
+          _creationTime: u._creationTime,
+          clerkId: u.clerkId,
+          name: u.name,
+          phone: u.phone,
+          onboardingStep: u.onboardingStep,
+          onboardingComplete: u.onboardingComplete,
+          completedCategories: u.completedCategories,
+          profileAuditCompletedAt: u.profileAuditCompletedAt,
+          lastActiveAt: u.lastActiveAt,
+          status: u.status,
+          voiceRecordingCount: recordings.length,
+          voiceQuestionIndices: recordings.map((r) => r.questionIndex).sort(),
+          hasProfile,
+          photoCount,
+          firstPhotoUrl: firstPhoto?.url ?? null,
+        };
+      })
+    );
+
+    return results;
   },
 });
 

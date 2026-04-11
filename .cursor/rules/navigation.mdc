@@ -6,6 +6,7 @@ alwaysApply: false
 
 # Navigation Conventions
 
+- **New screens:** The root `Stack` in `app/_layout.tsx` sets `headerShown: false` globally via `screenOptions`. When adding a new top-level screen file under `app/`, just add a bare `<Stack.Screen name="your-screen" />` entry — do NOT re-specify `headerShown: false` per-screen. Forgetting the `Stack.Screen` entry causes a double header (Expo Router's default native header appears above the screen's own header).
 - Use `router.replace()` for auth redirects and when navigation history may be empty
 - Use `router.push()` for normal navigation within a flow
 - Use `router.back()` only when certain there's navigation history

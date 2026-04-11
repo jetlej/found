@@ -9,7 +9,7 @@ import {
   MutationCtx,
 } from './_generated/server';
 import { TOTAL_VOICE_QUESTIONS } from './lib/voiceConfig';
-import { requireAdmin } from './lib/admin';
+import { requireAdmin, assertOwnerOrAdmin } from './lib/admin';
 import { Id } from './_generated/dataModel';
 
 /** Get the authenticated user from ctx.auth, or throw. */
@@ -49,14 +49,18 @@ export const saveRecording = mutation({
       await ctx.db.delete(existing._id);
     }
 
+    const now = Date.now();
+
     // Insert the new recording
     const id = await ctx.db.insert('voiceRecordings', {
       userId,
       questionIndex: args.questionIndex,
       storageId: args.storageId,
       durationSeconds: args.durationSeconds,
-      createdAt: Date.now(),
+      createdAt: now,
     });
+
+    await ctx.db.patch(userId, { lastActiveAt: now });
 
     // Immediately schedule transcription for this recording
     await ctx.scheduler.runAfter(0, internal.actions.parseVoiceProfile.transcribeRecording, {
@@ -118,7 +122,7 @@ export const getRecordingsForUser = query({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error('User not found');
-    if (user._id !== args.userId) throw new Error('Forbidden');
+    assertOwnerOrAdmin(user, args.userId);
 
     const recordings = await ctx.db
       .query('voiceRecordings')
@@ -138,7 +142,7 @@ export const getRecordingForQuestion = query({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error('User not found');
-    if (user._id !== args.userId) throw new Error('Forbidden');
+    assertOwnerOrAdmin(user, args.userId);
 
     const recording = await ctx.db
       .query('voiceRecordings')
@@ -159,7 +163,7 @@ export const getCompletedCount = query({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error('User not found');
-    if (user._id !== args.userId) throw new Error('Forbidden');
+    assertOwnerOrAdmin(user, args.userId);
 
     const recordings = await ctx.db
       .query('voiceRecordings')
@@ -167,6 +171,17 @@ export const getCompletedCount = query({
       .collect();
 
     return recordings.length;
+  },
+});
+
+// Get playback URL for a recording (admin only)
+export const getRecordingUrl = query({
+  args: { storageId: v.id('_storage') },
+  handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error('Not authenticated');
+    if (user.role !== 'admin') throw new Error('Forbidden');
+    return await ctx.storage.getUrl(args.storageId);
   },
 });
 

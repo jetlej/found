@@ -7,6 +7,7 @@ import {
   QueryCtx,
   MutationCtx,
 } from './_generated/server';
+import { assertOwnerOrAdmin } from './lib/admin';
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -237,7 +238,7 @@ export const getByUser = query({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error('User not found');
-    if (user._id !== args.userId) throw new Error('Forbidden');
+    assertOwnerOrAdmin(user, args.userId);
 
     return await ctx.db
       .query('userProfiles')
@@ -252,7 +253,7 @@ export const hasProfile = query({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error('User not found');
-    if (user._id !== args.userId) throw new Error('Forbidden');
+    assertOwnerOrAdmin(user, args.userId);
 
     const profile = await ctx.db
       .query('userProfiles')

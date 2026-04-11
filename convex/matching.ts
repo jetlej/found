@@ -2,20 +2,27 @@ import { v } from 'convex/values';
 import { query, QueryCtx } from './_generated/server';
 import { isGenderCompatible, isAgeCompatible } from './lib/compatibility';
 
-/** Get the authenticated user from ctx.auth, or return null. */
-async function getAuthUserOptional(ctx: QueryCtx) {
+/** Get the authenticated user, or the impersonated user if caller is admin. */
+async function resolveCurrentUser(ctx: QueryCtx, impersonateClerkId?: string) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
-  return await ctx.db
+  const realUser = await ctx.db
     .query('users')
     .withIndex('by_clerk_id', (q) => q.eq('clerkId', identity.subject))
     .first();
+  if (impersonateClerkId && realUser?.role === 'admin') {
+    return await ctx.db
+      .query('users')
+      .withIndex('by_clerk_id', (q) => q.eq('clerkId', impersonateClerkId))
+      .first();
+  }
+  return realUser;
 }
 
 // Returns fully-joined match data for the authenticated user.
 // Filters by gender/sexuality/age server-side so no raw data leaks.
 export const getMatchesForCurrentUser = query({
-  args: { limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()), impersonateClerkId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const DEFAULT_LIMIT = 30;
     const MAX_LIMIT = 100;
@@ -23,7 +30,7 @@ export const getMatchesForCurrentUser = query({
     const safeLimit = Math.max(1, Math.min(requestedLimit, MAX_LIMIT));
     const perSideScanLimit = Math.min(Math.max(safeLimit * 3, 100), 500);
 
-    const currentUser = await getAuthUserOptional(ctx);
+    const currentUser = await resolveCurrentUser(ctx, args.impersonateClerkId);
     if (!currentUser) return null;
 
     // Get AI analyses for this user
@@ -94,9 +101,9 @@ export const getMatchesForCurrentUser = query({
 
 // Returns whether the first match set is still being generated.
 export const getMatchGenerationStatusForCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    const currentUser = await getAuthUserOptional(ctx);
+  args: { impersonateClerkId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const currentUser = await resolveCurrentUser(ctx, args.impersonateClerkId);
     if (!currentUser) return null;
 
     const profile = await ctx.db

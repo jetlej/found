@@ -1,6 +1,7 @@
 import { AppHeader } from '@/components/AppHeader';
 import { api } from '@/convex/_generated/api';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useOfflineStore } from '@/stores/offline';
 import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS, VoiceQuestionIcon } from '@/lib/voice-questions';
 import {
@@ -170,6 +171,8 @@ const ICONS: Record<VoiceQuestionIcon, React.ComponentType<{ size: number; color
 
 export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?: boolean } = {}) {
   const userId = useEffectiveUserId();
+  const { devClerkId } = useOfflineStore();
+  const isDevImpersonating = __DEV__ && !!devClerkId;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { editing } = useLocalSearchParams<{ editing?: string }>();
@@ -183,7 +186,10 @@ export function QuestionsScreenContent({ forceEditing = false }: { forceEditing?
     fadeOpacity.value = withTiming(1, { duration: 350 });
   }, []);
 
-  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? (isDevImpersonating ? { impersonateClerkId: devClerkId! } : {}) : 'skip'
+  );
 
   const recordings = useQuery(
     api.voiceRecordings.getRecordingsForUser,

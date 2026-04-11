@@ -2,6 +2,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { api } from '@/convex/_generated/api';
 import { Doc } from '@/convex/_generated/dataModel';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useOfflineStore } from '@/stores/offline';
 import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import {
   IconAlertTriangle,
@@ -1409,6 +1410,8 @@ function EmptyHeartIcon() {
 
 export default function MatchesScreen() {
   const userId = useEffectiveUserId();
+  const { devClerkId } = useOfflineStore();
+  const isDevImpersonating = __DEV__ && !!devClerkId;
   const router = useRouter();
 
   const fadeOpacity = useSharedValue(0);
@@ -1427,13 +1430,20 @@ export default function MatchesScreen() {
   const localDecisionsRef = useRef<Record<string, 'like' | 'reject'>>({});
 
   // Get current user
-  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? (isDevImpersonating ? { impersonateClerkId: devClerkId! } : {}) : 'skip'
+  );
 
   // Server-side filtered matches (replaces client-side listAll queries)
-  const matchesData = useQuery(api.matching.getMatchesForCurrentUser, userId ? {} : 'skip');
+  const impersonateArg = isDevImpersonating ? { impersonateClerkId: devClerkId! } : {};
+  const matchesData = useQuery(
+    api.matching.getMatchesForCurrentUser,
+    userId ? impersonateArg : 'skip'
+  );
   const matchGenerationStatus = useQuery(
     api.matching.getMatchGenerationStatusForCurrentUser,
-    userId ? {} : 'skip'
+    userId ? impersonateArg : 'skip'
   );
 
   // Build match list from server data

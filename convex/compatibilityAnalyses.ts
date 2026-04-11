@@ -10,7 +10,7 @@ import {
 import { internal } from './_generated/api';
 import { Id } from './_generated/dataModel';
 import { categoryScoresValidator, categorySummariesValidator } from './lib/compatibilityCategories';
-import { requireAdmin } from './lib/admin';
+import { requireAdmin, assertOwnerOrAdmin } from './lib/admin';
 
 /** Get the authenticated user from ctx.auth, or throw. */
 async function getAuthUser(ctx: QueryCtx | MutationCtx) {
@@ -51,7 +51,7 @@ export const listForUser = query({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
     if (!user) throw new Error('User not found');
-    if (user._id !== args.userId) throw new Error('Forbidden');
+    assertOwnerOrAdmin(user, args.userId);
     const requestedLimit = args.limit ?? 500;
     const safeLimit = Math.max(1, Math.min(requestedLimit, 2000));
     const perSideLimit = Math.ceil(safeLimit / 2);

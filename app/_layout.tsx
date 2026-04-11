@@ -179,7 +179,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Query current user from Convex (skip until Convex has validated the JWT)
   const currentUser = useQuery(
     api.users.current,
-    effectiveUserId && isConvexAuthenticated ? {} : 'skip'
+    effectiveUserId && isConvexAuthenticated
+      ? isDevImpersonating
+        ? { impersonateClerkId: devClerkId! }
+        : {}
+      : 'skip'
   );
 
   // Check if voice questions are complete (needed to route to /questions vs /(tabs))
@@ -193,7 +197,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   );
   const matchGenStatus = useQuery(
     api.matching.getMatchGenerationStatusForCurrentUser,
-    currentUser?.profileAuditCompletedAt ? {} : 'skip'
+    currentUser?.profileAuditCompletedAt
+      ? isDevImpersonating
+        ? { impersonateClerkId: devClerkId! }
+        : {}
+      : 'skip'
   );
 
   // If signed in but no Convex user doc exists, create one. This handles the
@@ -541,43 +549,26 @@ function RootLayoutNav() {
           <DevTrigger>
             <Stack
               screenOptions={{
+                headerShown: false,
                 contentStyle: { backgroundColor: colors.background },
               }}
             >
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(onboarding)" />
               <Stack.Screen
                 name="my-profile"
                 options={{
-                  headerShown: false,
                   presentation: 'modal',
                   animation: 'slide_from_bottom',
                   gestureEnabled: true,
                 }}
               />
-              <Stack.Screen
-                name="profile-audit"
-                options={{
-                  headerShown: false,
-                  animation: 'default',
-                }}
-              />
-              <Stack.Screen
-                name="edit-answers"
-                options={{
-                  headerShown: false,
-                  animation: 'default',
-                }}
-              />
-              <Stack.Screen
-                name="mini-profile"
-                options={{
-                  headerShown: false,
-                  animation: 'default',
-                }}
-              />
+              <Stack.Screen name="profile-audit" />
+              <Stack.Screen name="edit-answers" />
+              <Stack.Screen name="mini-profile" />
+              <Stack.Screen name="admin" />
             </Stack>
           </DevTrigger>
         </AuthGate>

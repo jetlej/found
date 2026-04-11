@@ -73,6 +73,10 @@ export default defineSchema({
     profileAuditCompletedAt: v.optional(v.number()),
     // Timestamp when "completed profile" broadcast was sent (one-time)
     profileCompletionAnnouncedAt: v.optional(v.number()),
+    // Admin role for gating admin dashboard
+    role: v.optional(v.union(v.literal('admin'), v.literal('user'))),
+    // Last meaningful activity timestamp (updated on key mutations)
+    lastActiveAt: v.optional(v.number()),
   })
     .index('by_clerk_id', ['clerkId'])
     .index('by_phone', ['phone'])

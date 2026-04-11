@@ -2,6 +2,7 @@ import { PhotoGrid } from '@/components/PhotoGrid';
 import { api } from '@/convex/_generated/api';
 import { Doc } from '@/convex/_generated/dataModel';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useOfflineStore } from '@/stores/offline';
 import { getAuditableItems } from '@/lib/filterProfile';
 import { colors, fonts, fontSizes, spacing, textStyles } from '@/lib/theme';
 import {
@@ -208,6 +209,8 @@ function AuditTag({
 
 export default function ProfileAuditScreen() {
   const userId = useEffectiveUserId();
+  const { devClerkId } = useOfflineStore();
+  const isDevImpersonating = __DEV__ && !!devClerkId;
   const router = useRouter();
   const { firstTime, fromRegenerate, awaitingMatches } = useLocalSearchParams<{
     firstTime?: string;
@@ -218,7 +221,10 @@ export default function ProfileAuditScreen() {
   const isFromRegenerate = fromRegenerate === 'true';
   const isMandatory = isFirstTime || isFromRegenerate;
 
-  const currentUser = useQuery(api.users.current, userId ? {} : 'skip');
+  const currentUser = useQuery(
+    api.users.current,
+    userId ? (isDevImpersonating ? { impersonateClerkId: devClerkId! } : {}) : 'skip'
+  );
   const myProfile = useQuery(
     api.userProfiles.getByUser,
     currentUser?._id ? { userId: currentUser._id } : 'skip'
@@ -232,7 +238,7 @@ export default function ProfileAuditScreen() {
 
   const matchGenStatus = useQuery(
     api.matching.getMatchGenerationStatusForCurrentUser,
-    userId ? {} : 'skip'
+    userId ? (isDevImpersonating ? { impersonateClerkId: devClerkId! } : {}) : 'skip'
   );
 
   const [hidden, setHidden] = useState<Set<string>>(new Set());

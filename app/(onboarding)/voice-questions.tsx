@@ -7,7 +7,6 @@ import {
   IconMicrophone,
   IconPencil,
   IconPlayerPause,
-  IconPlus,
   IconTrash,
   IconX,
 } from '@tabler/icons-react-native';
@@ -94,6 +93,7 @@ export default function VoiceQuestionsScreen() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [initialized, setInitialized] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showEditMenu, setShowEditMenu] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isAppending, setIsAppending] = useState(false);
   const [editedTranscript, setEditedTranscript] = useState('');
@@ -340,6 +340,16 @@ export default function VoiceQuestionsScreen() {
     await startRecording();
   };
 
+  const handleEditOption = (option: 'record' | 'transcript' | 'startOver') => {
+    setShowEditMenu(false);
+    if (option === 'record') startAppending();
+    else if (option === 'transcript') {
+      setEditedTranscript(existingRecording?.transcription || '');
+      setTranscriptDirty(false);
+      setShowTranscript(true);
+    } else handleDelete();
+  };
+
   const handleDelete = async () => {
     if (!currentUser?._id) return;
 
@@ -456,26 +466,9 @@ export default function VoiceQuestionsScreen() {
                     {formatDuration(existingRecording.durationSeconds)}
                   </Text>
                 </View>
-                <View style={styles.actionRow}>
-                  <Pressable style={styles.addButton} onPress={startAppending}>
-                    <IconPlus size={18} color={colors.text} />
-                    <Text style={styles.addButtonText}>Record more</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.addButton}
-                    onPress={() => {
-                      setEditedTranscript(existingRecording?.transcription || '');
-                      setTranscriptDirty(false);
-                      setShowTranscript(true);
-                    }}
-                  >
-                    <IconPencil size={18} color={colors.text} />
-                    <Text style={styles.addButtonText}>Edit transcript</Text>
-                  </Pressable>
-                </View>
-                <Pressable style={styles.deleteButton} onPress={handleDelete}>
-                  <IconTrash size={18} color={colors.error} />
-                  <Text style={styles.deleteText}>Start Over</Text>
+                <Pressable style={styles.editLink} onPress={() => setShowEditMenu(true)}>
+                  <IconPencil size={14} color={colors.textSecondary} />
+                  <Text style={styles.editLinkText}>Edit</Text>
                 </Pressable>
               </View>
             ) : (
@@ -610,6 +603,34 @@ export default function VoiceQuestionsScreen() {
           </View>
         </SafeAreaView>
       </Modal>
+
+      <Modal
+        visible={showEditMenu}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowEditMenu(false)}
+      >
+        <Pressable style={styles.editMenuOverlay} onPress={() => setShowEditMenu(false)}>
+          <View style={styles.editMenuCard} onStartShouldSetResponder={() => true}>
+            <Text style={styles.editMenuTitle}>Edit answer</Text>
+            <Pressable style={styles.editMenuOption} onPress={() => handleEditOption('record')}>
+              <IconMicrophone size={20} color={colors.text} />
+              <Text style={styles.editMenuOptionText}>Record more</Text>
+            </Pressable>
+            <Pressable style={styles.editMenuOption} onPress={() => handleEditOption('transcript')}>
+              <IconPencil size={20} color={colors.text} />
+              <Text style={styles.editMenuOptionText}>Edit transcript</Text>
+            </Pressable>
+            <Pressable style={styles.editMenuOption} onPress={() => handleEditOption('startOver')}>
+              <IconTrash size={20} color={colors.error} />
+              <Text style={[styles.editMenuOptionText, { color: colors.error }]}>Start over</Text>
+            </Pressable>
+            <Pressable style={styles.editMenuCancel} onPress={() => setShowEditMenu(false)}>
+              <Text style={styles.editMenuCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -662,33 +683,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  addButton: {
+  editLink: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 10,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  addButtonText: {
-    color: colors.text,
+  editLinkText: {
+    color: colors.textSecondary,
     fontSize: fontSizes.sm,
+    fontWeight: '500',
+  },
+  editMenuCancel: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    marginTop: spacing.xs,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  editMenuCancelText: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.base,
     fontWeight: '600',
   },
-  deleteButton: {
+  editMenuCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+    width: '80%',
+  },
+  editMenuOption: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  editMenuOptionText: {
+    color: colors.text,
+    fontSize: fontSizes.base,
+    fontWeight: '500',
+  },
+  editMenuOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  editMenuTitle: {
+    color: colors.text,
+    fontFamily: fonts.serifBold,
+    fontSize: fontSizes.lg,
+    marginBottom: spacing.md,
   },
   deleteText: {
     color: colors.error,

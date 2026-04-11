@@ -21,6 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription: 'Found needs your location to find matches near you.',
+      UIBackgroundModes: ['audio'],
     },
   },
   android: {

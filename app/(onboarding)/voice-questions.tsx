@@ -12,6 +12,7 @@ import {
 import { useMutation, useQuery } from 'convex/react';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -186,6 +187,7 @@ export default function VoiceQuestionsScreen() {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
       });
 
       // Start recording
@@ -195,8 +197,8 @@ export default function VoiceQuestionsScreen() {
       recordingRef.current = recording;
       setIsRecording(true);
       setRecordingDuration(0);
+      activateKeepAwakeAsync('recording');
 
-      // Haptic feedback for start
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Start duration counter
@@ -241,13 +243,18 @@ export default function VoiceQuestionsScreen() {
 
     setIsRecording(false);
     setIsPaused(false);
+    deactivateKeepAwake('recording');
 
     const recording = recordingRef.current;
     recordingRef.current = null;
-    const finalDuration = recordingDuration;
     const questionIdx = currentIndex;
 
     try {
+      const status = await recording.getStatusAsync();
+      const finalDuration =
+        status.isLoaded && status.durationMillis
+          ? Math.round(status.durationMillis / 1000)
+          : recordingDuration;
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       if (!uri || !currentUser?._id) return;
@@ -308,6 +315,7 @@ export default function VoiceQuestionsScreen() {
     setIsRecording(false);
     setIsPaused(false);
     setRecordingDuration(0);
+    deactivateKeepAwake('recording');
   };
 
   const handleDelete = async () => {

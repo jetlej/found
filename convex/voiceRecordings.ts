@@ -192,6 +192,58 @@ export const updateTranscription = mutation({
   },
 });
 
+// Append additional audio to an existing recording (transcripts accumulate, audio replaced)
+export const appendToRecording = mutation({
+  args: {
+    questionIndex: v.number(),
+    storageId: v.id('_storage'),
+    durationSeconds: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) throw new Error('User not found');
+
+    const existing = await ctx.db
+      .query('voiceRecordings')
+      .withIndex('by_user_question', (q) =>
+        q.eq('userId', user._id).eq('questionIndex', args.questionIndex)
+      )
+      .first();
+
+    if (!existing) throw new Error('No existing recording to append to');
+
+    // Replace audio file, sum durations, keep existing transcription
+    await ctx.storage.delete(existing.storageId);
+    await ctx.db.patch(existing._id, {
+      storageId: args.storageId,
+      durationSeconds: existing.durationSeconds + args.durationSeconds,
+    });
+
+    // Schedule transcription that appends to existing transcript
+    await ctx.scheduler.runAfter(0, internal.actions.parseVoiceProfile.transcribeAndAppend, {
+      recordingId: existing._id,
+    });
+
+    return existing._id;
+  },
+});
+
+// Internal mutation: append new transcript text to existing transcription
+export const appendTranscriptionInternal = internalMutation({
+  args: {
+    recordingId: v.id('voiceRecordings'),
+    newText: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const recording = await ctx.db.get(args.recordingId);
+    if (!recording) return;
+    const combined = recording.transcription
+      ? `${recording.transcription} ${args.newText}`
+      : args.newText;
+    await ctx.db.patch(args.recordingId, { transcription: combined });
+  },
+});
+
 // Get a single recording by ID (used by transcribeRecording action)
 export const getRecordingById = internalQuery({
   args: {

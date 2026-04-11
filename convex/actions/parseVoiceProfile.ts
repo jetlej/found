@@ -605,6 +605,43 @@ export const transcribeRecording = internalAction({
   },
 });
 
+// Transcribe a recording and append the new text to existing transcription
+export const transcribeAndAppend = internalAction({
+  args: {
+    recordingId: v.id('voiceRecordings'),
+  },
+  handler: async (ctx, args) => {
+    const recording = await ctx.runQuery(internal.voiceRecordings.getRecordingById, {
+      recordingId: args.recordingId,
+    });
+    if (!recording) {
+      console.error(
+        `transcribeAndAppend: recording ${args.recordingId} not found (may have been deleted)`
+      );
+      return;
+    }
+
+    const audioUrl = await ctx.storage.getUrl(recording.storageId);
+    if (!audioUrl) {
+      console.error(`transcribeAndAppend: no storage URL for recording ${args.recordingId}`);
+      return;
+    }
+
+    try {
+      const { text } = await transcribeAudio(audioUrl);
+      await ctx.runMutation(internal.voiceRecordings.appendTranscriptionInternal, {
+        recordingId: args.recordingId,
+        newText: text,
+      });
+      console.log(
+        `Appended transcription for ${args.recordingId} (Q${recording.questionIndex + 1}): ${text.substring(0, 80)}...`
+      );
+    } catch (err) {
+      console.error(`transcribeAndAppend failed for ${args.recordingId}:`, err);
+    }
+  },
+});
+
 // Public action to manually trigger voice profile parsing
 export const triggerVoiceProfileParsing = action({
   args: {

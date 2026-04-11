@@ -3,11 +3,13 @@ import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
 import { colors, fonts, fontSizes, spacing } from '@/lib/theme';
 import { TOTAL_VOICE_QUESTIONS, VOICE_QUESTIONS } from '@/lib/voice-questions';
 import {
+  IconCheck,
   IconMicrophone,
+  IconPencil,
   IconPlayerPause,
+  IconPlus,
   IconTrash,
   IconX,
-  IconFileText,
 } from '@tabler/icons-react-native';
 import { useMutation, useQuery } from 'convex/react';
 import { Audio } from 'expo-av';
@@ -16,7 +18,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -82,7 +84,9 @@ export default function VoiceQuestionsScreen() {
     currentUser?._id ? { userId: currentUser._id } : 'skip'
   );
   const saveRecording = useMutation(api.voiceRecordings.saveRecording);
+  const appendToRecording = useMutation(api.voiceRecordings.appendToRecording);
   const deleteRecordingMutation = useMutation(api.voiceRecordings.deleteRecording);
+  const updateTranscription = useMutation(api.voiceRecordings.updateTranscription);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -91,6 +95,9 @@ export default function VoiceQuestionsScreen() {
   const [initialized, setInitialized] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isAppending, setIsAppending] = useState(false);
+  const [editedTranscript, setEditedTranscript] = useState('');
+  const [transcriptDirty, setTranscriptDirty] = useState(false);
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -248,6 +255,8 @@ export default function VoiceQuestionsScreen() {
     const recording = recordingRef.current;
     recordingRef.current = null;
     const questionIdx = currentIndex;
+    const shouldAppend = isAppending;
+    setIsAppending(false);
 
     try {
       const status = await recording.getStatusAsync();
@@ -259,7 +268,6 @@ export default function VoiceQuestionsScreen() {
       const uri = recording.getURI();
       if (!uri || !currentUser?._id) return;
 
-      // Upload + save in background — don't block navigation
       (async () => {
         try {
           const uploadUrl = await generateUploadUrl();
@@ -271,11 +279,19 @@ export default function VoiceQuestionsScreen() {
             body: blob,
           });
           const { storageId } = await uploadResp.json();
-          await saveRecording({
-            questionIndex: questionIdx,
-            storageId,
-            durationSeconds: finalDuration,
-          });
+          if (shouldAppend) {
+            await appendToRecording({
+              questionIndex: questionIdx,
+              storageId,
+              durationSeconds: finalDuration,
+            });
+          } else {
+            await saveRecording({
+              questionIndex: questionIdx,
+              storageId,
+              durationSeconds: finalDuration,
+            });
+          }
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (err) {
           console.error('Failed to upload recording:', err);
@@ -314,8 +330,14 @@ export default function VoiceQuestionsScreen() {
     recordingRef.current = null;
     setIsRecording(false);
     setIsPaused(false);
+    setIsAppending(false);
     setRecordingDuration(0);
     deactivateKeepAwake('recording');
+  };
+
+  const startAppending = async () => {
+    setIsAppending(true);
+    await startRecording();
   };
 
   const handleDelete = async () => {
@@ -390,7 +412,7 @@ export default function VoiceQuestionsScreen() {
   const canProceed = hasRecording;
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <Animated.View style={[styles.flex, fadeStyle]}>
         <View style={styles.header}>
           <View style={styles.headerRow}>
@@ -411,35 +433,49 @@ export default function VoiceQuestionsScreen() {
         </View>
 
         <Animated.View style={[styles.content, questionFadeStyle]}>
-          {currentQuestion.text.includes('\n\n') ? (
-            <View style={styles.questionTextGroup}>
-              {currentQuestion.text.split('\n\n').map((part, i) => (
-                <Text key={i} style={styles.questionTextPart}>
-                  {part}
-                </Text>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.questionText}>{currentQuestion.text}</Text>
-          )}
+          <View style={styles.questionContainer}>
+            {currentQuestion.text.includes('\n\n') ? (
+              <View style={styles.questionTextGroup}>
+                {currentQuestion.text.split('\n\n').map((part, i) => (
+                  <Text key={i} style={styles.questionTextPart}>
+                    {part}
+                  </Text>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.questionText}>{currentQuestion.text}</Text>
+            )}
+          </View>
 
           <View style={styles.recordingArea}>
             {hasRecording && !isRecording ? (
-              // Has existing recording
               <View style={styles.recordedState}>
                 <View style={styles.recordedBadge}>
-                  <IconMicrophone size={24} color={colors.text} />
+                  <IconCheck size={24} color={colors.success} />
                   <Text style={styles.recordedDuration}>
                     {formatDuration(existingRecording.durationSeconds)}
                   </Text>
                 </View>
+                <View style={styles.actionRow}>
+                  <Pressable style={styles.addButton} onPress={startAppending}>
+                    <IconPlus size={18} color={colors.text} />
+                    <Text style={styles.addButtonText}>Record more</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.addButton}
+                    onPress={() => {
+                      setEditedTranscript(existingRecording?.transcription || '');
+                      setTranscriptDirty(false);
+                      setShowTranscript(true);
+                    }}
+                  >
+                    <IconPencil size={18} color={colors.text} />
+                    <Text style={styles.addButtonText}>Edit transcript</Text>
+                  </Pressable>
+                </View>
                 <Pressable style={styles.deleteButton} onPress={handleDelete}>
                   <IconTrash size={18} color={colors.error} />
-                  <Text style={styles.deleteText}>Delete & Re-record</Text>
-                </Pressable>
-                <Pressable style={styles.transcriptLink} onPress={() => setShowTranscript(true)}>
-                  <IconFileText size={14} color={colors.textMuted} />
-                  <Text style={styles.transcriptLinkText}>Show transcript</Text>
+                  <Text style={styles.deleteText}>Start Over</Text>
                 </Pressable>
               </View>
             ) : (
@@ -511,7 +547,7 @@ export default function VoiceQuestionsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowTranscript(false)}
       >
-        <View style={styles.modalContent}>
+        <SafeAreaView style={styles.modalContent} edges={['bottom']}>
           <View style={styles.modalHandle} />
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{currentQuestion?.category}</Text>
@@ -522,13 +558,57 @@ export default function VoiceQuestionsScreen() {
           <ScrollView
             style={styles.modalScroll}
             contentContainerStyle={styles.modalScrollContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.modalTranscript}>
-              {existingRecording?.transcription || 'No transcript available yet.'}
-            </Text>
+            {existingRecording?.transcription != null ? (
+              <TextInput
+                style={styles.modalTranscript}
+                value={editedTranscript}
+                onChangeText={(text) => {
+                  setEditedTranscript(text);
+                  setTranscriptDirty(text !== existingRecording.transcription);
+                }}
+                multiline
+                scrollEnabled={false}
+              />
+            ) : (
+              <Text style={[styles.modalTranscript, { color: colors.textMuted }]}>
+                No transcript available yet.
+              </Text>
+            )}
           </ScrollView>
-        </View>
+          <View style={styles.modalFooter}>
+            <View style={styles.buttonRow}>
+              <Pressable
+                style={styles.backButton}
+                onPress={() => {
+                  setEditedTranscript(existingRecording?.transcription || '');
+                  setTranscriptDirty(false);
+                  setShowTranscript(false);
+                }}
+              >
+                <Text style={styles.backButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.nextButton, !transcriptDirty && styles.buttonDisabled]}
+                disabled={!transcriptDirty}
+                onPress={async () => {
+                  if (!existingRecording) return;
+                  await updateTranscription({
+                    recordingId: existingRecording._id,
+                    transcription: editedTranscript,
+                  });
+                  setTranscriptDirty(false);
+                  setShowTranscript(false);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+              >
+                <Text style={styles.nextButtonText}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -581,6 +661,27 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  addButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  addButtonText: {
+    color: colors.text,
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
   },
   deleteButton: {
     alignItems: 'center',
@@ -647,6 +748,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.xl,
   },
+  modalFooter: {
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
   modalScroll: {
     flex: 1,
   },
@@ -696,16 +804,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSizes.sm,
   },
+  questionContainer: {
+    marginBottom: spacing['2xl'],
+    minHeight: 140,
+  },
   questionText: {
     color: colors.text,
     fontFamily: fonts.serifBold,
     fontSize: fontSizes['2xl'],
     lineHeight: 36,
-    marginBottom: spacing['2xl'],
   },
   questionTextGroup: {
     gap: spacing.sm,
-    marginBottom: spacing['2xl'],
   },
   questionTextPart: {
     color: colors.text,
@@ -731,10 +841,8 @@ const styles = StyleSheet.create({
   },
   recordedBadge: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.text,
+    backgroundColor: colors.text,
     borderRadius: 16,
-    borderWidth: 2,
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.lg,
@@ -742,7 +850,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   recordedDuration: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: fontSizes['2xl'],
     fontWeight: '700',
   },
@@ -789,15 +897,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
     width: 100,
-  },
-  transcriptLink: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  transcriptLinkText: {
-    color: colors.textMuted,
-    fontSize: fontSizes.xs,
   },
 });

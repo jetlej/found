@@ -13,6 +13,7 @@ type Persona = {
   name: string;
   gender: 'Man' | 'Woman' | 'Non-binary';
   description: string;
+  birthdate?: string; // YYYY-MM-DD, overrides GPT generation
 };
 
 // ── Basics generation (shared by all seeding paths) ──────────────────────────
@@ -89,6 +90,15 @@ async function generateBasics(persona: Persona): Promise<BasicsResult> {
     `Generate the profile fields for ${persona.name} now. Return ALL 22 fields.`,
     { maxTokens: 1500 }
   );
+
+  // Use persona's real birthdate when provided, and recalculate age range to match
+  if (persona.birthdate) {
+    data.birthdate = persona.birthdate;
+    const birthYear = parseInt(persona.birthdate.split('-')[0]);
+    const age = new Date().getFullYear() - birthYear;
+    data.ageRangeMin = Math.max(18, age - 5);
+    data.ageRangeMax = Math.min(99, age + 5);
+  }
 
   // Ensure age range fields are always present (fallback if GPT omits them)
   if (!data.ageRangeMin || !data.ageRangeMax) {
@@ -411,30 +421,35 @@ const CELEB_PERSONAS: Persona[] = [
   {
     name: 'Dolly Parton',
     gender: 'Woman',
+    birthdate: '1946-01-19',
     description:
       'Warm, generous, deeply loyal. Small-town Tennessee roots, self-made businesswoman and legendary musician. Christian faith is central to her life. Values authenticity, humor, and kindness above all. Philanthropist who started the Imagination Library to give books to children. Would prioritize loyalty, humor, and someone comfortable letting her shine.',
   },
   {
     name: 'Oprah Winfrey',
     gender: 'Woman',
+    birthdate: '1954-01-29',
     description:
       'Spiritual but not traditionally religious. Overcame severe childhood trauma to become a media mogul and one of the most influential people in the world. Values personal growth, deep conversation, and emotional intelligence. Prioritizes independence, intellectual connection, and someone secure in themselves. Believes in the power of vulnerability and lifelong learning.',
   },
   {
     name: 'Zendaya',
     gender: 'Woman',
+    birthdate: '1996-09-01',
     description:
       "Grounded, private, ambitious Gen-Z icon and acclaimed actress. Very close to her family. Health-conscious — doesn't drink or do drugs. Values creativity, loyalty, and keeping life low-key despite fame. Would want someone who respects her privacy, shares her work ethic, and has a playful side.",
   },
   {
     name: 'Alexandria Ocasio-Cortez',
     gender: 'Woman',
+    birthdate: '1989-10-13',
     description:
       'Passionate progressive activist and congresswoman from the Bronx. Puerto Rican heritage is central to her identity. Values community, justice, and direct communication. Would prioritize shared values, intellectual sparring, emotional vulnerability, and someone who can handle public scrutiny.',
   },
   {
     name: 'Rihanna',
     gender: 'Woman',
+    birthdate: '1988-02-20',
     description:
       "Bold, independent, unapologetically herself. Barbadian roots. Built a beauty and fashion empire from the ground up. Values confidence, humor, and loyalty. Would want someone creative, secure in themselves, who matches her energy and doesn't try to tame her.",
   },
@@ -442,30 +457,35 @@ const CELEB_PERSONAS: Persona[] = [
   {
     name: 'Keanu Reeves',
     gender: 'Man',
+    birthdate: '1964-09-02',
     description:
       'Quiet, introspective, deeply kind. Has experienced profound personal loss that shaped his worldview. Values simplicity, loyalty, and genuine human connection. Buddhist-leaning philosophy. Not materialistic despite wealth. Would want someone grounded, emotionally present, who appreciates quiet moments together.',
   },
   {
     name: 'Dwayne Johnson',
     gender: 'Man',
+    birthdate: '1972-05-02',
     description:
       'Family-first, disciplined, optimistic. Samoan heritage is central to his identity. Overcame depression and a difficult early life through sheer determination. Extremely driven work ethic — up at 4am every day. Values humor, loyalty, and showing up consistently. Would want someone who values family, can handle his schedule, and keeps things fun.',
   },
   {
     name: 'Harry Styles',
     gender: 'Man',
+    birthdate: '1994-02-01',
     description:
       "Open-minded, emotionally expressive, gender-fluid in style. British charm and warmth. Values kindness, creativity, and treating people with respect. Comfortable with vulnerability and breaking traditional masculine norms. Would want someone who is open-minded, creative, emotionally available, and doesn't take life too seriously.",
   },
   {
     name: 'Barack Obama',
     gender: 'Man',
+    birthdate: '1961-08-04',
     description:
       'Intellectual, measured, deeply principled. Values community service, family, and partnership as equals. Former president who believes in the power of empathy and civic engagement. Prioritizes emotional intelligence, shared purpose, humor, and someone who challenges him intellectually.',
   },
   {
     name: 'Bad Bunny',
     gender: 'Man',
+    birthdate: '1994-03-10',
     description:
       "Puerto Rican pride, boundary-breaking artist who challenges traditional masculinity in Latin culture. Values authenticity, cultural roots, and creative freedom. Deeply connected to his community and homeland. Would want someone who respects his culture, is confident and independent, and doesn't need the spotlight.",
   },

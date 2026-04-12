@@ -40,5 +40,8 @@ yarn-error.*
 /ios
 /android
 
+# Beta build artifacts
+build/
+
 # Maestro test assets (generated, not source)
 .maestro/test_assets/

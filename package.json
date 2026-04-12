@@ -28,6 +28,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "beta": "bash scripts/beta.sh",
     "prepare": "husky"
   },
   "lint-staged": {
